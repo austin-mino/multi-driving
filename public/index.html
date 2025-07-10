@@ -113,6 +113,16 @@
   </style>
 </head>
 <body>
+  <div id="startMenu" style="
+  position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  background: rgba(0,0,0,0.85); padding: 30px; border-radius: 15px; z-index: 2000; color: white;
+">
+  <h2>게임 시작</h2>
+  <label>닉네임: <input type="text" id="nicknameInput" placeholder="Your Name" /></label><br /><br />
+  <label>차 색상: <input type="color" id="colorInput" value="#ffffff" /></label><br /><br />
+  <button id="startButton" style="padding: 10px 20px; font-size: 16px;">게임 시작</button>
+</div>
+
   <div id="rotateWarning">가로 모드로 전환해주세요</div>
   <div id="hud">속도: 0 km/h</div>
   <div id="timerDisplay">타이머: 0.00 s</div>
@@ -143,8 +153,59 @@
 <button id="btnToggleCam" class="controlBtn">C: ON</button>
 
   <script type="module">
+    document.getElementById('startButton').addEventListener('click', () => {
+  const nickname = document.getElementById('nicknameInput').value.trim();
+  const carColor = document.getElementById('colorInput').value;
+
+  if (!nickname) {
+    alert('닉네임을 입력하세요!');
+    return;
+  }
+
+  // 서버로 참가 요청 전송
+  socket.emit('joinGame', {
+    nickname,
+    carModel: 'GrandeurIG',
+    carColor,
+  });
+
+  document.getElementById('startMenu').style.display = 'none'; // 메뉴 숨김
+  startGame(); // 게임 로직 시작
+});
+
     import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.module.js';
     import * as CANNON from 'https://cdn.jsdelivr.net/npm/cannon-es@0.20.0/dist/cannon-es.js';
+    import { FontLoader } from 'https://cdn.jsdelivr.net/npm/three@0.152.2/examples/jsm/loaders/FontLoader.js';
+    import { TextGeometry } from 'https://cdn.jsdelivr.net/npm/three@0.152.2/examples/jsm/geometries/TextGeometry.js';
+
+let font;
+const fontLoader = new FontLoader();
+fontLoader.load('https://cdn.jsdelivr.net/npm/three@0.152.2/examples/fonts/helvetiker_regular.typeface.json', loadedFont => {
+  font = loadedFont;
+});
+
+function createTextMesh(text) {
+ if (!font) {
+  // 폰트가 아직 로드 안 됐으면 나중에 재시도하거나 간단 텍스트로 대체
+  const fallbackText = new THREE.Group(); // 빈 그룹, 일단 추가
+  // 나중에 폰트 로드 후 닉네임 텍스트 재생성하는 로직 추가 가능
+  return fallbackText;
+}
+
+
+  const textGeom = new TextGeometry(text, {
+    font: font,
+    size: 0.5,
+    height: 0.1,
+  });
+  const textMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+  const mesh = new THREE.Mesh(textGeom, textMat);
+  mesh.castShadow = true;
+  mesh.receiveShadow = false;
+  mesh.geometry.center(); // 가운데 정렬
+
+  return mesh;
+}
 
     // 가로모드 체크
     const rotateWarning = document.getElementById('rotateWarning');
@@ -338,11 +399,11 @@ scene.add(mesh);
     chassisBody.angularDamping = 0.5;
     chassisBody.linearDamping = 0.0;
     world.addBody(chassisBody);
-   const carModel = createGrandeurIGCarDetailed();
-scene.add(carModel);
+  let carModel; // 선언만
+
 
     // 자동차 시각 모델 (둥근 차체)
-   function createGrandeurIGCarDetailed() {
+    function createGrandeurIGCarDetailed(color = '#ffffff') {
   const group = new THREE.Group();
 
   const bodyMat = new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 0.6, roughness: 0.4 });
@@ -670,13 +731,6 @@ const socket = io(); // 서버 소켓 연결
 let playerId = null;        // 내 소켓 아이디
 const otherPlayers = {};    // 다른 플레이어 차량 모델 및 정보 저장용
 
-// 입장 시 서버에 닉네임, 차량 모델, 색상 정보 전달 (예: 닉네임 'Player', 기본 차체, 색상 흰색)
-socket.emit('joinGame', {
-  nickname: 'Player_' + Math.floor(Math.random()*1000),
-  carModel: 'GrandeurIG',  // 사용자가 고른 문자열 그대로 넣어주세요
-  carColor: '#ffffff'
-});
-
 // 서버가 내 소켓 아이디를 보내면 저장
 socket.on('playerId', id => {
   playerId = id;
@@ -712,6 +766,10 @@ socket.on('updatePlayers', (players) => {
     if (!otherPlayers[id]) {
       // 새 플레이어 등장 시 차량 모델 생성 (기존 createGrandeurIGCarDetailed 함수 활용)
       const otherCar = createGrandeurIGCarDetailed();
+      const nicknameText = createTextMesh(player.nickname);
+nicknameText.position.set(0, 2, 0);
+otherCar.add(nicknameText);
+
 
       // 차량 색상 적용 (간단하게 본체만 색칠, 필요시 확장 가능)
       otherCar.traverse(child => {
@@ -814,10 +872,15 @@ setInterval(sendPlayerState, 50);
 
       renderer.render(scene, camera);
     }
-
-    startTimer();
-    updateGearDisplay();
-    animate();
+function startGame() {
+  startTimer();
+  updateGearDisplay();
+  // 차량 모델 만들기 (색상 적용)
+  const color = document.getElementById('colorInput').value;
+  carModel = createGrandeurIGCarDetailed(color);
+  scene.add(carModel);
+  animate(); // ← 기존 animate() 호출을 여기로 옮기세요
+}
   </script>
     <script src="/socket.io/socket.io.js"></script>
 </body>
