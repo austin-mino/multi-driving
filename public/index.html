@@ -153,6 +153,7 @@
 <button id="btnToggleCam" class="controlBtn">C: ON</button>
 
   <script type="module">
+    const socket = io(); // 서버와 연결
     document.getElementById('startButton').addEventListener('click', () => {
   const nickname = document.getElementById('nicknameInput').value.trim();
   const carColor = document.getElementById('colorInput').value;
@@ -728,7 +729,11 @@ if (input.left) {
 
 const socket = io(); // 서버 소켓 연결
 
-let playerId = null;        // 내 소켓 아이디
+let playerId = null; 
+  socket.on('playerId', (id) => {
+  myPlayerId = id; // 저장용
+  console.log('내 ID:', id); // 디버깅용
+});
 const otherPlayers = {};    // 다른 플레이어 차량 모델 및 정보 저장용
 
 // 서버가 내 소켓 아이디를 보내면 저장
