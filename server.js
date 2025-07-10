@@ -1,70 +1,63 @@
-// server.js
+// npm install express socket.io
 const express = require('express');
-const http = require('http');
-const { Server } = require('socket.io');
-
 const app = express();
-const server = http.createServer(app);
-const io = new Server(server);
+const http = require('http').createServer(app);
+const io = require('socket.io')(http);
 
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
-// 정적 파일 서비스 (index.html, js, css 등)
-app.use(express.static('public'));
+app.use(express.static('public')); // public 폴더에 위 html, js 등 파일 위치
 
-// 접속한 플레이어들 관리 (id -> 플레이어 정보)
-const players = new Map();
+let players = {};
 
 io.on('connection', (socket) => {
-  console.log(`User connected: ${socket.id}`);
+  console.log('User connected:', socket.id);
 
-  // 새 플레이어 접속
-  socket.on('newPlayer', (data) => {
-    console.log(`New player joined: ${data.nickname} (${socket.id})`);
-    players.set(socket.id, {
-      id: socket.id,
+  // 플레이어 입장
+  socket.on('joinGame', (data) => {
+    players[socket.id] = {
       nickname: data.nickname,
-      carType: data.carType,
+      carModel: data.carModel,
       carColor: data.carColor,
-      position: { x: 0, y: 0, z: 0 },
-      quaternion: { x: 0, y: 0, z: 0, w: 1 },
-    });
-
-    // 접속한 새 플레이어에게 기존 플레이어 정보 모두 보내기
-    for (const [id, player] of players) {
-      if (id !== socket.id) {
-        socket.emit('newPlayer', player);
-      }
-    }
-
-    // 다른 플레이어들에게 새 플레이어 정보 전송
-    socket.broadcast.emit('newPlayer', players.get(socket.id));
+      position: {x:0,y:0,z:0},
+      rotation: {x:0,y:0,z:0,w:1},
+      input: {},
+      gear: 'P',
+    };
+    socket.emit('playerId', socket.id);
   });
 
-  // 플레이어 위치 및 회전 업데이트
-  socket.on('playerUpdate', (data) => {
-    if (players.has(socket.id)) {
-      const player = players.get(socket.id);
-      player.position = data.position;
-      player.quaternion = data.quaternion;
-
-      // 다른 플레이어들에게 업데이트 전송
-      socket.broadcast.emit('playerUpdate', {
-        id: socket.id,
-        position: data.position,
-        quaternion: data.quaternion,
-      });
+  // 플레이어 위치 업데이트
+  socket.on('updatePosition', (data) => {
+    if(players[socket.id]) {
+      players[socket.id].position = {
+        x: data.position.x,
+        y: data.position.y,
+        z: data.position.z,
+      };
+      players[socket.id].rotation = {
+        x: data.rotation.x,
+        y: data.rotation.y,
+        z: data.rotation.z,
+        w: data.rotation.w,
+      };
+      players[socket.id].input = data.input;
+      players[socket.id].gear = data.gear;
     }
   });
 
-  // 플레이어 퇴장 처리
+  // 플레이어 접속 종료
   socket.on('disconnect', () => {
-    console.log(`User disconnected: ${socket.id}`);
-    players.delete(socket.id);
-    io.emit('playerDisconnect', socket.id);
+    console.log('User disconnected:', socket.id);
+    delete players[socket.id];
   });
+
+  // 일정 간격으로 전체 플레이어 상태 브로드캐스트
+  setInterval(() => {
+    io.emit('updatePlayers', players);
+  }, 50);
 });
 
-server.listen(PORT, () => {
-  console.log(`Server listening on http://localhost:${PORT}`);
+http.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });
