@@ -20,7 +20,7 @@ io.on('connection', (socket) => {
       nickname: data.nickname || 'Unknown',
       carModel: data.carModel || 'DefaultCar',
       carColor: data.carColor || '#ffffff',
-      position: { x: 0, y: 0, z: 0 },
+      position: { x: 500, y: 0.5, z: 0 },
       rotation: { x: 0, y: 0, z: 0, w: 1 },
       input: {},
       gear: 'P',
