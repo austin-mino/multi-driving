@@ -1,49 +1,70 @@
 // server.js
-import express from 'express';
-import http from 'http';
-import { Server } from 'socket.io';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const express = require('express');
+const http = require('http');
+const { Server } = require('socket.io');
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-app.use(express.static(path.join(__dirname, 'public')));
+const PORT = 3000;
 
-let players = {};
+// 정적 파일 서비스 (index.html, js, css 등)
+app.use(express.static('public'));
 
-io.on('connection', socket => {
-  console.log('Connected:', socket.id);
+// 접속한 플레이어들 관리 (id -> 플레이어 정보)
+const players = new Map();
 
-  socket.on('join', data => {
-    players[socket.id] = {
+io.on('connection', (socket) => {
+  console.log(`User connected: ${socket.id}`);
+
+  // 새 플레이어 접속
+  socket.on('newPlayer', (data) => {
+    console.log(`New player joined: ${data.nickname} (${socket.id})`);
+    players.set(socket.id, {
+      id: socket.id,
       nickname: data.nickname,
       carType: data.carType,
-      color: data.color,
-      position: [0, 0, 0],
-      quaternion: [0, 0, 0, 1],
-    };
-    io.emit('players', players);
-  });
+      carColor: data.carColor,
+      position: { x: 0, y: 0, z: 0 },
+      quaternion: { x: 0, y: 0, z: 0, w: 1 },
+    });
 
-  socket.on('update', data => {
-    if (players[socket.id]) {
-      players[socket.id].position = data.position;
-      players[socket.id].quaternion = data.quaternion;
+    // 접속한 새 플레이어에게 기존 플레이어 정보 모두 보내기
+    for (const [id, player] of players) {
+      if (id !== socket.id) {
+        socket.emit('newPlayer', player);
+      }
     }
-    io.emit('players', players);
+
+    // 다른 플레이어들에게 새 플레이어 정보 전송
+    socket.broadcast.emit('newPlayer', players.get(socket.id));
   });
 
+  // 플레이어 위치 및 회전 업데이트
+  socket.on('playerUpdate', (data) => {
+    if (players.has(socket.id)) {
+      const player = players.get(socket.id);
+      player.position = data.position;
+      player.quaternion = data.quaternion;
+
+      // 다른 플레이어들에게 업데이트 전송
+      socket.broadcast.emit('playerUpdate', {
+        id: socket.id,
+        position: data.position,
+        quaternion: data.quaternion,
+      });
+    }
+  });
+
+  // 플레이어 퇴장 처리
   socket.on('disconnect', () => {
-    delete players[socket.id];
-    io.emit('players', players);
+    console.log(`User disconnected: ${socket.id}`);
+    players.delete(socket.id);
+    io.emit('playerDisconnect', socket.id);
   });
 });
 
-server.listen(3000, () => {
-  console.log('Server running at http://localhost:3000');
+server.listen(PORT, () => {
+  console.log(`Server listening on http://localhost:${PORT}`);
 });
