@@ -189,15 +189,6 @@ fontLoader.load('https://cdn.jsdelivr.net/npm/three@0.152.2/examples/fonts/helve
   font = loadedFont;
 });
 
-function createTextMesh(text) {
- if (!font) {
-  // 폰트가 아직 로드 안 됐으면 나중에 재시도하거나 간단 텍스트로 대체
-  const fallbackText = new THREE.Group(); // 빈 그룹, 일단 추가
-  // 나중에 폰트 로드 후 닉네임 텍스트 재생성하는 로직 추가 가능
-  return fallbackText;
-}
-
-
   const textGeom = new TextGeometry(text, {
     font: font,
     size: 0.5,
