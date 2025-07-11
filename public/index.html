@@ -111,6 +111,9 @@
   background: #005a9e;
 }
   </style>
+  
+   <script src="/socket.io/socket.io.js"></script>
+    
 </head>
 <body>
   <div id="startMenu" style="
@@ -153,6 +156,12 @@
 <button id="btnToggleCam" class="controlBtn">C: ON</button>
 
   <script type="module">
+
+    import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.module.js';
+    import * as CANNON from 'https://cdn.jsdelivr.net/npm/cannon-es@0.20.0/dist/cannon-es.js';
+    import { TextGeometry } from 'https://cdn.jsdelivr.net/npm/three@0.152.2/examples/jsm/geometries/TextGeometry.js';
+     import { FontLoader } from 'https://cdn.jsdelivr.net/npm/three@0.152.2/examples/jsm/loaders/FontLoader.js';
+    
     const socket = io(); // 서버와 연결
     document.getElementById('startButton').addEventListener('click', () => {
   const nickname = document.getElementById('nicknameInput').value.trim();
@@ -173,11 +182,6 @@
   document.getElementById('startMenu').style.display = 'none'; // 메뉴 숨김
   startGame(); // 게임 로직 시작
 });
-
-    import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.module.js';
-    import * as CANNON from 'https://cdn.jsdelivr.net/npm/cannon-es@0.20.0/dist/cannon-es.js';
-    import { FontLoader } from 'https://cdn.jsdelivr.net/npm/three@0.152.2/examples/jsm/loaders/FontLoader.js';
-    import { TextGeometry } from 'https://cdn.jsdelivr.net/npm/three@0.152.2/examples/jsm/geometries/TextGeometry.js';
 
 let font;
 const fontLoader = new FontLoader();
@@ -407,7 +411,7 @@ scene.add(mesh);
     function createGrandeurIGCarDetailed(color = '#ffffff') {
   const group = new THREE.Group();
 
-  const bodyMat = new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 0.6, roughness: 0.4 });
+  const bodyMat = new THREE.MeshStandardMaterial({ color: color, metalness: 0.6, roughness: 0.4 });
   const mainBody = new THREE.Mesh(new THREE.BoxGeometry(3, 1.2, 6), bodyMat);
   mainBody.position.y = 0.6;
   group.add(mainBody);
@@ -548,9 +552,10 @@ group.add(tailBar);
     dirLight.position.set(10, 20, 10);
     scene.add(dirLight);
 
-    // 입력 상태
-    const input = { left: false, right: false, accel: false, brake: false };
+// 사용자 입력 상태
+let input = { left: false, right: false, accel: false, brake: false };
 
+    
     // DOM 요소 바인딩
     const btnLeft = document.getElementById('btnLeft'),
           btnRight = document.getElementById('btnRight'),
@@ -727,19 +732,52 @@ if (input.left) {
 
 // ----------------- 멀티플레이 관련 추가 코드 -----------------
 
-const socket = io(); // 서버 소켓 연결
-
 let playerId = null; 
   socket.on('playerId', (id) => {
-  myPlayerId = id; // 저장용
+  playerId = id; // 저장용
   console.log('내 ID:', id); // 디버깅용
 });
-const otherPlayers = {};    // 다른 플레이어 차량 모델 및 정보 저장용
 
-// 서버가 내 소켓 아이디를 보내면 저장
-socket.on('playerId', id => {
-  playerId = id;
-});
+let loadedFont = null;
+const fontLoader = new FontLoader();
+
+function loadFontAsync() {
+  return new Promise((resolve, reject) => {
+    if (loadedFont) {
+      resolve(loadedFont);
+    } else {
+      fontLoader.load(
+        'https://threejs.org/examples/fonts/helvetiker_regular.typeface.json',
+        (font) => {
+          loadedFont = font;
+          resolve(font);
+        },
+        undefined,
+        (err) => reject(err)
+      );
+    }
+  });
+}
+
+// text를 받아서 Promise로 텍스쳐 메쉬를 반환하는 함수
+async function createTextMesh(text) {
+  const font = await loadFontAsync();
+
+  const geometry = new THREE.TextGeometry(text, {
+    font: font,
+    size: 0.6,
+    height: 0.1,
+    curveSegments: 12,
+  });
+
+  const material = new THREE.MeshStandardMaterial({ color: 0xffffff });
+  const mesh = new THREE.Mesh(geometry, material);
+
+  return mesh;
+}
+
+
+const otherPlayers = {};    // 다른 플레이어 차량 모델 및 정보 저장용
 
 // 서버로 내 현재 위치, 회전, 입력, 기어 상태를 주기적으로 보내는 함수
 function sendPlayerState() {
@@ -763,17 +801,17 @@ function sendPlayerState() {
 }
 
 // 서버가 보내는 모든 플레이어 정보 수신
-socket.on('updatePlayers', (players) => {
-  // 모든 플레이어를 순회
+socket.on('updatePlayers', async (players) => {
   for (const [id, player] of Object.entries(players)) {
-    if (id === playerId) continue; // 내 정보는 클라이언트 물리로 처리 중이므로 건드리지 않음
+    if (id === playerId) continue;
 
     if (!otherPlayers[id]) {
-      // 새 플레이어 등장 시 차량 모델 생성 (기존 createGrandeurIGCarDetailed 함수 활용)
       const otherCar = createGrandeurIGCarDetailed();
-      const nicknameText = createTextMesh(player.nickname);
-nicknameText.position.set(0, 2, 0);
-otherCar.add(nicknameText);
+
+      // async/await를 쓰려면 이 함수가 async 여야 함
+      const nicknameText = await createTextMesh(player.nickname);
+      nicknameText.position.set(0, 2, 0);
+      otherCar.add(nicknameText);
 
 
       // 차량 색상 적용 (간단하게 본체만 색칠, 필요시 확장 가능)
@@ -786,8 +824,7 @@ otherCar.add(nicknameText);
         }
       });
 
-      scene.add(otherCar);
-
+     scene.add(otherCar);
       otherPlayers[id] = {
         model: otherCar,
         lastUpdate: performance.now()
@@ -886,7 +923,7 @@ function startGame() {
   scene.add(carModel);
   animate(); // ← 기존 animate() 호출을 여기로 옮기세요
 }
+    
   </script>
-    <script src="/socket.io/socket.io.js"></script>
 </body>
 </html>
