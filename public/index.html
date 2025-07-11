@@ -189,20 +189,6 @@ fontLoader.load('https://cdn.jsdelivr.net/npm/three@0.152.2/examples/fonts/helve
   font = loadedFont;
 });
 
-  const textGeom = new TextGeometry(text, {
-    font: font,
-    size: 0.5,
-    height: 0.1,
-  });
-  const textMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
-  const mesh = new THREE.Mesh(textGeom, textMat);
-  mesh.castShadow = true;
-  mesh.receiveShadow = false;
-  mesh.geometry.center(); // 가운데 정렬
-
-  return mesh;
-}
-
     // 가로모드 체크
     const rotateWarning = document.getElementById('rotateWarning');
     function checkOrientation() {
