@@ -796,9 +796,6 @@ async function createTextMesh(text) {
   return mesh;
 }
 
-
-const otherPlayers = {};    // 다른 플레이어 차량 모델 및 정보 저장용
-
 // 서버로 내 현재 위치, 회전, 입력, 기어 상태를 주기적으로 보내는 함수
 function sendPlayerState() {
   if (!playerId) return;
