@@ -827,6 +827,16 @@ socket.on('updatePlayers', async (players) => {
       nicknameText.position.set(0, 2, 0);
       otherCar.add(nicknameText);
 
+      // 차량 색상 적용
+      otherCar.traverse(child => {
+        if (child.isMesh) {
+          child.material = child.material.clone();
+          try {
+            child.material.color = new THREE.Color(player.carColor || '#888888');
+          } catch (e) {}
+        }
+      });
+
       otherCar.position.set(player.position.x, player.position.y, player.position.z);
       otherCar.quaternion.set(
         player.rotation.x, player.rotation.y,
@@ -834,52 +844,23 @@ socket.on('updatePlayers', async (players) => {
       );
 
       scene.add(otherCar);
-      otherPlayers[id] = otherCar;
-    } else {
-      const otherCar = otherPlayers[id];
-      otherCar.position.set(player.position.x, player.position.y, player.position.z);
-      otherCar.quaternion.set(
-        player.rotation.x, player.rotation.y,
-        player.rotation.z, player.rotation.w
-      );
-    }
-  }
-
-  for (const id in otherPlayers) {
-    if (!players[id]) {
-      scene.remove(otherPlayers[id]);
-      delete otherPlayers[id];
-    }
-  }
-}); // 여기서 닫힘
-
-
-      // 차량 색상 적용 (간단하게 본체만 색칠, 필요시 확장 가능)
-      otherCar.traverse(child => {
-        if (child.isMesh) {
-          child.material = child.material.clone();
-          try {
-            child.material.color = new THREE.Color(player.carColor || '#888888');
-          } catch(e) {}
-        }
-      });
-
-     scene.add(otherCar);
       otherPlayers[id] = {
         model: otherCar,
         lastUpdate: performance.now()
       };
+    } else {
+      const car = otherPlayers[id].model;
+      car.position.set(player.position.x, player.position.y, player.position.z);
+      car.quaternion.set(
+        player.rotation.x, player.rotation.y,
+        player.rotation.z, player.rotation.w
+      );
+
+      otherPlayers[id].lastUpdate = performance.now();
     }
-
-    // 위치와 회전 갱신
-    const car = otherPlayers[id].model;
-    car.position.set(player.position.x, player.position.y, player.position.z);
-    car.quaternion.set(player.rotation.x, player.rotation.y, player.rotation.z, player.rotation.w);
-
-    otherPlayers[id].lastUpdate = performance.now();
   }
 
-  // 서버에서 없어진 플레이어 차량 제거 (접속 종료)
+  // 서버에서 없어진 플레이어 제거
   for (const id of Object.keys(otherPlayers)) {
     if (!players[id]) {
       scene.remove(otherPlayers[id].model);
