@@ -186,7 +186,7 @@ import { TextGeometry } from 'https://cdn.jsdelivr.net/npm/three@0.152.2/example
 
 import * as CANNON from 'https://cdn.jsdelivr.net/npm/cannon-es@0.20.0/dist/cannon-es.js';
 
-    const socket = io(); // 서버와 연결
+    const socket = io('https://multi-driving.onrender.com'); // 서버와 연결
     document.getElementById('startButton').addEventListener('click', () => {
   const nickname = document.getElementById('nicknameInput').value.trim();
   const modelName = document.getElementById('modelSelect').value || 'GrandeurIG';
