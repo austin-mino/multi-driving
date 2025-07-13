@@ -168,6 +168,14 @@
 <script src="https://cdn.jsdelivr.net/npm/cannon-es@0.20.0/dist/cannon-es.js"></script>
     
   <script>
+
+    document.getElementById('startButton').addEventListener('click', () => {
+      const nickname = document.getElementById('nicknameInput').value || 'Player';
+      const modelName = document.getElementById('modelSelect').value || 'GrandeurIG';
+      const color = document.getElementById('colorInput').value || '#ffffff';
+
+      startGame(modelName, color, nickname);
+    });
     
     const socket = io(); // 서버와 연결
     document.getElementById('startButton').addEventListener('click', () => {
@@ -936,6 +944,11 @@ setInterval(sendPlayerState, 50);
     }
       
   function startGame(modelName = 'GrandeurIG', color = '#ffffff') {
+    socket.emit('joinGame', {
+  nickname: userNickname,
+  carModel: modelName,   // startGame(modelName, color) 안에서 받은 modelName 사용
+  carColor: color
+});
   switch (modelName) {
     case 'GrandeurIG':
       carModel = createGrandeurIGCarDetailed(color);
