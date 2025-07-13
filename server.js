@@ -3,10 +3,9 @@ const express = require('express');
 const app = express();
 const http = require('http').createServer(app);
 
-// CORS 포함 socket.io 초기화
 const io = require('socket.io')(http, {
   cors: {
-    origin: '*',
+    origin: '*', // 모든 도메인 허용 (필요하면 특정 도메인으로 변경)
     methods: ['GET', 'POST']
   }
 });
@@ -20,7 +19,7 @@ app.use(express.static('public'));
 
 // 물리 월드 초기화
 const world = new CANNON.World();
-world.gravity.set(0, -9.82, 0); // 지구 중력
+world.gravity.set(0, -9.82, 0);
 world.broadphase = new CANNON.NaiveBroadphase();
 world.solver.iterations = 10;
 
@@ -30,11 +29,9 @@ const bodies = {};
 io.on('connection', (socket) => {
   console.log('🔌 User connected:', socket.id);
 
-  // 게임 참가
   socket.on('joinGame', (data) => {
     console.log(`🚗 ${data.nickname} joined`);
 
-    // 플레이어 정보 저장
     players[socket.id] = {
       nickname: data.nickname || 'Unknown',
       carModel: data.carModel || 'DefaultCar',
@@ -45,7 +42,6 @@ io.on('connection', (socket) => {
       gear: 'P'
     };
 
-    // 자동차 바디 생성
     const body = new CANNON.Body({
       mass: 1500,
       shape: new CANNON.Box(new CANNON.Vec3(2, 1, 4)),
@@ -60,20 +56,17 @@ io.on('connection', (socket) => {
     socket.emit('playerId', socket.id);
   });
 
-  // 입력 업데이트
   socket.on('updateInput', (input) => {
     if (players[socket.id]) {
       players[socket.id].input = input;
     }
   });
 
-  // 채팅
   socket.on('chatMessage', (msg) => {
     const nickname = players[socket.id]?.nickname || 'Unknown';
     io.emit('chatMessage', { sender: nickname, message: msg });
   });
 
-  // 연결 종료
   socket.on('disconnect', () => {
     console.log('❌ User disconnected:', socket.id);
     delete players[socket.id];
@@ -88,7 +81,6 @@ io.on('connection', (socket) => {
 setInterval(() => {
   const delta = 1 / 60;
 
-  // 입력에 따라 바디에 힘 적용
   Object.keys(players).forEach((id) => {
     const player = players[id];
     const body = bodies[id];
@@ -96,20 +88,11 @@ setInterval(() => {
 
     const force = new CANNON.Vec3();
 
-    if (player.input.accel) {
-      force.z -= 1000;
-    }
-    if (player.input.brake) {
-      force.z += 1000;
-    }
-    if (player.input.left) {
-      body.angularVelocity.y += 0.05;
-    }
-    if (player.input.right) {
-      body.angularVelocity.y -= 0.05;
-    }
+    if (player.input.accel) force.z -= 1000;
+    if (player.input.brake) force.z += 1000;
+    if (player.input.left) body.angularVelocity.y += 0.05;
+    if (player.input.right) body.angularVelocity.y -= 0.05;
 
-    // 자동차 방향에 따라 로컬 Z축 기준으로 힘 적용
     const q = body.quaternion;
     const f = q.vmult(force);
     body.applyForce(f, body.position);
@@ -117,7 +100,6 @@ setInterval(() => {
 
   world.step(delta);
 
-  // 모든 플레이어 위치/회전 업데이트
   Object.keys(players).forEach((id) => {
     const body = bodies[id];
     if (body) {
@@ -135,7 +117,20 @@ setInterval(() => {
     }
   });
 
-  io.emit('updatePlayers', players);
+  // 가볍게 정리해서 클라이언트로 전송
+  const simplifiedPlayers = {};
+  Object.keys(players).forEach((id) => {
+    simplifiedPlayers[id] = {
+      nickname: players[id].nickname,
+      carModel: players[id].carModel,
+      carColor: players[id].carColor,
+      position: players[id].position,
+      rotation: players[id].rotation,
+      gear: players[id].gear
+    };
+  });
+
+  io.emit('updatePlayers', simplifiedPlayers);
 }, 1000 / 60);
 
 // 서버 시작
