@@ -166,29 +166,6 @@
 <script src="https://cdn.jsdelivr.net/npm/three@0.152.2/examples/js/loaders/FontLoader.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.152.2/examples/js/geometries/TextGeometry.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/cannon-es@0.20.0/dist/cannon-es.js"></script>
- 
-    <script>
-    
-    const socket = io(); // 서버와 연결
-    document.getElementById('startButton').addEventListener('click', () => {
-  const nickname = document.getElementById('nicknameInput').value.trim();
-  const carColor = document.getElementById('colorInput').value;
-
-  if (!nickname) {
-    alert('닉네임을 입력하세요!');
-    return;
-  }
-
-  // 서버로 참가 요청 전송
-  socket.emit('joinGame', {
-    nickname,
-    carModel: 'GrandeurIG',
-    carColor,
-  });
-
-  document.getElementById('startMenu').style.display = 'none'; // 메뉴 숨김
-  startGame(); // 게임 로직 시작
-});
     
   <script>
     
