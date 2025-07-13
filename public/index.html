@@ -186,16 +186,6 @@
   startGame(modelName, color, nickname);
 });
 
-
- const carModel = document.getElementById('modelSelect').value;
-
-socket.emit('joinGame', {
-  nickname,
-  carModel,
-  carColor,
-});
-startGame(carModel, carColor);
-
 let font;
 const fontLoader = new FontLoader();
 fontLoader.load('https://cdn.jsdelivr.net/npm/three@0.152.2/examples/fonts/helvetiker_regular.typeface.json', loadedFont => {
