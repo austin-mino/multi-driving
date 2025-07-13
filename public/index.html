@@ -499,21 +499,6 @@ function createSUVCar(color = '#ffffff') {
 
   return group;
 }
-
-function startGame(model, color) {
-  let carMesh;
-
-  if (model === 'GrandeurIG') {
-    carMesh = createGrandeurIGCarDetailed(color);
-  } else if (model === 'SportsCar') {
-    carMesh = createSportsCar(color);
-  } else if (model === 'SUV') {
-    carMesh = createSUVCar(color);
-  }
-
-  scene.add(carMesh);
-  // carMesh를 자동차 물리 바디에 연결하거나 카메라 추적 등 추가
-}
       
     // 차량용 RaycastVehicle 설정
     const vehicle = new CANNON.RaycastVehicle({
