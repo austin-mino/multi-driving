@@ -755,6 +755,7 @@ if (input.left) {
 // ----------------- 멀티플레이 관련 추가 코드 -----------------
 
 let playerId = null; 
+  let otherPlayers = {};  
   socket.on('playerId', (id) => {
   playerId = id; // 저장용
   console.log('내 ID:', id); // 디버깅용
@@ -824,13 +825,41 @@ socket.on('updatePlayers', async (players) => {
   for (const [id, player] of Object.entries(players)) {
     if (id === playerId) continue;
 
+    // 새 플레이어 차량 추가
     if (!otherPlayers[id]) {
-      const otherCar = createGrandeurIGCarDetailed();
-
-      // async/await를 쓰려면 이 함수가 async 여야 함
+      const otherCar = createGrandeurIGCarDetailed(player.carColor || '#aaaaaa');
       const nicknameText = await createTextMesh(player.nickname);
       nicknameText.position.set(0, 2, 0);
       otherCar.add(nicknameText);
+
+      otherCar.position.set(player.position.x, player.position.y, player.position.z);
+      otherCar.quaternion.set(
+        player.rotation.x, player.rotation.y,
+        player.rotation.z, player.rotation.w
+      );
+
+      scene.add(otherCar);
+      otherPlayers[id] = otherCar;
+    } else {
+      // 기존 차량 위치 업데이트
+      const otherCar = otherPlayers[id];
+      otherCar.position.set(player.position.x, player.position.y, player.position.z);
+      otherCar.quaternion.set(
+        player.rotation.x, player.rotation.y,
+        player.rotation.z, player.rotation.w
+      );
+    }
+  }
+
+  // 연결 끊긴 플레이어 정리
+  for (const id in otherPlayers) {
+    if (!players[id]) {
+      scene.remove(otherPlayers[id]);
+      delete otherPlayers[id];
+    }
+  }
+});
+;
 
 
       // 차량 색상 적용 (간단하게 본체만 색칠, 필요시 확장 가능)
