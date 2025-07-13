@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
+  <link rel="icon" href="data:,">
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>multi driving</title>
@@ -162,30 +163,29 @@
     <!-- 카메라 토글 버튼 -->
 <button id="btnToggleCam" class="controlBtn">C: ON</button>
 
-<script src="https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.152.2/examples/js/loaders/FontLoader.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.152.2/examples/js/geometries/TextGeometry.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/cannon-es@0.20.0/dist/cannon-es.js"></script>
-    
-  <script>
+<script type="module">
+  // Three.js, FontLoader, TextGeometry 모듈 import
+  import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.module.js';
+  import { FontLoader } from 'https://cdn.jsdelivr.net/npm/three@0.152.2/examples/jsm/loaders/FontLoader.js';
+  import { TextGeometry } from 'https://cdn.jsdelivr.net/npm/three@0.152.2/examples/jsm/geometries/TextGeometry.js';
 
-    document.getElementById('startButton').addEventListener('click', () => {
-      const nickname = document.getElementById('nicknameInput').value || 'Player';
-      const modelName = document.getElementById('modelSelect').value || 'GrandeurIG';
-      const color = document.getElementById('colorInput').value || '#ffffff';
-
-      startGame(modelName, color, nickname);
-    });
+  // cannon-es ES 모듈 import
+  import * as CANNON from 'https://cdn.jsdelivr.net/npm/cannon-es@0.20.0/dist/cannon-es.js';
     
     const socket = io(); // 서버와 연결
     document.getElementById('startButton').addEventListener('click', () => {
   const nickname = document.getElementById('nicknameInput').value.trim();
-  const carColor = document.getElementById('colorInput').value;
+  const modelName = document.getElementById('modelSelect').value || 'GrandeurIG';
+  const color = document.getElementById('colorInput').value || '#ffffff';
 
   if (!nickname) {
     alert('닉네임을 입력하세요!');
     return;
   }
+
+  startGame(modelName, color, nickname);
+});
+
 
  const carModel = document.getElementById('modelSelect').value;
 
