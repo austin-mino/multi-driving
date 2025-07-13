@@ -123,6 +123,13 @@
   <h2>게임 시작</h2>
   <label>닉네임: <input type="text" id="nicknameInput" placeholder="Your Name" /></label><br /><br />
   <label>차 색상: <input type="color" id="colorInput" value="#ffffff" /></label><br /><br />
+    <!-- 자동차 모델 선택 -->
+<label for="modelSelect">자동차 모델 선택:</label>
+<select id="modelSelect">
+  <option value="GrandeurIG">그랜저 IG</option>
+  <option value="SportsCar">스포츠카</option>
+  <option value="SUV">SUV</option>
+</select>
   <button id="startButton" style="padding: 10px 20px; font-size: 16px;">게임 시작</button>
 </div>
 
@@ -493,7 +500,32 @@ group.add(tailBar);
 
   return group;
 }
-  
+
+      function createSportsCar(color = '#ffffff') {
+  const group = new THREE.Group();
+
+  const body = new THREE.Mesh(
+    new THREE.BoxGeometry(3.5, 1.2, 1.6),
+    new THREE.MeshStandardMaterial({ color })
+  );
+  body.position.y = 1;
+  group.add(body);
+
+  return group;
+}
+
+function createSUVCar(color = '#ffffff') {
+  const group = new THREE.Group();
+
+  const body = new THREE.Mesh(
+    new THREE.BoxGeometry(4, 1.6, 2),
+    new THREE.MeshStandardMaterial({ color })
+  );
+  body.position.y = 1.2;
+  group.add(body);
+
+  return group;
+}
     // 차량용 RaycastVehicle 설정
     const vehicle = new CANNON.RaycastVehicle({
       chassisBody,
@@ -911,14 +943,27 @@ setInterval(sendPlayerState, 50);
 
       renderer.render(scene, camera);
     }
-function startGame() {
+      
+  function startGame(modelName = 'GrandeurIG', color = '#ffffff') {
+  switch (modelName) {
+    case 'GrandeurIG':
+      carModel = createGrandeurIGCarDetailed(color);
+      break;
+    case 'SportsCar':
+      carModel = createSportsCar(color);
+      break;
+    case 'SUV':
+      carModel = createSUVCar(color);
+      break;
+    default:
+      carModel = createGrandeurIGCarDetailed(color);
+  }
+
+  scene.add(carModel);
   startTimer();
   updateGearDisplay();
-  // 차량 모델 만들기 (색상 적용)
-  const color = document.getElementById('colorInput').value;
-  carModel = createGrandeurIGCarDetailed(color);
-  scene.add(carModel);
-  animate(); // ← 기존 animate() 호출을 여기로 옮기세요
+  animate();
+  }
 }
     
   </script>
