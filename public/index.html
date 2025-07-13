@@ -817,12 +817,10 @@ function sendPlayerState() {
   });
 }
 
-// 서버가 보내는 모든 플레이어 정보 수신
 socket.on('updatePlayers', async (players) => {
   for (const [id, player] of Object.entries(players)) {
     if (id === playerId) continue;
 
-    // 새 플레이어 차량 추가
     if (!otherPlayers[id]) {
       const otherCar = createGrandeurIGCarDetailed(player.carColor || '#aaaaaa');
       const nicknameText = await createTextMesh(player.nickname);
@@ -838,7 +836,6 @@ socket.on('updatePlayers', async (players) => {
       scene.add(otherCar);
       otherPlayers[id] = otherCar;
     } else {
-      // 기존 차량 위치 업데이트
       const otherCar = otherPlayers[id];
       otherCar.position.set(player.position.x, player.position.y, player.position.z);
       otherCar.quaternion.set(
@@ -848,15 +845,13 @@ socket.on('updatePlayers', async (players) => {
     }
   }
 
-  // 연결 끊긴 플레이어 정리
   for (const id in otherPlayers) {
     if (!players[id]) {
       scene.remove(otherPlayers[id]);
       delete otherPlayers[id];
     }
   }
-});
-;
+}); // 여기서 닫힘
 
 
       // 차량 색상 적용 (간단하게 본체만 색칠, 필요시 확장 가능)
