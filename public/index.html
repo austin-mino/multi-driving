@@ -881,7 +881,6 @@ socket.on('updatePlayers', async (players) => {
     car.quaternion.set(player.rotation.x, player.rotation.y, player.rotation.z, player.rotation.w);
 
     otherPlayers[id].lastUpdate = performance.now();
-  }
 
   // 서버에서 없어진 플레이어 차량 제거 (접속 종료)
   for (const id of Object.keys(otherPlayers)) {
@@ -891,7 +890,6 @@ socket.on('updatePlayers', async (players) => {
     }
   }
 });
-
 // 매 프레임 또는 50ms 간격으로 내 위치/상태 서버 전송
 setInterval(sendPlayerState, 50);
 
