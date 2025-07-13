@@ -934,7 +934,7 @@ setInterval(sendPlayerState, 50);
       
   function startGame(modelName = 'GrandeurIG', color = '#ffffff') {
     socket.emit('joinGame', {
-  nickname: userNickname,
+  nickname: nickname,
   carModel: modelName,   // startGame(modelName, color) 안에서 받은 modelName 사용
   carColor: color
 });
