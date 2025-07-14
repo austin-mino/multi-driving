@@ -282,7 +282,7 @@ renderer.domElement.addEventListener('touchcancel', onPointerUp);
     });
 document.getElementById('btnReset').addEventListener('click', resetCar);
 window.addEventListener('keydown', e => {
-  if (e.key.toLowerCase() === 'r') resetCar();
+  if (e.key?.toLowerCase() === 'r') resetCar();
 });
 
 function resetCar() {
