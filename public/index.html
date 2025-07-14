@@ -915,6 +915,24 @@ switch (player.carModel) {
         wheelHolders[i].quaternion.copy(t.quaternion);
       }
 
+       // 💡 상대방 차량 위치 보간 처리
+  const now = performance.now();
+  for (const id in otherPlayers) {
+    const player = otherPlayers[id];
+    const model = player.model;
+    const targetPos = player.targetPosition;
+    const targetQuat = player.targetQuaternion;
+
+    if (targetPos && targetQuat) {
+      // 위치 보간
+      model.position.lerp(targetPos, 0.2);
+
+      // 회전 보간
+      THREE.Quaternion.slerp(model.quaternion, targetQuat, model.quaternion, 0.2);
+    }
+  }
+
+
       // 속도 UI 업데이트
       hud.textContent = `속도: ${getSpeedKmH().toFixed(1)} km/h`;
 
