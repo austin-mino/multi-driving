@@ -85,17 +85,35 @@ io.on('connection', (socket) => {
    * }
    */
   socket.on('updatePosition', (data) => {
-    if (!players[socket.id]) {
-      // 만약 플레이어가 아직 등록 안 됐으면 무시
-      return;
-    }
+  if (!players[socket.id]) {
+    // 플레이어가 등록 안 됐으면 무시
+    return;
+  }
 
-    // 받은 데이터가 있으면 저장, 없으면 기존 상태 유지
-    players[socket.id].position = data.position || players[socket.id].position;
-    players[socket.id].rotation = data.rotation || players[socket.id].rotation;
-    players[socket.id].gear = data.gear || players[socket.id].gear;
-    players[socket.id].input = data.input || players[socket.id].input;
-  });
+  if (
+    data.position &&
+    typeof data.position.x === 'number' &&
+    typeof data.position.y === 'number' &&
+    typeof data.position.z === 'number'
+  ) {
+    players[socket.id].position = data.position;
+  }
+
+  if (
+    data.rotation &&
+    typeof data.rotation.x === 'number' &&
+    typeof data.rotation.y === 'number' &&
+    typeof data.rotation.z === 'number' &&
+    typeof data.rotation.w === 'number'
+  ) {
+    players[socket.id].rotation = data.rotation;
+  }
+
+  if (typeof data.gear === 'string') {
+    players[socket.id].gear = data.gear;
+  }
+});
+
 
   /**
    * 클라이언트가 별도로 입력 상태만 보낼 수도 있음 (선택 사항)
