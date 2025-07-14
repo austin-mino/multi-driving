@@ -819,6 +819,7 @@ function sendPlayerState() {
   });
 }
 // 예시: 키 입력 처리 후
+socket.emit('updateInput', input);
 socket.on('updatePlayers', async (players) => {
   for (const [id, player] of Object.entries(players)) {
     if (id === playerId) continue;
