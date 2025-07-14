@@ -820,7 +820,6 @@ function sendPlayerState() {
 }
 // 예시: 키 입력 처리 후
 socket.emit('updateInput', input);
-  const targetQuaternion = new THREE.Quaternion(); // 회전 보간용
 socket.on('updatePlayers', async (players) => {
   for (const [id, player] of Object.entries(players)) {
     if (id === playerId) continue;
