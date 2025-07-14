@@ -838,10 +838,14 @@ socket.on('updatePlayers', async (players) => {
           otherCar = createGrandeurIGCarDetailed(player.carColor || '#aaaaaa');
       }
 
-      // 닉네임 표시
-      const nicknameText = await createTextMesh(player.nickname);
-      nicknameText.position.set(0, 2, 0);
-      otherCar.add(nicknameText);
+      // ✅ 닉네임 텍스트 생성 (에러 방지 및 1회만)
+      try {
+        const nicknameText = await createTextMesh(player.nickname);
+        nicknameText.position.set(0, 2, 0);
+        otherCar.add(nicknameText);
+      } catch (e) {
+        console.error('❌ 닉네임 텍스트 생성 실패:', e);
+      }
 
       scene.add(otherCar);
 
@@ -881,6 +885,7 @@ socket.on('updatePlayers', async (players) => {
     }
   }
 });
+
 
 // 매 프레임 또는 50ms 간격으로 내 위치/상태 서버 전송
   setInterval(() => {
