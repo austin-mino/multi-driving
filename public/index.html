@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>multi driving</title>
   
-  </script>// server.js
+  <script>// server.js
 const express = require('express');
 const app = express();
 const http = require('http').createServer(app);
@@ -176,6 +176,7 @@ function gracefulShutdown() {
 
 process.on('SIGINT', gracefulShutdown);
 process.on('SIGTERM', gracefulShutdown);
+  </script>
 
   <style>
     body {
