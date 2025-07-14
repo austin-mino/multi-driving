@@ -820,62 +820,60 @@ function sendPlayerState() {
 }
 // 예시: 키 입력 처리 후
 socket.emit('updateInput', input);
-
 socket.on('updatePlayers', async (players) => {
-   console.log('📡 Received players:', players);
   for (const [id, player] of Object.entries(players)) {
     if (id === playerId) continue;
 
     if (!otherPlayers[id]) {
       let otherCar;
-switch (player.carModel) {
-  case 'SportsCar':
-    otherCar = createSportsCar(player.carColor || '#aaaaaa');
-    break;
-  case 'SUV':
-    otherCar = createSUVCar(player.carColor || '#aaaaaa');
-    break;
-  default:
-    otherCar = createGrandeurIGCarDetailed(player.carColor || '#aaaaaa');
-}
+
+      switch (player.carModel) {
+        case 'SportsCar':
+          otherCar = createSportsCar(player.carColor || '#aaaaaa');
+          break;
+        case 'SUV':
+          otherCar = createSUVCar(player.carColor || '#aaaaaa');
+          break;
+        default:
+          otherCar = createGrandeurIGCarDetailed(player.carColor || '#aaaaaa');
+      }
+
+      // 닉네임 표시
       const nicknameText = await createTextMesh(player.nickname);
       nicknameText.position.set(0, 2, 0);
       otherCar.add(nicknameText);
 
-      // 차량 색상 적용
-      otherCar.traverse(child => {
-        if (child.isMesh) {
-          child.material = child.material.clone();
-          try {
-            child.material.color = new THREE.Color(player.carColor || '#888888');
-          } catch (e) {}
-        }
-      });
-
-      otherCar.position.set(player.position.x, player.position.y, player.position.z);
-      otherCar.quaternion.set(
-        player.rotation.x, player.rotation.y,
-        player.rotation.z, player.rotation.w
-      );
-
       scene.add(otherCar);
+
       otherPlayers[id] = {
         model: otherCar,
-        lastUpdate: performance.now()
+        targetPosition: new THREE.Vector3(player.position.x, player.position.y, player.position.z),
+        targetQuaternion: new THREE.Quaternion(
+          player.rotation.x, player.rotation.y, player.rotation.z, player.rotation.w
+        ),
       };
     } else {
-      const car = otherPlayers[id].model;
-      car.position.set(player.position.x, player.position.y, player.position.z);
-      car.quaternion.set(
-        player.rotation.x, player.rotation.y,
-        player.rotation.z, player.rotation.w
-      );
+      const playerData = otherPlayers[id];
 
-      otherPlayers[id].lastUpdate = performance.now();
+      // ✅ 위치/회전 보간용 타겟 업데이트
+      playerData.targetPosition.set(player.position.x, player.position.y, player.position.z);
+      playerData.targetQuaternion.set(player.rotation.x, player.rotation.y, player.rotation.z, player.rotation.w);
+
+      // ✅ 차량 색상 업데이트 (변경 시만 반영)
+      playerData.model.traverse(child => {
+        if (child.isMesh && child.material && child.material.color) {
+          const newColor = new THREE.Color(player.carColor || '#888888');
+
+          if (!child.material.color.equals(newColor)) {
+            child.material = child.material.clone(); // 공유 방지
+            child.material.color.copy(newColor);
+          }
+        }
+      });
     }
   }
 
-  // 서버에서 없어진 플레이어 제거
+  // 제거된 플레이어 처리
   for (const id of Object.keys(otherPlayers)) {
     if (!players[id]) {
       scene.remove(otherPlayers[id].model);
