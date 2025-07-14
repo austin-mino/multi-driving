@@ -1,4 +1,3 @@
-// server.js
 const express = require('express');
 const app = express();
 const http = require('http').createServer(app);
@@ -10,38 +9,14 @@ const io = require('socket.io')(http, {
   },
 });
 
-const CANNON = require('cannon-es');
-
 const PORT = process.env.PORT || 3000;
 
 // 정적 파일 서비스
 app.use(express.static('public'));
 
-// 물리 월드 초기화
-const world = new CANNON.World();
-world.gravity.set(0, -9.82, 0);
-world.broadphase = new CANNON.NaiveBroadphase();
-world.solver.iterations = 10;
-
 const players = {};
-const bodies = {};
 
-// 플레이어 입력 → 물리력 적용 함수
-function applyPlayerInputToBody(player, body) {
-  if (!player.input) return;
-
-  const force = new CANNON.Vec3();
-
-  if (player.input.accel) force.z -= 1000;
-  if (player.input.brake) force.z += 1000;
-  if (player.input.left) body.angularVelocity.y += 0.05;
-  if (player.input.right) body.angularVelocity.y -= 0.05;
-
-  const q = body.quaternion;
-  const f = q.vmult(force);
-  body.applyForce(f, body.position);
-}
-
+// 클라이언트 접속 이벤트
 io.on('connection', (socket) => {
   console.log('🔌 User connected:', socket.id);
 
@@ -49,6 +24,7 @@ io.on('connection', (socket) => {
     try {
       console.log(`🚗 ${data.nickname} joined`);
 
+      // 플레이어 초기 상태 등록 (물리 바디는 없음)
       players[socket.id] = {
         nickname: data.nickname || 'Unknown',
         carModel: data.carModel || 'DefaultCar',
@@ -59,30 +35,20 @@ io.on('connection', (socket) => {
         gear: 'P',
       };
 
-      const body = new CANNON.Body({
-        mass: 1500,
-        shape: new CANNON.Box(new CANNON.Vec3(2, 1, 4)),
-        position: new CANNON.Vec3(500, 0.5, 0),
-        linearDamping: 0.5,
-        angularDamping: 0.5,
-      });
-
-      world.addBody(body);
-      bodies[socket.id] = body;
-
       socket.emit('playerId', socket.id);
     } catch (e) {
       console.error('joinGame error:', e);
     }
   });
 
+  // 클라이언트가 직접 계산한 위치/회전/기어/입력 받음
   socket.on('updatePosition', (data) => {
     if (!players[socket.id]) return;
 
-    players[socket.id].position = data.position;
-    players[socket.id].rotation = data.rotation;
-    players[socket.id].input = data.input;
-    players[socket.id].gear = data.gear;
+    players[socket.id].position = data.position || players[socket.id].position;
+    players[socket.id].rotation = data.rotation || players[socket.id].rotation;
+    players[socket.id].input = data.input || players[socket.id].input;
+    players[socket.id].gear = data.gear || players[socket.id].gear;
   });
 
   socket.on('updateInput', (input) => {
@@ -99,65 +65,18 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => {
     console.log('❌ User disconnected:', socket.id);
     delete players[socket.id];
-    if (bodies[socket.id]) {
-      world.removeBody(bodies[socket.id]);
-      delete bodies[socket.id];
-    }
   });
 });
 
-// 물리 시뮬레이션 (60FPS)
+// 50ms 주기로 전체 플레이어 상태 브로드캐스트 (약 20FPS)
 setInterval(() => {
-  const delta = 1 / 60;
+  io.emit('updatePlayers', players);
+}, 50);
 
-  Object.keys(players).forEach((id) => {
-    const player = players[id];
-    const body = bodies[id];
-    if (!body || !player.input) return;
-
-    applyPlayerInputToBody(player, body);
-  });
-
-  world.step(delta);
-
-  Object.keys(players).forEach((id) => {
-    const body = bodies[id];
-    if (body) {
-      players[id].position = {
-        x: body.position.x,
-        y: body.position.y,
-        z: body.position.z,
-      };
-      players[id].rotation = {
-        x: body.quaternion.x,
-        y: body.quaternion.y,
-        z: body.quaternion.z,
-        w: body.quaternion.w,
-      };
-    }
-  });
-
-  const simplifiedPlayers = {};
-  Object.keys(players).forEach((id) => {
-    simplifiedPlayers[id] = {
-      nickname: players[id].nickname,
-      carModel: players[id].carModel,
-      carColor: players[id].carColor,
-      position: players[id].position,
-      rotation: players[id].rotation,
-      gear: players[id].gear,
-    };
-  });
-
-  io.emit('updatePlayers', simplifiedPlayers);
-}, 1000 / 60);
-
-// 서버 시작 (0.0.0.0 바인딩 필수)
 http.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
 
-// 서버 종료 시 처리 (선택)
 function gracefulShutdown() {
   console.log('🛑 Server shutting down...');
   io.close(() => {
