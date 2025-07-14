@@ -822,7 +822,17 @@ socket.on('updatePlayers', async (players) => {
     if (id === playerId) continue;
 
     if (!otherPlayers[id]) {
-      const otherCar = createGrandeurIGCarDetailed(player.carColor || '#aaaaaa');
+      let otherCar;
+switch (player.carModel) {
+  case 'SportsCar':
+    otherCar = createSportsCar(player.carColor || '#aaaaaa');
+    break;
+  case 'SUV':
+    otherCar = createSUVCar(player.carColor || '#aaaaaa');
+    break;
+  default:
+    otherCar = createGrandeurIGCarDetailed(player.carColor || '#aaaaaa');
+}
       const nicknameText = await createTextMesh(player.nickname);
       nicknameText.position.set(0, 2, 0);
       otherCar.add(nicknameText);
