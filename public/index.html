@@ -191,7 +191,8 @@ import * as CANNON from 'https://cdn.jsdelivr.net/npm/cannon-es@0.20.0/dist/cann
   const nickname = document.getElementById('nicknameInput').value.trim();
   const modelName = document.getElementById('modelSelect').value || 'GrandeurIG';
   const color = document.getElementById('colorInput').value || '#ffffff';
-
+let loadedFont = null;
+const fontLoader = new THREE.FontLoader();
   if (!nickname) {
     alert('닉네임을 입력하세요!');
     return;
