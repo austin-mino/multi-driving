@@ -803,9 +803,6 @@ async function createTextMesh(text) {
 function sendPlayerState() {
   if (!playerId) return;
 
-  // 서버에서 playerId를 socket.id로 설정해서 클라이언트에 보내줘야 함
-socket.emit('playerInfo', { playerId: socket.id });
-
   socket.emit('updatePosition', {
     position: {
       x: chassisBody.position.x,
