@@ -884,21 +884,8 @@ switch (player.carModel) {
 
 // 매 프레임 또는 50ms 간격으로 내 위치/상태 서버 전송
 setInterval(() => {
-  socket.emit('updateInput', {
-    input: input,   // 유저 입력 상태
-    position: {
-      x: player.position.x,
-      y: player.position.y,
-      z: player.position.z,
-    },
-    rotation: {
-      x: player.rotation.x,
-      y: player.rotation.y,
-      z: player.rotation.z,
-    },
-    gear: player.gear,
-  });
-}, 50); // 50ms마다 실행
+  socket.emit('updateInput', input);
+}, 50);
 
 
 // ------------------------------------------------------------
