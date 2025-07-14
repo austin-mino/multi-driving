@@ -889,6 +889,11 @@ switch (player.carModel) {
     socket.emit('updateInput', input);
   }, 50);
 
+  // 위치 상태 전송
+setInterval(() => {
+  sendPlayerState();
+}, 50);
+
 // ------------------------------------------------------------
 
     
