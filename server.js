@@ -56,6 +56,16 @@ io.on('connection', (socket) => {
     socket.emit('playerId', socket.id);
   });
 
+  socket.on('updatePosition', (data) => {
+if (!players[socket.id]) return;
+
+// 위치/회전 수신 → 서버 데이터 갱신
+players[socket.id].position = data.position;
+players[socket.id].rotation = data.rotation;
+players[socket.id].input = data.input;
+players[socket.id].gear = data.gear;
+});
+
   socket.on('updateInput', (input) => {
     if (players[socket.id]) {
       players[socket.id].input = input;
