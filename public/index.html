@@ -931,8 +931,7 @@ setInterval(() => {
       model.position.lerp(targetPos, 0.2);
 
       // 회전 보간
-      THREE.Quaternion.slerp(model.quaternion, targetQuat, model.quaternion, 0.2);
-    }
+     model.quaternion.slerp(targetQuaternion, 0.1);}
   }
 
 
