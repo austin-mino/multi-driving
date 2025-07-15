@@ -304,6 +304,7 @@ function getYRotation(q) {
   const siny_cosp = 2 * (q.w * q.y + q.z * q.x);
   const cosy_cosp = 1 - 2 * (q.y * q.y + q.z * q.z);
   return Math.atan2(siny_cosp, cosy_cosp);
+  
 // --- 1. 물리엔진 월드 초기화 ---
 const world = new CANNON.World({
   gravity: new CANNON.Vec3(0, -9.82, 0),
