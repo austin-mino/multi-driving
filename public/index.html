@@ -305,91 +305,199 @@ function getYRotation(q) {
   const cosy_cosp = 1 - 2 * (q.y * q.y + q.z * q.z);
   return Math.atan2(siny_cosp, cosy_cosp);
 }
-    // ───────────────────────────────────────────────
-// 1. 월드 설정
-const world = new CANNON.World({ gravity: new CANNON.Vec3(0, -9.82, 0) });
-world.broadphase = new CANNON.SAPBroadphase(world);
-world.defaultContactMaterial.friction = 0.6;
 
-// 2. 지면 생성
-const groundBody = new CANNON.Body({ mass: 0 });
-groundBody.addShape(new CANNON.Plane());
-groundBody.quaternion.setFromEuler(-Math.PI / 2, 0, 0);
-world.addBody(groundBody);
+  // --- 도시 & 교외 리얼 넓은 구성 ---
 
-// 3. 트랙 타원 파라미터
-const trackA = 500;  // x 방향 반지름
-const trackB = 60;   // z 방향 반지름
-const trackWidth = 60;
-const numSegments = 400; // 트랙 구성 정밀도
+// --- 1. 도심 빌딩 (랜덤 크기와 밀도 증가) ---
+const buildingMat = new THREE.MeshStandardMaterial({ color: 0xaaaaaa, roughness: 0.7, metalness: 0.2 });
+const cityCenterRadius = 600;
+const cityBuildingCount = 60;
 
-// 4. 바리어 생성
-const barrierHeight = 1;
-const barrierThickness = 1;
-const barrierLength = 25;
+for (let i = 0; i < cityBuildingCount; i++) {
+  const height = 40 + Math.random() * 150;
+  const sizeX = 15 + Math.random() * 25;
+  const sizeZ = 15 + Math.random() * 25;
 
-// Three.js 재질 재사용
-const barrierMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
-const barrierMeshes = [];
+  // 원형 배치 + 랜덤 약간 변형
+  const angle = Math.random() * Math.PI * 2;
+  const radius = Math.random() * cityCenterRadius * 0.8;
 
-for (let i = 0; i < numSegments; i++) {
-  const angle = (i / numSegments) * 2 * Math.PI;
-
-  // 중앙 타원 경로 좌표
-  const cx = Math.cos(angle);
-  const sz = Math.sin(angle);
-
-  const innerX = (trackA - trackWidth / 2) * cx;
-  const innerZ = (trackB - trackWidth / 2) * sz;
-
-  const outerX = (trackA + trackWidth / 2) * cx;
-  const outerZ = (trackB + trackWidth / 2) * sz;
-
-  // 회전각: 접선 방향을 따라 회전
-  const rotationY = -Math.atan2(
-    (trackB * Math.cos(angle)),
-    (-trackA * Math.sin(angle))
+  const building = new THREE.Mesh(
+    new THREE.BoxGeometry(sizeX, height, sizeZ),
+    buildingMat
+  );
+  building.position.set(
+    Math.cos(angle) * radius,
+    height / 2,
+    Math.sin(angle) * radius
   );
 
-  // 왼쪽(안쪽) 바리어
-  [innerX, innerZ].forEach((_, index) => {
-    const isInner = index === 0;
-    const x = isInner ? innerX : outerX;
-    const z = isInner ? innerZ : outerZ;
+  // 약간 랜덤 회전
+  building.rotation.y = (Math.random() - 0.5) * 0.3;
 
-    const barrierShape = new CANNON.Box(new CANNON.Vec3(barrierLength / 2, barrierHeight / 2, barrierThickness / 2));
-    const barrierBody = new CANNON.Body({ mass: 0 });
-    barrierBody.addShape(barrierShape);
-    barrierBody.position.set(x, barrierHeight / 3, z);
-    barrierBody.quaternion.setFromEuler(0, rotationY, 0);
-    world.addBody(barrierBody);
-
-    const barrierGeom = new THREE.BoxGeometry(barrierLength, barrierHeight, barrierThickness);
-    const barrierMesh = new THREE.Mesh(barrierGeom, barrierMat);
-    barrierMesh.position.copy(barrierBody.position);
-    barrierMesh.quaternion.copy(barrierBody.quaternion);
-    scene.add(barrierMesh);
-    barrierMeshes.push(barrierMesh);
-  });
+  scene.add(building);
 }
-    const trackShape = new THREE.Shape();
-for (let i = 0; i <= numSegments; i++) {
-  const angle = (i / numSegments) * 2 * Math.PI;
-  const x = trackA * Math.cos(angle);
-  const z = trackB * Math.sin(angle);
-  if (i === 0) {
-    trackShape.moveTo(x, z);
-  } else {
-    trackShape.lineTo(x, z);
+
+// --- 2. 넓은 도로, 인도, 횡단보도 ---
+
+// 도로 (길고 넓게)
+const roadLength = 1200;
+const roadWidth = 120;
+const roadMat = new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.6 });
+const road = new THREE.Mesh(new THREE.PlaneGeometry(roadLength, roadWidth), roadMat);
+road.rotation.x = -Math.PI / 2;
+road.position.set(0, 0.01, 0);
+scene.add(road);
+
+// 인도 좌우 (좁게 분리)
+const sidewalkWidth = 30;
+const sidewalkMat = new THREE.MeshStandardMaterial({ color: 0x999999, roughness: 0.9 });
+const sidewalkL = new THREE.Mesh(new THREE.PlaneGeometry(roadLength, sidewalkWidth), sidewalkMat);
+sidewalkL.rotation.x = -Math.PI / 2;
+sidewalkL.position.set(0, 0.02, -(roadWidth / 2 + sidewalkWidth / 2));
+scene.add(sidewalkL);
+
+const sidewalkR = sidewalkL.clone();
+sidewalkR.position.z = roadWidth / 2 + sidewalkWidth / 2;
+scene.add(sidewalkR);
+
+// 횡단보도 여러 개
+const crosswalkWhiteMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
+const crosswalkBlackMat = new THREE.MeshStandardMaterial({ color: 0x222222 });
+const stripeCount = 18;
+const stripeWidth = 3;
+const stripeLength = 25;
+
+function createCrosswalk(x, z, rotationY = 0) {
+  const group = new THREE.Group();
+  for (let i = 0; i < stripeCount; i++) {
+    const mat = i % 2 === 0 ? crosswalkWhiteMat : crosswalkBlackMat;
+    const stripe = new THREE.Mesh(new THREE.BoxGeometry(stripeWidth, 0.1, stripeLength), mat);
+    stripe.position.set(- (stripeCount * stripeWidth) / 2 + i * stripeWidth + stripeWidth / 2, 0.05, 0);
+    group.add(stripe);
   }
+  group.position.set(x, 0.01, z);
+  group.rotation.y = rotationY;
+  scene.add(group);
 }
-const extrudeSettings = { depth:0.1, bevelEnabled: false };
-const geometry = new THREE.ExtrudeGeometry(trackShape, extrudeSettings);
-const material = new THREE.MeshStandardMaterial({ color: 0x222222 });
-const mesh = new THREE.Mesh(geometry, material);
-mesh.rotation.x = -Math.PI / 2;
-mesh.position.y = -trackWidth / 2;  // ← 이 줄 추가
-scene.add(mesh);
+createCrosswalk(0, 0);
+createCrosswalk(200, 60, Math.PI / 2);
+createCrosswalk(-250, -100, Math.PI / 4);
+
+// --- 3. 신호등 (더 현실감 있게 여러 곳에) ---
+const trafficLightMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
+const lightRedMat = new THREE.MeshStandardMaterial({ color: 0xff0000, emissive: 0xff0000 });
+const lightYellowMat = new THREE.MeshStandardMaterial({ color: 0xffff00, emissive: 0xffff00 });
+const lightGreenMat = new THREE.MeshStandardMaterial({ color: 0x00ff00, emissive: 0x00ff00 });
+
+const trafficPositions = [
+  {x: 10, z: -10},
+  {x: 210, z: 55},
+  {x: -240, z: -110},
+  {x: 400, z: 80},
+  {x: -380, z: -90},
+];
+
+trafficPositions.forEach(pos => {
+  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 7), trafficLightMat);
+  pole.position.set(pos.x, 3.5, pos.z);
+  scene.add(pole);
+
+  const box = new THREE.Mesh(new THREE.BoxGeometry(2, 5, 1), trafficLightMat);
+  box.position.set(pos.x, 7, pos.z);
+  scene.add(box);
+
+  const red = new THREE.Mesh(new THREE.SphereGeometry(0.4), lightRedMat);
+  red.position.set(pos.x, 8.5, pos.z + 0.3);
+  scene.add(red);
+
+  const yellow = new THREE.Mesh(new THREE.SphereGeometry(0.4), lightYellowMat);
+  yellow.position.set(pos.x, 7.8, pos.z + 0.3);
+  scene.add(yellow);
+
+  const green = new THREE.Mesh(new THREE.SphereGeometry(0.4), lightGreenMat);
+  green.position.set(pos.x, 7.1, pos.z + 0.3);
+  scene.add(green);
+});
+
+// --- 4. 교외 주택 + 넓은 공원 ---
+
+const houseMat = new THREE.MeshStandardMaterial({ color: 0xd2a679 });
+const houseRoofMat = new THREE.MeshStandardMaterial({ color: 0x663300 });
+
+for (let i = 0; i < 30; i++) {
+  const house = new THREE.Group();
+
+  // 집 몸통
+  const base = new THREE.Mesh(new THREE.BoxGeometry(20, 12, 20), houseMat);
+  base.position.y = 6;
+  house.add(base);
+
+  // 지붕 (삼각형 모양)
+  const roofShape = new THREE.Shape();
+  roofShape.moveTo(-10, -10);
+  roofShape.lineTo(0, 10);
+  roofShape.lineTo(10, -10);
+  roofShape.closePath();
+
+  const extrudeSettings = { depth: 20, bevelEnabled: false };
+  const roofGeom = new THREE.ExtrudeGeometry(roofShape, extrudeSettings);
+  const roof = new THREE.Mesh(roofGeom, houseRoofMat);
+  roof.rotation.x = Math.PI / 2;
+  roof.position.y = 18;
+  roof.position.z = -10;
+  house.add(roof);
+
+  // 위치 지정 (넓은 영역, 규칙적 X 랜덤)
+  house.position.set(
+    -700 + Math.random() * 1400,
+    0,
+    -400 + Math.random() * 600
+  );
+  house.rotation.y = (Math.random() - 0.5) * 0.3;
+  scene.add(house);
+}
+
+// 넓은 잔디 공원 영역
+const parkGrassMat = new THREE.MeshStandardMaterial({ color: 0x2a6e2a });
+const parkArea = new THREE.Mesh(new THREE.PlaneGeometry(700, 400), parkGrassMat);
+parkArea.rotation.x = -Math.PI / 2;
+parkArea.position.set(0, 0, -200);
+scene.add(parkArea);
+
+// --- 5. 공원 나무 (더 많이, 자연스럽게) ---
+const trunkMat = new THREE.MeshStandardMaterial({ color: 0x4d2c19 });
+const leavesMat = new THREE.MeshStandardMaterial({ color: 0x2f6f2f });
+
+for (let i = 0; i < 40; i++) {
+  const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.7, 5), trunkMat);
+  const x = -300 + Math.random() * 600;
+  const z = -350 + Math.random() * 300;
+  trunk.position.set(x, 2.5, z);
+  scene.add(trunk);
+
+  const leaves = new THREE.Mesh(new THREE.SphereGeometry(4 + Math.random() * 2), leavesMat);
+  leaves.position.set(x, 7, z);
+  scene.add(leaves);
+}
+
+// --- 6. 가로등 (많이, 길게) ---
+const lampPostMat = new THREE.MeshStandardMaterial({ color: 0x222222 });
+const lampLightMat = new THREE.MeshStandardMaterial({ color: 0xffffaa, emissive: 0xffffaa });
+
+for (let i = 0; i < 25; i++) {
+  const poleHeight = 15;
+  const x = -600 + i * 50;
+  const z = 100 + (i % 2) * 60;
+
+  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, poleHeight), lampPostMat);
+  pole.position.set(x, poleHeight / 2, z);
+  scene.add(pole);
+
+  const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.8, 12, 12), lampLightMat);
+  bulb.position.set(x, poleHeight + 0.5, z);
+  scene.add(bulb);
+}
 
     // 자동차 차체 물리 (박스)
     const chassisShape = new CANNON.Box(new CANNON.Vec3(1.5, 0.5, 3));
