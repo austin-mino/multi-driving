@@ -408,6 +408,7 @@ scene.add(mesh);
 
   const bodyMat = new THREE.MeshStandardMaterial({ color: color, metalness: 0.6, roughness: 0.4 });
   const mainBody = new THREE.Mesh(new THREE.BoxGeometry(3, 1.2, 6), bodyMat);
+  mainBody.name = 'MainBody';
   mainBody.position.y = 0.6;
   group.add(mainBody);
 
@@ -862,7 +863,7 @@ socket.on('updatePlayers', async (players) => {
 
       // ✅ 차량 색상 업데이트 (변경 시만 반영)
       playerData.model.traverse(child => {
-        if (child.isMesh && child.material && child.material.color) {
+        if (child.isMesh && child.name === 'MainBody' && child.material && child.material.color) {
           const newColor = new THREE.Color(player.carColor || '#888888');
 
           if (!child.material.color.equals(newColor)) {
