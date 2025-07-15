@@ -317,12 +317,15 @@ const groundBody = new CANNON.Body({ mass: 0 });
 groundBody.addShape(new CANNON.Plane());
 groundBody.quaternion.setFromEuler(-Math.PI / 2, 0, 0);
 world.addBody(groundBody);
+groundBody.position.y = -5;  // 지면을 5만큼 아래로 내림
+
 
 const groundGeo = new THREE.PlaneGeometry(5000, 5000);
 const groundMat = new THREE.MeshStandardMaterial({ color: 0x444444 });
 const groundMesh = new THREE.Mesh(groundGeo, groundMat);
 groundMesh.rotation.x = -Math.PI / 2;
 scene.add(groundMesh);
+groundMesh.position.y = -5;  // 물리 엔진과 동일하게 내림
 
 const loader = new FontLoader();
 loader.load('https://threejs.org/examples/fonts/helvetiker_regular.typeface.json', loadedFont => {
@@ -445,10 +448,10 @@ createOuterRingRoad();
 
 
     // 자동차 차체 물리 (박스)
-    const chassisShape = new CANNON.Box(new CANNON.Vec3(1.5, 1.0, 3));
+    const chassisShape = new CANNON.Box(new CANNON.Vec3(1.5, 0.5, 3));
     const chassisBody = new CANNON.Body({ mass: 110 });
     chassisBody.addShape(chassisShape);
-    chassisBody.position.set(500, 1.0, 0);
+    chassisBody.position.set(500, 0.5, 0);
     chassisBody.angularDamping = 0.5;
     chassisBody.linearDamping = 0.0;
     world.addBody(chassisBody);
