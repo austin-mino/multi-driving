@@ -307,6 +307,12 @@ function getYRotation(q) {
 }
 
   // --- 도시 & 교외 리얼 넓은 구성 ---
+  // Cannon-es 물리 엔진 월드 생성 (중력 설정 포함)
+const world = new CANNON.World({
+  gravity: new CANNON.Vec3(0, -9.82, 0), // 중력: y축 아래 방향
+});
+world.broadphase = new CANNON.SAPBroadphase(world);
+world.defaultContactMaterial.friction = 0.6;
 
 // --- 1. 도심 빌딩 (랜덤 크기와 밀도 증가) ---
 const buildingMat = new THREE.MeshStandardMaterial({ color: 0xaaaaaa, roughness: 0.7, metalness: 0.2 });
