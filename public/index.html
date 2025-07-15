@@ -324,8 +324,6 @@ const groundMesh = new THREE.Mesh(groundGeo, groundMat);
 groundMesh.rotation.x = -Math.PI / 2;
 scene.add(groundMesh);
 
-// 폰트 로드 (3D 텍스트용)
-let font = null;
 const loader = new THREE.FontLoader();
 loader.load('https://threejs.org/examples/fonts/helvetiker_regular.typeface.json', loadedFont => {
   font = loadedFont;
