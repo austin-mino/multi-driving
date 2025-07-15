@@ -761,7 +761,7 @@ let playerId = null;
   socket.on('playerId', (id) => {
   playerId = id; // 저장용
   console.log('내 ID:', id); // 디버깅용
-});
+
 
   let loadedFont = null;
   
@@ -890,6 +890,7 @@ if (
     }
   }
 });
+  });
 
 // 매 프레임 또는 50ms 간격으로 내 위치/상태 서버 전송
   setInterval(() => {
