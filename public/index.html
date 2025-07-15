@@ -927,7 +927,7 @@ setInterval(() => {
     const targetPos = player.targetPosition;
     const targetQuat = player.targetQuaternion;
 
-    if (targetPosition && targetQuaternion) {
+    if (targetPos && targetQuat) {
   // 위치 보간
   model.position.lerp(targetPosition, 0.2);
 
