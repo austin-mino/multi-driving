@@ -183,7 +183,7 @@
 import * as THREE from 'three';
 import { FontLoader } from 'https://cdn.jsdelivr.net/npm/three@0.152.2/examples/jsm/loaders/FontLoader.js';
 import { TextGeometry } from 'https://cdn.jsdelivr.net/npm/three@0.152.2/examples/jsm/geometries/TextGeometry.js';
-
+import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import * as CANNON from 'https://cdn.jsdelivr.net/npm/cannon-es@0.20.0/dist/cannon-es.js';
 
     const socket = io('https://multi-driving.onrender.com'); // ← 여기에 배포 주소 정확히 기입
@@ -588,7 +588,7 @@ group.add(tailBar);
 
   return group;
 }
-  
+
 function createSUVCar(color = '#ffffff') {
   const group = new THREE.Group();
 
