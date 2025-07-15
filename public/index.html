@@ -496,7 +496,7 @@ function createSportsCar(color = '#ffffff') {
   const bodyMat = new THREE.MeshStandardMaterial({ color, metalness: 0.6, roughness: 0.4 });
 
   // ✅ 메인 차체: Z축으로 길쭉하게
-  const mainBody = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.9, 5.2), bodyMat);
+  const mainBody = new THREE.Mesh(new THREE.BoxGeometry(3.0, 0.9, 5.2), bodyMat);
   mainBody.name = 'MainBody';
   mainBody.position.y = 0.45;
   group.add(mainBody);
@@ -587,7 +587,7 @@ function createSUVCar(color = '#ffffff') {
   const bodyMat = new THREE.MeshStandardMaterial({ color, metalness: 0.5, roughness: 0.4 });
 
   // ✅ 메인 차체: Z 방향으로 길게 (depth: 5.2)
-  const mainBody = new THREE.Mesh(new THREE.BoxGeometry(2.2, 1.8, 5.2), bodyMat);
+  const mainBody = new THREE.Mesh(new THREE.BoxGeometry(3.0, 1.8, 5.2), bodyMat);
   mainBody.position.y = 0.9;
   group.add(mainBody);
 
