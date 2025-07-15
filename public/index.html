@@ -490,7 +490,7 @@ group.add(tailBar);
   return group;
 }
 
-  function createSportsCar(color = '#ff0000') {
+ function createSportsCar(color = '#ff0000') {
   const group = new THREE.Group();
   group.name = 'SportsCar';
 
@@ -498,67 +498,78 @@ group.add(tailBar);
   const detailMat = new THREE.MeshStandardMaterial({ color: 0x111111, metalness: 0.6, roughness: 0.2 });
   const glassMat = new THREE.MeshStandardMaterial({ color: 0x223344, transparent: true, opacity: 0.5 });
 
-  // 메인 차체 (길고 낮고 넓게)
+  // 메인 차체
   const mainBody = new THREE.Mesh(new THREE.BoxGeometry(3.4, 0.9, 7), bodyMat);
   mainBody.position.set(0, 0.45, 0);
   mainBody.name = 'MainBody';
   group.add(mainBody);
 
-  // 전면 스플리터 (범퍼 아래 얇게 돌출)
+  // 전면 스플리터
   const splitter = new THREE.Mesh(new THREE.BoxGeometry(3.6, 0.1, 0.8), detailMat);
   splitter.position.set(0, 0.15, -3.6);
+  splitter.name = 'Splitter';
   group.add(splitter);
 
   // 에어 인테이크
   const intake = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.25, 0.1), detailMat);
   intake.position.set(0, 0.25, -3.55);
+  intake.name = 'Intake';
   group.add(intake);
 
-  // 루프 (곡선 유리 느낌)
+  // 루프
   const roof = new THREE.Mesh(new THREE.CylinderGeometry(1.3, 1.3, 3.8, 16, 1, true, 0, Math.PI), glassMat);
   roof.rotation.z = Math.PI / 2;
   roof.position.set(0, 1.0, 0);
+  roof.name = 'Roof';
   group.add(roof);
 
-  // 앞 유리창 약간 기울임
+  // 앞 유리창
   const windshield = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.6, 0.05), glassMat);
   windshield.position.set(0, 1.0, -1.6);
   windshield.rotation.x = -Math.PI / 10;
+  windshield.name = 'Windshield';
   group.add(windshield);
 
   // 뒷 유리창
   const rearGlass = windshield.clone();
   rearGlass.position.z = 1.6;
   rearGlass.rotation.x = Math.PI / 12;
+  rearGlass.name = 'RearGlass';
   group.add(rearGlass);
 
-  // 헤드라이트 (날카롭게)
+  // 헤드라이트
   const headlightMat = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 1.0 });
   const headlightL = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.2, 0.1), headlightMat);
   headlightL.position.set(-1.2, 0.55, -3.5);
+  headlightL.name = 'HeadlightL';
   group.add(headlightL);
+
   const headlightR = headlightL.clone();
   headlightR.position.x = 1.2;
+  headlightR.name = 'HeadlightR';
   group.add(headlightR);
 
   // 테일라이트
   const tailMat = new THREE.MeshStandardMaterial({ color: 0xff0000, emissive: 0xff0000, emissiveIntensity: 1.2 });
   const tailBar = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.15, 0.05), tailMat);
   tailBar.position.set(0, 0.6, 3.55);
+  tailBar.name = 'TailLight';
   group.add(tailBar);
 
   // 리어 디퓨저
   const diffuser = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.2, 0.3), detailMat);
   diffuser.position.set(0, 0.2, 3.6);
+  diffuser.name = 'Diffuser';
   group.add(diffuser);
 
   // 스포일러
   const spoiler = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.1, 0.3), detailMat);
   spoiler.position.set(0, 1.1, 3.3);
   spoiler.rotation.x = Math.PI / 18;
+  spoiler.name = 'Spoiler';
   group.add(spoiler);
 
-  // 도어 캐릭터 라인
+  // 도어 캐릭터 라인 - 왼쪽
   const lineMat = new THREE.LineBasicMaterial({ color: 0x333333 });
   const doorLineL = new THREE.Line(
     new THREE.BufferGeometry().setFromPoints([
@@ -567,14 +578,18 @@ group.add(tailBar);
     ]),
     lineMat
   );
+  doorLineL.name = 'DoorLineL';
   group.add(doorLineL);
+
+  // 도어 캐릭터 라인 - 오른쪽
   const doorLineR = doorLineL.clone();
   doorLineR.geometry = doorLineL.geometry.clone();
   doorLineR.position.x = 2.4;
+  doorLineR.name = 'DoorLineR';
   group.add(doorLineR);
 
   return group;
-  }
+}
 
 function createSUVCar(color = '#ffffff') {
   const group = new THREE.Group();
