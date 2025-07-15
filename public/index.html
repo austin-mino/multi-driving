@@ -490,186 +490,214 @@ group.add(tailBar);
   return group;
 }
 
-function createSportsCar(color = '#ffffff') {
+  function createSportsCar(color = '#ffffff') {
   const group = new THREE.Group();
 
-  const bodyMat = new THREE.MeshStandardMaterial({ color, metalness: 0.6, roughness: 0.4 });
-
-  // ✅ 메인 차체: Z축으로 길쭉하게
-  const mainBody = new THREE.Mesh(new THREE.BoxGeometry(3.0, 0.9, 5.2), bodyMat);
+  const bodyMat = new THREE.MeshStandardMaterial({ color: color, metalness: 0.6, roughness: 0.4 });
+  // 메인 차체 높이 1.2 -> 1.0, 위치 y 0.6 -> 0.55 (약간 낮게)
+  const mainBody = new THREE.Mesh(new THREE.BoxGeometry(3, 1.0, 6), bodyMat);
   mainBody.name = 'MainBody';
-  mainBody.position.y = 0.45;
+  mainBody.position.y = 0.55;
   group.add(mainBody);
 
-  // ✅ 루프: 낮고 날렵하게
-  const roof = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.25, 3.4), bodyMat);
-  roof.position.set(0, 1.0, 0);
-  group.add(roof);
-
-  // ✅ 유리 재질
-  const windowMat = new THREE.MeshStandardMaterial({
-    color: 0x223344,
-    transparent: true,
-    opacity: 0.5,
-    roughness: 0.1
+  const sphereGeom = new THREE.SphereGeometry(0.6, 16, 16);
+  // 구 위치 y도 0.6 -> 0.55로 맞춤
+  [[-1.2, 0.55, -2.7], [1.2, 0.55, -2.7], [-1.2, 0.55, 2.7], [1.2, 0.55, 2.7]].forEach(([x,y,z])=>{
+    const s = new THREE.Mesh(sphereGeom, bodyMat);
+    s.position.set(x, y, z);
+    group.add(s);
   });
 
-  // ✅ 앞 유리창 (-Z 방향)
-  const frontWin = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.4, 0.05), windowMat);
-  frontWin.position.set(0, 0.95, -2.0);
-  frontWin.rotation.x = -Math.PI / 10;
+  // 루프 높이 0.4 -> 0.3, 위치 y 1.3 -> 1.1, 약간 앞으로 기울임
+  const roof = new THREE.Mesh(
+    new THREE.BoxGeometry(2.5, 0.3, 3),
+    new THREE.MeshStandardMaterial({ color: 0xcccccc, metalness: 0.5, roughness: 0.5 })
+  );
+  roof.position.set(0, 1.1, 0);
+  roof.rotation.x = -Math.PI / 180 * 10;  // -10도 앞쪽으로 기울임
+  group.add(roof);
+
+  // 유리창 재질
+  const windowMat = new THREE.MeshStandardMaterial({ color: 0x446688, transparent: true, opacity: 0.5, roughness: 0.1 });
+
+  // 앞 유리창, 높이 1.25 -> 1.05, 위치 그대로, 앞쪽으로 기울임
+  const frontWin = new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.5, 0.05), windowMat);
+  frontWin.position.set(0, 1.05, -1.5);
+  frontWin.rotation.x = -Math.PI / 9;  // 약 -20도 기울임
   group.add(frontWin);
 
-  // ✅ 뒤 유리창 (+Z 방향)
+  // 뒤 유리창, 위치 y 1.25 -> 1.05, 뒤쪽으로 약간 젖힘
   const rearWin = frontWin.clone();
-  rearWin.position.z = 2.0;
+  rearWin.position.z = 1.5;
   rearWin.rotation.x = Math.PI / 12;
   group.add(rearWin);
 
-  // ✅ 사이드 유리
-  const sideWinL = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.4, 2.8), windowMat);
-  sideWinL.position.set(-1.05, 0.95, 0);
-  group.add(sideWinL);
+  // 좌우 유리창 높이 1.25 -> 1.05
+  const leftWin = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.5, 3), windowMat);
+  leftWin.position.set(-1.25, 1.05, 0);
+  group.add(leftWin);
 
-  const sideWinR = sideWinL.clone();
-  sideWinR.position.x = 1.05;
-  group.add(sideWinR);
+  const rightWin = leftWin.clone();
+  rightWin.position.x = 1.25;
+  group.add(rightWin);
 
-  // ✅ 앞 범퍼 (-Z)
-  const bumperMat = new THREE.MeshStandardMaterial({ color: 0x666666 });
-  const fBumper = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.4, 0.4), bumperMat);
-  fBumper.position.set(0, 0.35, -2.7);
-  group.add(fBumper);
+  // 앞 범퍼 높이 0.6 -> 0.45, 위치 y 0.5 -> 0.4
+  const bumperMat = new THREE.MeshStandardMaterial({ color: 0x888888, metalness: 0.7, roughness: 0.3 });
+  const fBump = new THREE.Mesh(new THREE.BoxGeometry(3, 0.45, 0.5), bumperMat);
+  fBump.position.set(0, 0.4, -3.1);
+  group.add(fBump);
 
-  // ✅ 뒤 범퍼 (+Z)
-  const rBumper = fBumper.clone();
-  rBumper.position.z = 2.7;
-  group.add(rBumper);
+  // 뒤 범퍼도 y 0.4로 맞춤
+  const rBump = fBump.clone();
+  rBump.position.z = 3.1;
+  group.add(rBump);
 
-  // ✅ 헤드라이트 (-Z)
+  // 헤드라이트 높이 0.65 -> 0.5
   const headMat = new THREE.MeshStandardMaterial({
-    color: 0xffffcc,
-    emissive: 0xffffcc,
-    emissiveIntensity: 0.9
-  });
-  [-0.6, 0.6].forEach(x => {
-    const lamp = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.15, 0.05), headMat);
-    lamp.position.set(x, 0.7, -2.75);
-    group.add(lamp);
+    color: 0xffffee,
+    emissive: 0xffffee,
+    emissiveIntensity: 0.7,
+    roughness: 0.3
   });
 
-  // ✅ 테일램프 (+Z)
-  const tailMat = new THREE.MeshStandardMaterial({
-    color: 0xff0000,
-    emissive: 0xff0000,
-    emissiveIntensity: 0.7
-  });
-  const tail = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.15, 0.05), tailMat);
-  tail.position.set(0, 0.7, 2.75);
-  group.add(tail);
+  const headLamp = new THREE.Mesh(
+    new THREE.BoxGeometry(0.8, 0.2, 0.1),
+    headMat
+  );
+  headLamp.position.set(-1.1, 0.5, -3.35);
+  group.add(headLamp);
 
-  // ✅ 사이드미러 (앞부분에 위치)
+  const headLampR = headLamp.clone();
+  headLampR.position.x = 1.1;
+  group.add(headLampR);
+
+  // 사이드미러 높이 1.2 -> 1.0
   const mirrorMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
-  [-1, 1].forEach(side => {
-    const mirror = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.1, 0.4), mirrorMat);
-    mirror.position.set(side * 1.2, 1.0, -1.4);
-    mirror.rotation.y = side * Math.PI / 10;
+  for (let side of [-1, 1]) {
+    const mirror = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.1, 0.5), mirrorMat);
+    mirror.position.set(side * 1.6, 1.0, -1.8);
+    mirror.rotation.y = side * Math.PI / 8;
     group.add(mirror);
-  });
+  }
+
+  // 후미등 높이 0.85 -> 0.65
+  const tailMat = new THREE.MeshStandardMaterial({ color: 0xff3333, emissive: 0xff3333, emissiveIntensity: 0.6 });
+  const tailBar = new THREE.Mesh(new THREE.BoxGeometry(2.5, 0.15, 0.05), tailMat);
+  tailBar.position.set(0, 0.65, 3.3);
+  group.add(tailBar);
 
   return group;
 }
-
-
+  
 function createSUVCar(color = '#ffffff') {
   const group = new THREE.Group();
 
-  const bodyMat = new THREE.MeshStandardMaterial({ color, metalness: 0.5, roughness: 0.4 });
+  const bodyMat = new THREE.MeshStandardMaterial({ color, metalness: 0.7, roughness: 0.3 });
 
-  // ✅ 메인 차체: Z 방향으로 길게 (depth: 5.2)
-  const mainBody = new THREE.Mesh(new THREE.BoxGeometry(3.0, 1.8, 5.2), bodyMat);
-  mainBody.position.y = 0.9;
+  // RoundedBoxGeometry: 너비 3.5, 높이 1.6, 깊이 6, 곡률 0.3, 5분할
+  const mainBody = new THREE.Mesh(
+    new RoundedBoxGeometry(3.5, 1.6, 6, 5, 0.3),
+    bodyMat
+  );
+  mainBody.position.y = 0.8;  // 차체 높이 절반
   group.add(mainBody);
 
-  // ✅ 루프
-  const roof = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.3, 4.6), bodyMat);
-  roof.position.set(0, 1.95, 0);
+  // 루프: 날렵하게 앞쪽으로 낮추고 뒤로 약간 올라감 (BoxGeometry를 Rotate 하면서 조정)
+  const roofMat = new THREE.MeshStandardMaterial({ color: 0xdddddd, metalness: 0.5, roughness: 0.4 });
+  const roof = new THREE.Mesh(
+    new RoundedBoxGeometry(3.2, 0.4, 4, 4, 0.2),
+    roofMat
+  );
+  roof.position.set(0, 1.3, 0);
+  roof.rotation.x = -Math.PI / 12;  // 약 -15도 기울임
   group.add(roof);
 
-  // ✅ 유리 재질
-  const windowMat = new THREE.MeshStandardMaterial({
-    color: 0x334455,
-    transparent: true,
-    opacity: 0.5,
-    roughness: 0.1
-  });
+  // 창문 재질과 투명도
+  const windowMat = new THREE.MeshStandardMaterial({ color: 0x335577, transparent: true, opacity: 0.4, roughness: 0.1 });
 
-  // ✅ 앞 유리창 (앞쪽 -Z)
-  const frontWin = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.7, 0.05), windowMat);
-  frontWin.position.set(0, 1.7, -2.2);
-  frontWin.rotation.x = -Math.PI / 10;
+  // 앞 유리창: 얇고 약간 기울임, 위치 앞쪽 (앞유리 느낌)
+  const frontWin = new THREE.Mesh(
+    new RoundedBoxGeometry(3, 0.5, 0.1, 3, 0.1),
+    windowMat
+  );
+  frontWin.position.set(0, 1.2, -1.9);
+  frontWin.rotation.x = -Math.PI / 6;  // -30도 기울임
   group.add(frontWin);
 
-  // ✅ 뒤 유리창 (+Z)
-  const rearWin = frontWin.clone();
-  rearWin.position.z = 2.2;
-  rearWin.rotation.x = Math.PI / 14;
+  // 뒤 유리창: 앞쪽보단 살짝 세우고 위치 뒤쪽
+  const rearWin = new THREE.Mesh(
+    new RoundedBoxGeometry(3, 0.5, 0.1, 3, 0.1),
+    windowMat
+  );
+  rearWin.position.set(0, 1.1, 1.7);
+  rearWin.rotation.x = Math.PI / 12;  // 약 15도 뒤로 젖힘
   group.add(rearWin);
 
-  // ✅ 좌우 유리창
-  const sideWinLeft = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.7, 3.2), windowMat);
-  sideWinLeft.position.set(-1.15, 1.7, 0);
+  // 좌우 유리창: 길고 얇게
+  const sideWinLeft = new THREE.Mesh(
+    new RoundedBoxGeometry(0.1, 0.5, 3.6, 3, 0.1),
+    windowMat
+  );
+  sideWinLeft.position.set(-1.7, 1.15, 0);
   group.add(sideWinLeft);
 
   const sideWinRight = sideWinLeft.clone();
-  sideWinRight.position.x = 1.15;
+  sideWinRight.position.x = 1.7;
   group.add(sideWinRight);
 
-  // ✅ 앞 범퍼 (-Z)
-  const bumperMat = new THREE.MeshStandardMaterial({ color: 0x666666 });
-  const frontBumper = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.6, 0.5), bumperMat);
-  frontBumper.position.set(0, 0.6, -2.85);
+  // 앞 범퍼: RoundedBoxGeometry, 낮게 붙임
+  const bumperMat = new THREE.MeshStandardMaterial({ color: 0x555555, metalness: 0.8, roughness: 0.25 });
+  const frontBumper = new THREE.Mesh(
+    new RoundedBoxGeometry(3.5, 0.5, 0.6, 3, 0.15),
+    bumperMat
+  );
+  frontBumper.position.set(0, 0.45, -3.3);
   group.add(frontBumper);
 
-  // ✅ 뒤 범퍼 (+Z)
+  // 뒤 범퍼도 유사하게
   const rearBumper = frontBumper.clone();
-  rearBumper.position.z = 2.85;
+  rearBumper.position.z = 3.3;
   group.add(rearBumper);
 
-  // ✅ 헤드라이트 (-Z)
+  // 헤드라이트: 납작한 박스형태, 위치도 낮고 옆으로 길게
   const headMat = new THREE.MeshStandardMaterial({
-    color: 0xffffcc,
-    emissive: 0xffffcc,
-    emissiveIntensity: 0.8
-  });
-  [-0.7, 0.7].forEach(x => {
-    const lamp = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.2, 0.05), headMat);
-    lamp.position.set(x, 1.1, -2.9);
-    group.add(lamp);
+    color: 0xffffee,
+    emissive: 0xffffee,
+    emissiveIntensity: 0.8,
+    roughness: 0.3
   });
 
-  // ✅ 테일램프 (+Z)
-  const tailMat = new THREE.MeshStandardMaterial({
-    color: 0xff0000,
-    emissive: 0xff0000,
-    emissiveIntensity: 0.7
-  });
-  const tail = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.2, 0.05), tailMat);
-  tail.position.set(0, 1.1, 2.9);
-  group.add(tail);
+  const headLampL = new THREE.Mesh(
+    new RoundedBoxGeometry(0.9, 0.25, 0.1, 3, 0.05),
+    headMat
+  );
+  headLampL.position.set(-1.3, 0.55, -3.55);
+  group.add(headLampL);
 
-  // ✅ 사이드미러 (앞쪽에 위치)
-  const mirrorMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
-  [-1, 1].forEach(side => {
-    const mirror = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.15, 0.5), mirrorMat);
-    mirror.position.set(side * 1.3, 1.8, -1.6);
+  const headLampR = headLampL.clone();
+  headLampR.position.x = 1.3;
+  group.add(headLampR);
+
+  // 사이드미러: 각지고 날렵하게
+  const mirrorMat = new THREE.MeshStandardMaterial({ color: 0x111111, metalness: 0.5, roughness: 0.3 });
+  for (let side of [-1, 1]) {
+    const mirror = new THREE.Mesh(new RoundedBoxGeometry(0.45, 0.15, 0.35, 2, 0.05), mirrorMat);
+    mirror.position.set(side * 1.8, 1.3, -1.6);
     mirror.rotation.y = side * Math.PI / 10;
     group.add(mirror);
-  });
+  }
+
+  // 후미등: 넓고 얇게, 위치 높음
+  const tailMat = new THREE.MeshStandardMaterial({ color: 0xff3300, emissive: 0xff3300, emissiveIntensity: 0.7 });
+  const tailLight = new THREE.Mesh(
+    new RoundedBoxGeometry(2.8, 0.2, 0.07, 3, 0.1),
+    tailMat
+  );
+  tailLight.position.set(0, 1.0, 3.4);
+  group.add(tailLight);
 
   return group;
 }
-
       
     // 차량용 RaycastVehicle 설정
     const vehicle = new CANNON.RaycastVehicle({
