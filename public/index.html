@@ -895,7 +895,6 @@ setInterval(() => {
 // ------------------------------------------------------------
 
     const targetQuaternion = new THREE.Quaternion();
-    const targetPosition = new THREE.Vector3();
 
     function animate() {
        requestAnimationFrame(animate);
@@ -928,7 +927,7 @@ setInterval(() => {
     const targetPos = player.targetPosition;
     const targetQuat = player.targetQuaternion;
 
-    if (targetPos && targetQuat) {
+    if (targetPosition && targetQuaternion) {
   // 위치 보간
   model.position.lerp(targetPosition, 0.2);
 
