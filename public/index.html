@@ -826,6 +826,13 @@ socket.on('updatePlayers', async (players) => {
   for (const [id, player] of Object.entries(players)) {
     if (id === playerId) continue;
 
+if (
+  !player?.position || typeof player.position.x !== 'number' ||
+  !player?.rotation || typeof player.rotation.w !== 'number'
+) {
+  continue; // 잘못된 플레이어 데이터 → 무시
+}
+    
     if (!otherPlayers[id]) {
       let otherCar;
 
