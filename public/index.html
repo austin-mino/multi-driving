@@ -894,8 +894,7 @@ setInterval(() => {
 
 // ------------------------------------------------------------
 
-    const targetQuaternion = new THREE.Quaternion();
-
+    
     function animate() {
        requestAnimationFrame(animate);
 
@@ -927,13 +926,14 @@ setInterval(() => {
     const targetPos = player.targetPosition;
     const targetQuat = player.targetQuaternion;
 
-    if (targetPosition && targetQuaternion) {
-  // 위치 보간
-  model.position.lerp(targetPosition, 0.2);
+    if (targetPos && targetQuat) {
+      // 위치 보간
+      model.position.lerp(targetPos, 0.2);
 
-  // 회전 보간
-  model.quaternion.slerp(targetQuaternion, 0.1);
-}
+      // 회전 보간
+     model.quaternion.slerp(targetQuaternion, 0.1);}
+  }
+
 
       // 속도 UI 업데이트
       hud.textContent = `속도: ${getSpeedKmH().toFixed(1)} km/h`;
