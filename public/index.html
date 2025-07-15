@@ -924,10 +924,10 @@ setInterval(() => {
   for (const id in otherPlayers) {
     const player = otherPlayers[id];
     const model = player.model;
-    const targetPos = player.targetPosition;
-    const targetQuat = player.targetQuaternion;
+    const targetPosition = player.targetPosition;
+    const targetQuaternion = player.targetQuaternion;
 
-    if (targetPos && targetQuat) {
+    if (targetPosision && targetQuaternion) {
   // 위치 보간
   model.position.lerp(targetPosition, 0.2);
 
