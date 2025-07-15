@@ -490,7 +490,7 @@ group.add(tailBar);
   return group;
 }
 
- function createSportsCar(color = '#ff0000') {
+function createSportsCar(color = '#ffffff') {
   const group = new THREE.Group();
   group.name = 'SportsCar';
 
@@ -516,10 +516,9 @@ group.add(tailBar);
   intake.name = 'Intake';
   group.add(intake);
 
-  // 루프
-  const roof = new THREE.Mesh(new THREE.CylinderGeometry(1.3, 1.3, 3.8, 16, 1, true, 0, Math.PI), glassMat);
-  roof.rotation.z = Math.PI / 2;
-  roof.position.set(0, 1.0, 0);
+  // 루프 (박스로 닫은 천장)
+  const roof = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.2, 3.6), glassMat);
+  roof.position.set(0, 1.1, 0);
   roof.name = 'Roof';
   group.add(roof);
 
@@ -556,12 +555,6 @@ group.add(tailBar);
   tailBar.name = 'TailLight';
   group.add(tailBar);
 
-  // 리어 디퓨저
-  const diffuser = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.2, 0.3), detailMat);
-  diffuser.position.set(0, 0.2, 3.6);
-  diffuser.name = 'Diffuser';
-  group.add(diffuser);
-
   // 스포일러
   const spoiler = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.1, 0.3), detailMat);
   spoiler.position.set(0, 1.1, 3.3);
@@ -587,6 +580,25 @@ group.add(tailBar);
   doorLineR.position.x = 2.4;
   doorLineR.name = 'DoorLineR';
   group.add(doorLineR);
+
+  // 🔴 모서리 SphereGeometry (네 귀퉁이)
+  const cornerRadius = 0.25;
+  const cornerGeo = new THREE.SphereGeometry(cornerRadius, 16, 16);
+  const cornerMat = new THREE.MeshStandardMaterial({ color, metalness: 0.8, roughness: 0.3 });
+
+  const corners = [
+    [-1.7, 0.45, -3.5], // front-left
+    [ 1.7, 0.45, -3.5], // front-right
+    [-1.7, 0.45,  3.5], // rear-left
+    [ 1.7, 0.45,  3.5], // rear-right
+  ];
+
+  corners.forEach((pos, idx) => {
+    const sphere = new THREE.Mesh(cornerGeo, cornerMat);
+    sphere.position.set(...pos);
+    sphere.name = `Corner${idx}`;
+    group.add(sphere);
+  });
 
   return group;
 }
