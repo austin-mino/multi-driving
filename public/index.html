@@ -349,31 +349,31 @@ function createRoad(x, z, w, d) {
   streetGroup.add(road);
 
   // 물리 바디
-  const shape = new CANNON.Box(new CANNON.Vec3(w/2, 0.1, d/2));
+  const shape = new CANNON.Box(new CANNON.Vec3(w / 2, 0.1, d / 2));
   const body = new CANNON.Body({ mass: 0, material: roadPhysMat });
   body.addShape(shape);
   body.position.set(x, -5 + 0.1, z);
   world.addBody(body);
-}
-
 
   // 횡단보도 생성 (흰 줄무늬)
-  const crosswalkWidth = Math.min(w,d) * 0.3;
+  const crosswalkWidth = Math.min(w, d) * 0.3;
   const crosswalkLength = 10;
   const lineCount = 6;
-  const lineMat = new THREE.MeshStandardMaterial({ color: 0xffffff, transparent:true, opacity:0.8 });
-  for (let i=0; i<lineCount; i++) {
+  const lineMat = new THREE.MeshStandardMaterial({ color: 0xffffff, transparent: true, opacity: 0.8 });
+
+  for (let i = 0; i < lineCount; i++) {
     const lineGeo = new THREE.BoxGeometry(crosswalkLength, 0.01, 2);
     const line = new THREE.Mesh(lineGeo, lineMat);
 
     if (w > d) {
-      line.position.set(x - crosswalkWidth/2 + i*(crosswalkLength+2), -4.9, z);
+      line.position.set(x - crosswalkWidth / 2 + i * (crosswalkLength + 2), -4.9, z);
     } else {
-      line.position.set(x, -4.9, z - crosswalkWidth/2 + i*(crosswalkLength+2));
+      line.position.set(x, -4.9, z - crosswalkWidth / 2 + i * (crosswalkLength + 2));
       line.rotation.y = Math.PI / 2;
     }
     streetGroup.add(line);
   }
+}
 
 // 인도 생성
 function createSidewalk(x, z, w, d) {
@@ -381,8 +381,9 @@ function createSidewalk(x, z, w, d) {
   const mat = new THREE.MeshStandardMaterial({ color: 0x888888 });
   const geo = new THREE.BoxGeometry(w, height, d);
   const mesh = new THREE.Mesh(geo, mat);
-  mesh.position.set(x, -4.5 + height/2, z);
+  mesh.position.set(x, -4.5 + height / 2, z);
   sidewalkGroup.add(mesh);
+}
 
   // 충돌 바디
   const shape = new CANNON.Box(new CANNON.Vec3(w/2, height/2, d/2));
@@ -432,13 +433,13 @@ function createStreetLamp(x, z, baseHeight) {
   const poleGeo = new THREE.CylinderGeometry(0.1, 0.1, 5);
   const poleMat = new THREE.MeshStandardMaterial({ color: 0x222222 });
   const pole = new THREE.Mesh(poleGeo, poleMat);
-  pole.position.set(x, baseHeight + 2.5, z);
+  pole.position.set(x, baseHeight -4.5, z);
   propsGroup.add(pole);
 
   const lampGeo = new THREE.SphereGeometry(0.3, 12, 8);
   const lampMat = new THREE.MeshStandardMaterial({ color: 0xffffaa, emissive: 0xffffaa, emissiveIntensity: 0.6 });
   const lamp = new THREE.Mesh(lampGeo, lampMat);
-  lamp.position.set(x, baseHeight + 5, z);
+  lamp.position.set(x, baseHeight -4.5, z);
   propsGroup.add(lamp);
 }
 
@@ -447,7 +448,7 @@ function createBench(x, z, baseHeight) {
   const benchGeo = new THREE.BoxGeometry(1.5, 0.3, 0.5);
   const benchMat = new THREE.MeshStandardMaterial({ color: 0x663300 });
   const bench = new THREE.Mesh(benchGeo, benchMat);
-  bench.position.set(x, baseHeight + 0.15, z);
+  bench.position.set(x, baseHeight -4.5, z);
   propsGroup.add(bench);
 }
 
@@ -456,13 +457,13 @@ function createTree(x, z, baseHeight) {
   const trunkGeo = new THREE.CylinderGeometry(0.2, 0.2, 2);
   const trunkMat = new THREE.MeshStandardMaterial({ color: 0x443322 });
   const trunk = new THREE.Mesh(trunkGeo, trunkMat);
-  trunk.position.set(x, baseHeight + 1, z);
+  trunk.position.set(x, baseHeight -4.5, z);
   propsGroup.add(trunk);
 
   const leafGeo = new THREE.SphereGeometry(1.2, 12, 8);
   const leafMat = new THREE.MeshStandardMaterial({ color: 0x228822 });
   const leaves = new THREE.Mesh(leafGeo, leafMat);
-  leaves.position.set(x, baseHeight + 2.5, z);
+  leaves.position.set(x, baseHeight -4.0, z);
   propsGroup.add(leaves);
 }
 
