@@ -438,6 +438,7 @@ function createBuilding(x, z) {
   sidewalkBody.addShape(sidewalkShape);
   sidewalkBody.position.set(x, -4.5 + sidewalkHeight / 2, z);
   world.addBody(sidewalkBody);
+  addPropsAroundBuilding(x, z, w, d);
 }
 function generateCity() {
   const ringRoadDist = (citySize + 1) * baseBlockSize;
@@ -453,19 +454,7 @@ function generateCity() {
       const roadDepth = randomWidth(60, 20);
       createRoad(baseX, baseZ, roadWidth, roadDepth);
 
-      // 고가도로 영역과 주변 15m 여백 밖이면 건물 안 생성
-      const distX = Math.abs(baseX);
-      const distZ = Math.abs(baseZ);
-
-      if (distX > ringRoadDist + clearance || distZ > ringRoadDist + clearance) {
-        continue; // 고가도로 바깥, 건물 생성 안함
-      }
-      if (
-        (distX > ringRoadDist - clearance && distX <= ringRoadDist + clearance) ||
-        (distZ > ringRoadDist - clearance && distZ <= ringRoadDist + clearance)
-      ) {
-        continue; // 고가도로 주변 15m 이내, 건물 생성 안함
-      }
+      
 
       // 건물 1~2개 생성 (도로 내부)
       const sidewalkW = 0; // 도로 주변 인도 없음 (별도 생성 안함)
@@ -477,160 +466,46 @@ function generateCity() {
         const pz = baseZ + (Math.random() - 0.5) * (roadDepth - sidewalkD * 2);
         createBuilding(px, pz);
       }
+  }
+         const BUILDING_LIMIT = 50
 
-      // 소품 (가로등, 벤치, 나무 등) 배치 가능 (필요 시 구현)
+      If(Math.abs(px)<=BUILDING_LIMIT && Math.abs(pz)<=BUILDING_LIMIT){createBuilding(px,pz);
     }
-  }
 }
-// 고가도로 생성
-function createOuterRingRoad(size = citySize, width = 30, height = 1) {
-  const segments = size * 2 + 1;
-  const len = segments * baseBlockSize + width * 2;
-  const mat = new THREE.MeshStandardMaterial({ color: 0x333333 });
+  function addPropsAroundBuilding(x, z, w, d) {
+  const propCount = Math.floor(Math.random() * 4); // 0~3개의 소품 생성
+  const sidewalkOffset = 5; // 인도 폭
 
-  for (let i = -1; i <= 1; i++) {
-    const y = 0.2;
+  for (let i = 0; i < propCount; i++) {
+    const randSide = Math.floor(Math.random() * 4); // 0: 앞, 1: 뒤, 2: 좌, 3: 우
+    const offset = 1 + Math.random() * (sidewalkOffset - 1.5); // 인도 안쪽 랜덤
 
-    const north = new THREE.Mesh(new THREE.BoxGeometry(len, height, width), mat);
-    north.position.set(0, y, (size + i) * baseBlockSize);
-    scene.add(north);
-    addGuardrailsToBridge(north);
-    blockUnderBridge(north);
+    let px = x, pz = z;
 
-    const south = new THREE.Mesh(new THREE.BoxGeometry(len, height, width), mat);
-    south.position.set(0, y, -(size + i) * baseBlockSize);
-    scene.add(south);
-    addGuardrailsToBridge(south);
-    blockUnderBridge(south);
-
-    const east = new THREE.Mesh(new THREE.BoxGeometry(width, height, len), mat);
-    east.position.set((size + i) * baseBlockSize, y, 0);
-    scene.add(east);
-    addGuardrailsToBridge(east);
-    blockUnderBridge(east);
-
-    const west = new THREE.Mesh(new THREE.BoxGeometry(width, height, len), mat);
-    west.position.set(-(size + i) * baseBlockSize, y, 0);
-    scene.add(west);
-    addGuardrailsToBridge(west);
-    blockUnderBridge(west);
-  }
-}
-
-function blockUnderBridge(mesh) {
-  const { x, y, z } = mesh.position;
-  const { width: w, depth: d } = mesh.geometry.parameters;
-
-  const shape = new CANNON.Box(new CANNON.Vec3(w / 2, 5, d / 2));
-  const body = new CANNON.Body({ mass: 0 });
-  body.addShape(shape);
-  body.position.set(x, -5 + 2.5, z);
-  world.addBody(body);
-}
-
-function addGuardrailsToBridge(mesh) {
-  const { x, y, z } = mesh.position;
-  const params = mesh.geometry.parameters;
-  const isHorizontal = params.width > params.depth;
-
-  const length = isHorizontal ? params.width : params.depth;
-  const railLength = length;
-  const railHeight = 1.2;
-  const railThickness = 0.1;
-  const offset = (isHorizontal ? params.depth : params.width) / 2 + railThickness / 2;
-
-  const railGeo = new THREE.BoxGeometry(railLength, railHeight, railThickness);
-  const railMat = new THREE.MeshStandardMaterial({ color: 0xaaaaaa });
-
-  const leftRail = new THREE.Mesh(railGeo, railMat);
-  if (isHorizontal) leftRail.position.set(x, y + railHeight / 2, z - offset);
-  else {
-    leftRail.position.set(x - offset, y + railHeight / 2, z);
-    leftRail.rotation.y = Math.PI / 2;
-  }
-  scene.add(leftRail);
-
-  const rightRail = new THREE.Mesh(railGeo, railMat);
-  if (isHorizontal) rightRail.position.set(x, y + railHeight / 2, z + offset);
-  else {
-    rightRail.position.set(x + offset, y + railHeight / 2, z);
-    rightRail.rotation.y = Math.PI / 2;
-  }
-  scene.add(rightRail);
-
-  // 기둥 (간격 10m)
-  const pillarGeo = new THREE.BoxGeometry(railThickness, railHeight, railThickness);
-  for (let i = -length / 2 + 5; i < length / 2; i += 10) {
-    const pillar1 = new THREE.Mesh(pillarGeo, railMat);
-    const pillar2 = new THREE.Mesh(pillarGeo, railMat);
-    if (isHorizontal) {
-      pillar1.position.set(x + i, y + railHeight / 2, z - offset);
-      pillar2.position.set(x + i, y + railHeight / 2, z + offset);
-    } else {
-      pillar1.position.set(x - offset, y + railHeight / 2, z + i);
-      pillar2.position.set(x + offset, y + railHeight / 2, z + i);
+    if (randSide === 0) { // 앞
+      px += (Math.random() - 0.5) * (w - 2);
+      pz -= d / 2 + offset;
+    } else if (randSide === 1) { // 뒤
+      px += (Math.random() - 0.5) * (w - 2);
+      pz += d / 2 + offset;
+    } else if (randSide === 2) { // 좌
+      px -= w / 2 + offset;
+      pz += (Math.random() - 0.5) * (d - 2);
+    } else if (randSide === 3) { // 우
+      px += w / 2 + offset;
+      pz += (Math.random() - 0.5) * (d - 2);
     }
-    scene.add(pillar1);
-    scene.add(pillar2);
+
+    const propBaseHeight = 0.05; // 인도 높이에 맞춤
+    const r = Math.random();
+    if (r < 0.33) createStreetLamp(px, pz, propBaseHeight);
+    else if (r < 0.66) createBench(px, pz, propBaseHeight);
+    else createTree(px, pz, propBaseHeight);
   }
 }
-
-// 고가도로 출입구(램프) 생성
-function createRamp(x, z, rotY) {
-  const geo = new THREE.BoxGeometry(100, 1, 30);
-  geo.translate(0, 0.5, 0); // 기준점 아래로 0.5만큼 이동
-  geo.rotateX(-Math.PI / 12); // 경사 약 -15도
-  const rampMat = new THREE.MeshStandardMaterial({ color: 0x555555 });
-  const ramp = new THREE.Mesh(geo, rampMat);
-  ramp.position.set(x, -5 + 0.1, z);
-  ramp.rotation.y = rotY;
-  scene.add(ramp);
-}
-
-// 도시 출입구 벽 (도로 출입 가능, 나머지 공간 막기)
-function createCityGateWall(x, z, w, h, d, rotY = 0) {
-  const wallMat = new THREE.MeshStandardMaterial({ color: 0x222222 });
-  const wallGeo = new THREE.BoxGeometry(w, h, d);
-  const wall = new THREE.Mesh(wallGeo, wallMat);
-  wall.position.set(x, -4.5 + h / 2, z);
-  wall.rotation.y = rotY;
-  scene.add(wall);
-
-  // 물리 바디
-  const shape = new CANNON.Box(new CANNON.Vec3(w / 2, h / 2, d / 2));
-  const body = new CANNON.Body({ mass: 0 });
-  body.addShape(shape);
-  body.position.set(x, -4.5 + h / 2, z);
-  body.quaternion.setFromEuler(0, rotY, 0);
-  world.addBody(body);
-}
-
 // 도시 전체 초기화 함수
 function initializeCity() {
   generateCity();
-
-  createOuterRingRoad();
-
-  // 고가도로 출입구 4곳 (램프)
-  createRamp(0, -baseBlockSize * (citySize + 1), 0); // 남쪽 입구
-  createRamp(0, baseBlockSize * (citySize + 1), Math.PI); // 북쪽 입구
-  createRamp(-baseBlockSize * (citySize + 1), 0, -Math.PI / 2); // 서쪽 입구
-  createRamp(baseBlockSize * (citySize + 1), 0, Math.PI / 2); // 동쪽 입구
-
-  // 도시 출입구 4개 (도로 출입 가능하지만 나머지 공간 벽으로 차단)
-  const gateHeight = 15;
-  const gateWidth = 30;
-  const gateDepth = 10;
-
-  // 북쪽 벽 (도로 사이 공간 제외)
-  createCityGateWall(0, baseBlockSize * (citySize + 1) + gateDepth / 2, baseBlockSize * citySize * 2, gateHeight, gateDepth);
-  // 남쪽 벽
-  createCityGateWall(0, -baseBlockSize * (citySize + 1) - gateDepth / 2, baseBlockSize * citySize * 2, gateHeight, gateDepth);
-  // 동쪽 벽
-  createCityGateWall(baseBlockSize * (citySize + 1) + gateDepth / 2, 0, gateDepth, gateHeight, baseBlockSize * citySize * 2, Math.PI / 2);
-  // 서쪽 벽
-  createCityGateWall(-baseBlockSize * (citySize + 1) - gateDepth / 2, 0, gateDepth, gateHeight, baseBlockSize * citySize * 2, Math.PI / 2);
-}
 
 // 초기화 함수 호출
 initializeCity();
