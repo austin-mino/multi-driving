@@ -417,9 +417,9 @@ function createBuilding(x, z) {
   ];
   const bldg = types[Math.floor(Math.random() * types.length)];
 
-  const w = randomWidth(40, 20);
-  const d = randomWidth(40, 20);
-  const h = bldg.minH + Math.random() * (bldg.maxH - bldg.minH);
+  const w = randomWidth(20, 10);
+const d = randomWidth(20, 10);
+const h = bldg.minH * 0.5 + Math.random() * (bldg.maxH * 0.5 - bldg.minH * 0.5);
 
   const material = new THREE.MeshStandardMaterial({
     color: bldg.color,
