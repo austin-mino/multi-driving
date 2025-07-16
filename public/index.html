@@ -474,36 +474,6 @@ function generateCity() {
   }
 }
 }
-  
-  function addPropsAroundBuilding(x, z, w, d) {
-  const propCount = Math.floor(Math.random() * 4); // 0~3개의 소품 생성
-  const sidewalkOffset = 5; // 인도 폭
-
-  for (let i = 0; i < propCount; i++) {
-    const randSide = Math.floor(Math.random() * 4); // 0: 앞, 1: 뒤, 2: 좌, 3: 우
-    const offset = 1 + Math.random() * (sidewalkOffset - 1.5); // 인도 안쪽 랜덤
-
-    let px = x, pz = z;
-
-    if (randSide === 0) { // 앞
-      px += (Math.random() - 0.5) * (w - 2);
-      pz -= d / 2 + offset;
-    } else if (randSide === 1) { // 뒤
-      px += (Math.random() - 0.5) * (w - 2);
-      pz += d / 2 + offset;
-    } else if (randSide === 2) { // 좌
-      px -= w / 2 + offset;
-      pz += (Math.random() - 0.5) * (d - 2);
-    } else if (randSide === 3) { // 우
-      px += w / 2 + offset;
-      pz += (Math.random() - 0.5) * (d - 2);
-    }
-
-    const propBaseHeight = 0.05; // 인도 높이에 맞춤
-    const r = Math.random();
-    if (r < 0.33) createStreetLamp(px, pz, propBaseHeight);
-    else if (r < 0.66) createBench(px, pz, propBaseHeight);
-    else createTree(px, pz, propBaseHeight);
   }
 }
 // 도시 전체 초기화 함수
