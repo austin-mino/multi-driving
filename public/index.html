@@ -328,18 +328,55 @@ world.addBody(groundBody);
 // 재질
 const roadMat = new CANNON.Material("road");
 const buildingMat = new CANNON.Material("building");
+const sidewalkMat = new CANNON.Material("sidewalk");
 
 // 그룹
 const streetGroup = new THREE.Group();
 const buildingGroup = new THREE.Group();
-scene.add(streetGroup, buildingGroup);
+const sidewalkGroup = new THREE.Group();
+scene.add(streetGroup, buildingGroup, sidewalkGroup);
 
 // 도시 설정
 const citySize = 6; // -6~6 범위
 const blockSize = 60; // 블록 간격
+const sidewalkWidth = 5;
+const sidewalkHeight = 0.05;
 
 function randomBetween(min, max) {
   return min + Math.random() * (max - min);
+}
+
+// === 인도 추가 ===
+function addSidewalk(x, z) {
+  const size = blockSize;
+  const positions = [
+    { dx: size / 2 + sidewalkWidth / 2, dz: 0 },
+    { dx: -size / 2 - sidewalkWidth / 2, dz: 0 },
+    { dx: 0, dz: size / 2 + sidewalkWidth / 2 },
+    { dx: 0, dz: -size / 2 - sidewalkWidth / 2 },
+  ];
+
+  positions.forEach(({ dx, dz }) => {
+    const geo = new THREE.BoxGeometry(
+      dx === 0 ? size : sidewalkWidth,
+      sidewalkHeight,
+      dz === 0 ? size : sidewalkWidth
+    );
+    const mat = new THREE.MeshStandardMaterial({ color: 0x888888 });
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.position.set(x + dx, -4.95, z + dz);
+    sidewalkGroup.add(mesh);
+
+    const shape = new CANNON.Box(new CANNON.Vec3(
+      (dx === 0 ? size : sidewalkWidth) / 2,
+      sidewalkHeight / 2,
+      (dz === 0 ? size : sidewalkWidth) / 2
+    ));
+    const body = new CANNON.Body({ mass: 0, material: sidewalkMat });
+    body.addShape(shape);
+    body.position.set(x + dx, -4.95, z + dz);
+    world.addBody(body);
+  });
 }
 
 function createRoad(x, z) {
@@ -357,6 +394,9 @@ function createRoad(x, z) {
   body.addShape(shape);
   body.position.set(x, -4.9, z);
   world.addBody(body);
+
+  // 인도 생성
+  addSidewalk(x, z);
 }
 
 function createBuilding(x, z) {
@@ -364,8 +404,12 @@ function createBuilding(x, z) {
   const depth = randomBetween(10, 20);
   const height = randomBetween(40, 100);
 
+  // 건물 색상 3가지 중 하나 선택
+  const colors = [0x555555, 0x888888, 0xbbbbbb];
+  const color = colors[Math.floor(Math.random() * colors.length)];
+
   const mat = new THREE.MeshStandardMaterial({
-    color: new THREE.Color().setHSL(Math.random(), 0.4, 0.5),
+    color: color,
     roughness: 0.6,
     metalness: 0.2,
   });
