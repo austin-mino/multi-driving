@@ -337,6 +337,9 @@ function randomWidth(base, variance=20) {
   return base + (Math.random() - 0.5) * variance;
 }
 
+// 전역에 물리 재질 정의 (한 번만)
+const roadPhysMat = new CANNON.Material("road");
+
 // 도로 + 횡단보도 생성
 function createRoad(x, z, w, d) {
   const roadGeo = new THREE.BoxGeometry(w, 0.2, d);
@@ -347,10 +350,12 @@ function createRoad(x, z, w, d) {
 
   // 물리 바디
   const shape = new CANNON.Box(new CANNON.Vec3(w/2, 0.1, d/2));
-  const body = new CANNON.Body({ mass: 0, material: roadMat });
+  const body = new CANNON.Body({ mass: 0, material: roadPhysMat });
   body.addShape(shape);
   body.position.set(x, -5 + 0.1, z);
   world.addBody(body);
+}
+
 
   // 횡단보도 생성 (흰 줄무늬)
   const crosswalkWidth = Math.min(w,d) * 0.3;
