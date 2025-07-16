@@ -500,7 +500,7 @@ function generateCity() {
       createSidewalk(baseX, baseZ + roadDepth / 2 + sidewalkD / 2, roadWidth, sidewalkD);
 
       // 건물 1~3개, 인도 경계 안쪽 랜덤 위치에
-      const bldgCount = 1 + Math.floor(Math.random() * 3);
+      const bldgCount = 1 + Math.floor(Math.random() * 1);
       for (let k = 0; k < bldgCount; k++) {
         const px = baseX + (Math.random() - 0.5) * (roadWidth - sidewalkW * 2);
         const pz = baseZ + (Math.random() - 0.5) * (roadDepth - sidewalkD * 2);
