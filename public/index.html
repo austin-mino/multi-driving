@@ -306,181 +306,100 @@ function getYRotation(q) {
   return Math.atan2(siny_cosp, cosy_cosp);
 }
 
-// === 기본 세팅 ===
+// === 초기 세팅 ===
 const world = new CANNON.World({ gravity: new CANNON.Vec3(0, -9.82, 0) });
 world.broadphase = new CANNON.SAPBroadphase(world);
 world.defaultContactMaterial.friction = 0.6;
 
-// THREE.js 씬, 카메라, 렌더러는 기존에 있다고 가정
-
-// 바닥 (도로)
-const groundMat = new THREE.MeshStandardMaterial({ color: 0x444444 });
+// 바닥 설정
+const groundMat = new THREE.MeshStandardMaterial({ color: 0x222222 });
 const groundGeo = new THREE.PlaneGeometry(5000, 5000);
 const groundMesh = new THREE.Mesh(groundGeo, groundMat);
 groundMesh.rotation.x = -Math.PI / 2;
 groundMesh.position.y = -5;
 scene.add(groundMesh);
 
-const groundShape = new CANNON.Plane();
 const groundBody = new CANNON.Body({ mass: 0 });
-groundBody.addShape(groundShape);
+groundBody.addShape(new CANNON.Plane());
 groundBody.quaternion.setFromEuler(-Math.PI / 2, 0, 0);
 groundBody.position.y = -5;
 world.addBody(groundBody);
 
-// 재질 정의
-const sidewalkMat = new CANNON.Material("sidewalk");
+// 재질
 const roadMat = new CANNON.Material("road");
 const buildingMat = new CANNON.Material("building");
-const carMat = new CANNON.Material("car");
 
-// 물리 충돌 재질간 마찰 설정
-world.addContactMaterial(new CANNON.ContactMaterial(carMat, sidewalkMat, { friction: 0.8 }));
-world.addContactMaterial(new CANNON.ContactMaterial(carMat, roadMat, { friction: 0.6 }));
-world.addContactMaterial(new CANNON.ContactMaterial(carMat, buildingMat, { friction: 0.9 }));
-
-// 씬 그룹 생성
-const sidewalkGroup = new THREE.Group();
-const buildingGroup = new THREE.Group();
+// 그룹
 const streetGroup = new THREE.Group();
-const propsGroup = new THREE.Group();
-scene.add(sidewalkGroup, buildingGroup, streetGroup, propsGroup);
+const buildingGroup = new THREE.Group();
+scene.add(streetGroup, buildingGroup);
 
-// 도시 관련 변수
-const citySize = 6;
-const baseBlockSize = 40;
-const buildingClearance = 15; // 고가도로 주변 건물 여백 15m
+// 도시 설정
+const citySize = 6; // -6~6 범위
+const blockSize = 60; // 블록 간격
 
-// 무작위 폭 산출 함수 (base ± variance/2)
-function randomWidth(base, variance = 20) {
-  return base + (Math.random() - 0.5) * variance;
+function randomBetween(min, max) {
+  return min + Math.random() * (max - min);
 }
 
-// 도로 생성 함수 (시각 + 물리)
-function createRoad(x, z, w, d) {
-  const roadGeo = new THREE.BoxGeometry(w, 0.2, d);
-  const roadMatVisual = new THREE.MeshStandardMaterial({ color: 0x222222 });
-  const roadMesh = new THREE.Mesh(roadGeo, roadMatVisual);
-  roadMesh.position.set(x, -5 + 0.1, z);
-  streetGroup.add(roadMesh);
+function createRoad(x, z) {
+  const width = blockSize;
+  const depth = blockSize;
 
-  const roadShape = new CANNON.Box(new CANNON.Vec3(w / 2, 0.1, d / 2));
-  const roadBody = new CANNON.Body({ mass: 0, material: roadMat });
-  roadBody.addShape(roadShape);
-  roadBody.position.set(x, -5 + 0.1, z);
-  world.addBody(roadBody);
+  const geo = new THREE.BoxGeometry(width, 0.2, depth);
+  const mat = new THREE.MeshStandardMaterial({ color: 0x2a2a2a });
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.position.set(x, -4.9, z);
+  streetGroup.add(mesh);
 
-  // 횡단보도 줄무늬 (시각적 효과)
-  const crosswalkWidth = Math.min(w, d) * 0.3;
-  const crosswalkLength = 10;
-  const lineCount = 6;
-  const lineMat = new THREE.MeshStandardMaterial({ color: 0xffffff, transparent: true, opacity: 0.8 });
-
-  for (let i = 0; i < lineCount; i++) {
-    const lineGeo = new THREE.BoxGeometry(crosswalkLength, 0.01, 2);
-    const line = new THREE.Mesh(lineGeo, lineMat);
-
-    if (w > d) {
-      line.position.set(x - crosswalkWidth / 2 + i * (crosswalkLength + 2), -4.9, z);
-    } else {
-      line.position.set(x, -4.9, z - crosswalkWidth / 2 + i * (crosswalkLength + 2));
-      line.rotation.y = Math.PI / 2;
-    }
-    streetGroup.add(line);
-  }
+  const shape = new CANNON.Box(new CANNON.Vec3(width / 2, 0.1, depth / 2));
+  const body = new CANNON.Body({ mass: 0, material: roadMat });
+  body.addShape(shape);
+  body.position.set(x, -4.9, z);
+  world.addBody(body);
 }
+
 function createBuilding(x, z) {
-  const types = [
-    { type: "주거", color: 0x9999aa, minH: 60, maxH: 150 },
-    { type: "상가", color: 0xaa9966, minH: 50, maxH: 120 },
-    { type: "공장", color: 0x666666, minH: 70, maxH: 200 },
-  ];
-  const bldg = types[Math.floor(Math.random() * types.length)];
+  const width = randomBetween(10, 20);
+  const depth = randomBetween(10, 20);
+  const height = randomBetween(40, 100);
 
-  // 건물 크기 (폭, 깊이, 높이)
-  const w = randomWidth(13, 6);
-  const d = randomWidth(13, 6);
-  const h = bldg.minH * 0.5 + Math.random() * (bldg.maxH * 0.5 - bldg.minH * 0.5);
-
-  // 건물 메쉬 생성 및 배치
-  const material = new THREE.MeshStandardMaterial({
-    color: bldg.color,
-    transparent: true,
-    opacity: 0.85,
-    roughness: 0.5,
-    metalness: 0.1,
+  const mat = new THREE.MeshStandardMaterial({
+    color: new THREE.Color().setHSL(Math.random(), 0.4, 0.5),
+    roughness: 0.6,
+    metalness: 0.2,
   });
-  const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material);
-  mesh.position.set(x, -4.5 + h / 2, z);
+  const geo = new THREE.BoxGeometry(width, height, depth);
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.position.set(x, -4.5 + height / 2, z);
   buildingGroup.add(mesh);
 
-  // 건물 물리 바디 생성 및 배치
-  const shape = new CANNON.Box(new CANNON.Vec3(w / 2, h / 2, d / 2));
+  const shape = new CANNON.Box(new CANNON.Vec3(width / 2, height / 2, depth / 2));
   const body = new CANNON.Body({ mass: 0, material: buildingMat });
   body.addShape(shape);
-  body.position.set(x, -4.5 + h / 2, z);
+  body.position.set(x, -4.5 + height / 2, z);
   world.addBody(body);
-
-  // 건물 주변을 감싸는 인도 생성 (폭 8, 높이 0.3, y = -4.5 기준)
-  const sidewalkWidth = w + 3 * 2; // 건물 폭 + 양쪽 인도 폭 8씩
-  const sidewalkHeight = 0.05;
-  const sidewalkDepth = d + 3 * 2; // 건물 깊이 + 양쪽 인도 폭 8씩
-
-  const sidewalkGeo = new THREE.BoxGeometry(sidewalkWidth, sidewalkHeight, sidewalkDepth);
-  const sidewalkMatVisual = new THREE.MeshStandardMaterial({ color: 0x888888 });
-  const sidewalkMesh = new THREE.Mesh(sidewalkGeo, sidewalkMatVisual);
-  sidewalkMesh.position.set(x, -4.5 + sidewalkHeight / 2, z);
-  sidewalkGroup.add(sidewalkMesh);
-
-  // 인도 물리 바디 생성 및 배치
-  const sidewalkShape = new CANNON.Box(new CANNON.Vec3(sidewalkWidth / 2, sidewalkHeight / 2, sidewalkDepth / 2));
-  const sidewalkBody = new CANNON.Body({ mass: 0, material: sidewalkMat });
-  sidewalkBody.addShape(sidewalkShape);
-  sidewalkBody.position.set(x, -4.5 + sidewalkHeight / 2, z);
-  world.addBody(sidewalkBody);
-  addPropsAroundBuilding(x, z, w, d);
 }
-function generateCity() {
-  const ringRoadDist = (citySize + 1) * baseBlockSize;
-  const clearance = buildingClearance; // 15m 주변 여백
 
+function generateCity() {
   for (let i = -citySize; i <= citySize; i++) {
     for (let j = -citySize; j <= citySize; j++) {
-      const baseX = i * baseBlockSize;
-      const baseZ = j * baseBlockSize;
+      const x = i * blockSize;
+      const z = j * blockSize;
 
-      // 도로 폭 랜덤
-      const roadWidth = randomWidth(60, 20);
-      const roadDepth = randomWidth(60, 20);
-      createRoad(baseX, baseZ, roadWidth, roadDepth);
+      createRoad(x, z);
 
-      
-
-      // 건물 1~2개 생성 (도로 내부)
-      const sidewalkW = 0; // 도로 주변 인도 없음 (별도 생성 안함)
-      const sidewalkD = 0;
-
-      const bldgCount = 1 + Math.floor(Math.random() * 1);
-      for (let k = 0; k < bldgCount; k++) {
-        const px = baseX + (Math.random() - 0.5) * (roadWidth - sidewalkW * 2);
-        const pz = baseZ + (Math.random() - 0.5) * (roadDepth - sidewalkD * 2);
-        createBuilding(px, pz);
-         const BUILDING_LIMIT = 50
-
-     if (Math.abs(px) <= BUILDING_LIMIT && Math.abs(pz) <= BUILDING_LIMIT) {
-  createBuilding(px, pz);
-}
+      const numBuildings = Math.floor(Math.random() * 3); // 0~2개
+      for (let b = 0; b < numBuildings; b++) {
+        const offsetX = (Math.random() - 0.5) * blockSize * 0.6;
+        const offsetZ = (Math.random() - 0.5) * blockSize * 0.6;
+        createBuilding(x + offsetX, z + offsetZ);
       }
+    }
   }
 }
-}
-// 도시 전체 초기화 함수
-function initializeCity() {
-  generateCity();
-}
-// 초기화 함수 호출
-initializeCity();
 
+generateCity();
   
     // 자동차 차체 물리 (박스)
     const chassisShape = new CANNON.Box(new CANNON.Vec3(1.5, 0.5, 3));
