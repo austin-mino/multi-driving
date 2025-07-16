@@ -306,19 +306,20 @@ function getYRotation(q) {
   return Math.atan2(siny_cosp, cosy_cosp);
 }
 
-// === 초기 세팅 ===
+// === 초기 설정 ===
 const world = new CANNON.World({ gravity: new CANNON.Vec3(0, -9.82, 0) });
 world.broadphase = new CANNON.SAPBroadphase(world);
 world.defaultContactMaterial.friction = 0.6;
 
-// 바닥 설정
-const groundMat = new THREE.MeshStandardMaterial({ color: 0x222222 });
+// THREE.js 바닥 (검정색)
+const groundMat = new THREE.MeshStandardMaterial({ color: 0x000000 });
 const groundGeo = new THREE.PlaneGeometry(5000, 5000);
 const groundMesh = new THREE.Mesh(groundGeo, groundMat);
 groundMesh.rotation.x = -Math.PI / 2;
 groundMesh.position.y = -5;
 scene.add(groundMesh);
 
+// Cannon 바닥
 const groundBody = new CANNON.Body({ mass: 0 });
 groundBody.addShape(new CANNON.Plane());
 groundBody.quaternion.setFromEuler(-Math.PI / 2, 0, 0);
@@ -338,93 +339,74 @@ scene.add(streetGroup, buildingGroup, sidewalkGroup);
 
 // 도시 설정
 const citySize = 6; // -6~6 범위
-const blockSize = 60; // 블록 간격
-const sidewalkWidth = 5;
-const sidewalkHeight = 0.05;
+const blockSize = 60;
 
+// 유틸
 function randomBetween(min, max) {
   return min + Math.random() * (max - min);
 }
 
-// === 인도 추가 ===
-function addSidewalk(x, z) {
-  const size = blockSize;
-  const positions = [
-    { dx: size / 2 + sidewalkWidth / 2, dz: 0 },
-    { dx: -size / 2 - sidewalkWidth / 2, dz: 0 },
-    { dx: 0, dz: size / 2 + sidewalkWidth / 2 },
-    { dx: 0, dz: -size / 2 - sidewalkWidth / 2 },
-  ];
-
-  positions.forEach(({ dx, dz }) => {
-    const geo = new THREE.BoxGeometry(
-      dx === 0 ? size : sidewalkWidth,
-      sidewalkHeight,
-      dz === 0 ? size : sidewalkWidth
-    );
-    const mat = new THREE.MeshStandardMaterial({ color: 0x888888 });
-    const mesh = new THREE.Mesh(geo, mat);
-    mesh.position.set(x + dx, -4.95, z + dz);
-    sidewalkGroup.add(mesh);
-
-    const shape = new CANNON.Box(new CANNON.Vec3(
-      (dx === 0 ? size : sidewalkWidth) / 2,
-      sidewalkHeight / 2,
-      (dz === 0 ? size : sidewalkWidth) / 2
-    ));
-    const body = new CANNON.Body({ mass: 0, material: sidewalkMat });
-    body.addShape(shape);
-    body.position.set(x + dx, -4.95, z + dz);
-    world.addBody(body);
-  });
-}
-
+// 차도 (검정색)
 function createRoad(x, z) {
-  const width = blockSize;
-  const depth = blockSize;
-
-  const geo = new THREE.BoxGeometry(width, 0.2, depth);
-  const mat = new THREE.MeshStandardMaterial({ color: 0x2a2a2a });
+  const geo = new THREE.BoxGeometry(blockSize, 0.2, blockSize);
+  const mat = new THREE.MeshStandardMaterial({ color: 0x000000 });
   const mesh = new THREE.Mesh(geo, mat);
   mesh.position.set(x, -4.9, z);
   streetGroup.add(mesh);
 
-  const shape = new CANNON.Box(new CANNON.Vec3(width / 2, 0.1, depth / 2));
+  const shape = new CANNON.Box(new CANNON.Vec3(blockSize / 2, 0.1, blockSize / 2));
   const body = new CANNON.Body({ mass: 0, material: roadMat });
   body.addShape(shape);
   body.position.set(x, -4.9, z);
   world.addBody(body);
-
-  // 인도 생성
-  addSidewalk(x, z);
 }
 
-function createBuilding(x, z) {
-  const width = randomBetween(10, 20);
-  const depth = randomBetween(10, 20);
-  const height = randomBetween(40, 100);
-
-  // 건물 색상 3가지 중 하나 선택
-  const colors = [0x555555, 0x888888, 0xbbbbbb];
-  const color = colors[Math.floor(Math.random() * colors.length)];
-
-  const mat = new THREE.MeshStandardMaterial({
-    color: color,
-    roughness: 0.6,
-    metalness: 0.2,
-  });
-  const geo = new THREE.BoxGeometry(width, height, depth);
+// 인도 (폭 8, 높이 0.05)
+function createSidewalk(x, z, w, d) {
+  const geo = new THREE.BoxGeometry(w, 0.05, d);
+  const mat = new THREE.MeshStandardMaterial({ color: 0x666666 });
   const mesh = new THREE.Mesh(geo, mat);
-  mesh.position.set(x, -4.5 + height / 2, z);
-  buildingGroup.add(mesh);
+  mesh.position.set(x, -4.925, z);
+  sidewalkGroup.add(mesh);
 
-  const shape = new CANNON.Box(new CANNON.Vec3(width / 2, height / 2, depth / 2));
-  const body = new CANNON.Body({ mass: 0, material: buildingMat });
+  const shape = new CANNON.Box(new CANNON.Vec3(w / 2, 0.025, d / 2));
+  const body = new CANNON.Body({ mass: 0, material: sidewalkMat });
   body.addShape(shape);
-  body.position.set(x, -4.5 + height / 2, z);
+  body.position.set(x, -4.925, z);
   world.addBody(body);
 }
 
+// 건물
+function createBuilding(x, z) {
+  const w = randomBetween(10, 20);
+  const d = randomBetween(10, 20);
+  const h = randomBetween(40, 100);
+
+  const mat = new THREE.MeshStandardMaterial({
+    color: new THREE.Color().setHSL(Math.random(), 0.4, 0.5),
+    roughness: 0.6,
+    metalness: 0.2,
+  });
+  const geo = new THREE.BoxGeometry(w, h, d);
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.position.set(x, -4.5 + h / 2, z);
+  buildingGroup.add(mesh);
+
+  const shape = new CANNON.Box(new CANNON.Vec3(w / 2, h / 2, d / 2));
+  const body = new CANNON.Body({ mass: 0, material: buildingMat });
+  body.addShape(shape);
+  body.position.set(x, -4.5 + h / 2, z);
+  world.addBody(body);
+
+  // 건물 주변 인도 (폭 8)
+  const sw = 8;
+  createSidewalk(x - (w / 2 + sw / 2), z, sw, d + sw * 2); // 좌
+  createSidewalk(x + (w / 2 + sw / 2), z, sw, d + sw * 2); // 우
+  createSidewalk(x, z - (d / 2 + sw / 2), w + sw * 2, sw); // 앞
+  createSidewalk(x, z + (d / 2 + sw / 2), w + sw * 2, sw); // 뒤
+}
+
+// 도시 생성
 function generateCity() {
   for (let i = -citySize; i <= citySize; i++) {
     for (let j = -citySize; j <= citySize; j++) {
@@ -433,11 +415,19 @@ function generateCity() {
 
       createRoad(x, z);
 
-      const numBuildings = Math.floor(Math.random() * 3); // 0~2개
+      const numBuildings = Math.floor(Math.random() * 3);
       for (let b = 0; b < numBuildings; b++) {
         const offsetX = (Math.random() - 0.5) * blockSize * 0.6;
         const offsetZ = (Math.random() - 0.5) * blockSize * 0.6;
-        createBuilding(x + offsetX, z + offsetZ);
+
+        const bx = x + offsetX;
+        const bz = z + offsetZ;
+
+        // 고가도로가 없으므로 중심 반경 15m만 제외
+        const distFromCenter = Math.sqrt(bx * bx + bz * bz);
+        if (distFromCenter > 15) {
+          createBuilding(bx, bz);
+        }
       }
     }
   }
