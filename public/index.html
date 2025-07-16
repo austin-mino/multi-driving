@@ -398,8 +398,8 @@ function createBuilding(x, z) {
   const bldg = types[Math.floor(Math.random() * types.length)];
 
   // 건물 크기 (폭, 깊이, 높이)
-  const w = randomWidth(20, 10);
-  const d = randomWidth(20, 10);
+  const w = randomWidth(13, 6);
+  const d = randomWidth(13, 6);
   const h = bldg.minH * 0.5 + Math.random() * (bldg.maxH * 0.5 - bldg.minH * 0.5);
 
   // 건물 메쉬 생성 및 배치
@@ -422,9 +422,9 @@ function createBuilding(x, z) {
   world.addBody(body);
 
   // 건물 주변을 감싸는 인도 생성 (폭 8, 높이 0.3, y = -4.5 기준)
-  const sidewalkWidth = w + 5 * 2; // 건물 폭 + 양쪽 인도 폭 8씩
-  const sidewalkHeight = 0.15;
-  const sidewalkDepth = d + 5 * 2; // 건물 깊이 + 양쪽 인도 폭 8씩
+  const sidewalkWidth = w + 3 * 2; // 건물 폭 + 양쪽 인도 폭 8씩
+  const sidewalkHeight = 0.05;
+  const sidewalkDepth = d + 3 * 2; // 건물 깊이 + 양쪽 인도 폭 8씩
 
   const sidewalkGeo = new THREE.BoxGeometry(sidewalkWidth, sidewalkHeight, sidewalkDepth);
   const sidewalkMatVisual = new THREE.MeshStandardMaterial({ color: 0x888888 });
