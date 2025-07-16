@@ -469,8 +469,9 @@ function generateCity() {
   }
          const BUILDING_LIMIT = 50
 
-      If(Math.abs(px)<=BUILDING_LIMIT && Math.abs(pz)<=BUILDING_LIMIT){createBuilding(px,pz);
-    }
+     if (Math.abs(px) <= BUILDING_LIMIT && Math.abs(pz) <= BUILDING_LIMIT) {
+  createBuilding(px, pz);
+}
 }
   
   function addPropsAroundBuilding(x, z, w, d) {
