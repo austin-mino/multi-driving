@@ -339,23 +339,25 @@ function randomWidth(base, variance=20) {
 
 // 전역에 물리 재질 정의 (한 번만)
 const roadPhysMat = new CANNON.Material("road");
+const sidewalkPhysMat = new CANNON.Material("sidewalk");
 
-// 도로 + 횡단보도 생성
+// 도로 + 횡단보도 생성 함수
 function createRoad(x, z, w, d) {
+  // 시각적 도로 메쉬
   const roadGeo = new THREE.BoxGeometry(w, 0.2, d);
   const roadMat = new THREE.MeshStandardMaterial({ color: 0x222222 });
   const road = new THREE.Mesh(roadGeo, roadMat);
   road.position.set(x, -5 + 0.1, z);
   streetGroup.add(road);
 
-  // 물리 바디
-  const shape = new CANNON.Box(new CANNON.Vec3(w / 2, 0.1, d / 2));
-  const body = new CANNON.Body({ mass: 0, material: roadPhysMat });
-  body.addShape(shape);
-  body.position.set(x, -5 + 0.1, z);
-  world.addBody(body);
+  // 도로 물리 바디
+  const roadShape = new CANNON.Box(new CANNON.Vec3(w / 2, 0.1, d / 2));
+  const roadBody = new CANNON.Body({ mass: 0, material: roadPhysMat });
+  roadBody.addShape(roadShape);
+  roadBody.position.set(x, -5 + 0.1, z);
+  world.addBody(roadBody);
 
-  // 횡단보도 생성 (흰 줄무늬)
+  // 횡단보도 줄무늬 (시각 효과)
   const crosswalkWidth = Math.min(w, d) * 0.3;
   const crosswalkLength = 10;
   const lineCount = 6;
@@ -375,22 +377,29 @@ function createRoad(x, z, w, d) {
   }
 }
 
-// 인도 생성
+// 인도 생성 함수 (방지턱처럼 차도보다 살짝 높은 구조)
 function createSidewalk(x, z, w, d) {
   const height = 0.3;
-  const mat = new THREE.MeshStandardMaterial({ color: 0x888888 });
+
+  // 시각적 메쉬
   const geo = new THREE.BoxGeometry(w, height, d);
+  const mat = new THREE.MeshStandardMaterial({ color: 0x888888 });
   const mesh = new THREE.Mesh(geo, mat);
   mesh.position.set(x, -4.5 + height / 2, z);
   sidewalkGroup.add(mesh);
+
+  // 충돌용 바디
+  const shape = new CANNON.Box(new CANNON.Vec3(w / 2, height / 2, d / 2));
+  const body = new CANNON.Body({ mass: 0, material: sidewalkPhysMat });
+  body.addShape(shape);
+  body.position.set(x, -4.5 + height / 2, z);
+  world.addBody(body);
 }
 
-  // 충돌 바디
-  const shape = new CANNON.Box(new CANNON.Vec3(w/2, height/2, d/2));
-  const body = new CANNON.Body({ mass: 0, material: sidewalkMat });
-  body.addShape(shape);
-  body.position.set(x, -4.5 + height/2, z);
-  world.addBody(body);
+  createRoad(0, 0, 100, 100);
+createSidewalk(-45, 0, 10, 100); // 왼쪽 인도
+createSidewalk(45, 0, 10, 100);  // 오른쪽 인도
+
 
   // 소품 랜덤 배치
   if (Math.random() < 0.15) createStreetLamp(x, z, height);
