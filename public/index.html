@@ -390,25 +390,6 @@ function createRoad(x, z, w, d) {
   }
 }
 
-// 인도 생성 함수 (방지턱처럼 차도보다 살짝 높은 구조)
-function createSidewalk(x, z, w, d) {
-  const height = 0.3;
-
-  // 시각적 메쉬
-  const geo = new THREE.BoxGeometry(w, height, d);
-  const mat = new THREE.MeshStandardMaterial({ color: 0x888888 });
-  const mesh = new THREE.Mesh(geo, mat);
-  mesh.position.set(x, -4.5 + height / 2, z);
-  sidewalkGroup.add(mesh);
-
-  // 충돌용 바디
-  const shape = new CANNON.Box(new CANNON.Vec3(w / 2, height / 2, d / 2));
-  const body = new CANNON.Body({ mass: 0, material: sidewalkMat });
-  body.addShape(shape);
-  body.position.set(x, -4.5 + height / 2, z);
-  world.addBody(body);
-}
-// 건물 생성 함수
 function createBuilding(x, z) {
   const types = [
     { type: "주거", color: 0x9999aa, minH: 60, maxH: 150 },
@@ -418,8 +399,8 @@ function createBuilding(x, z) {
   const bldg = types[Math.floor(Math.random() * types.length)];
 
   const w = randomWidth(20, 10);
-const d = randomWidth(20, 10);
-const h = bldg.minH * 0.5 + Math.random() * (bldg.maxH * 0.5 - bldg.minH * 0.5);
+  const d = randomWidth(20, 10);
+  const h = bldg.minH * 0.5 + Math.random() * (bldg.maxH * 0.5 - bldg.minH * 0.5);
 
   const material = new THREE.MeshStandardMaterial({
     color: bldg.color,
@@ -437,6 +418,33 @@ const h = bldg.minH * 0.5 + Math.random() * (bldg.maxH * 0.5 - bldg.minH * 0.5);
   body.addShape(shape);
   body.position.set(x, -4.5 + h / 2, z);
   world.addBody(body);
+
+  // 인도 네 모서리에 인도 생성 (폭 8, 높이 0.3, 높이 -4.5)
+  const sidewalkWidth = 8;
+  const sidewalkHeight = 0.3;
+  const sidewalkDepth = 8;
+  
+  // 4개 모서리 좌표 계산
+  const corners = [
+    { sx: x - w/2 - sidewalkWidth/2, sz: z - d/2 - sidewalkDepth/2 }, // 왼쪽 앞
+    { sx: x + w/2 + sidewalkWidth/2, sz: z - d/2 - sidewalkDepth/2 }, // 오른쪽 앞
+    { sx: x - w/2 - sidewalkWidth/2, sz: z + d/2 + sidewalkDepth/2 }, // 왼쪽 뒤
+    { sx: x + w/2 + sidewalkWidth/2, sz: z + d/2 + sidewalkDepth/2 }, // 오른쪽 뒤
+  ];
+
+  corners.forEach(corner => {
+    const geo = new THREE.BoxGeometry(sidewalkWidth, sidewalkHeight, sidewalkDepth);
+    const mat = new THREE.MeshStandardMaterial({ color: 0x888888 });
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.position.set(corner.sx, -4.5 + sidewalkHeight / 2, corner.sz);
+    sidewalkGroup.add(mesh);
+
+    const shape = new CANNON.Box(new CANNON.Vec3(sidewalkWidth / 2, sidewalkHeight / 2, sidewalkDepth / 2));
+    const body = new CANNON.Body({ mass: 0, material: sidewalkMat });
+    body.addShape(shape);
+    body.position.set(corner.sx, -4.5 + sidewalkHeight / 2, corner.sz);
+    world.addBody(body);
+  });
 }
 
 // 소품: 가로등
