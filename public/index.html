@@ -472,6 +472,7 @@ function generateCity() {
       If(Math.abs(px)<=BUILDING_LIMIT && Math.abs(pz)<=BUILDING_LIMIT){createBuilding(px,pz);
     }
 }
+  
   function addPropsAroundBuilding(x, z, w, d) {
   const propCount = Math.floor(Math.random() * 4); // 0~3개의 소품 생성
   const sidewalkOffset = 5; // 인도 폭
@@ -506,7 +507,7 @@ function generateCity() {
 // 도시 전체 초기화 함수
 function initializeCity() {
   generateCity();
-
+}
 // 초기화 함수 호출
 initializeCity();
 
