@@ -311,6 +311,19 @@ const world = new CANNON.World({ gravity: new CANNON.Vec3(0, -9.82, 0) });
 world.broadphase = new CANNON.SAPBroadphase(world);
 world.defaultContactMaterial.friction = 0.6;
 
+  const groundMat = new THREE.MeshStandardMaterial({ color: 0x444444 });
+const groundGeo = new THREE.PlaneGeometry(5000, 5000);
+const groundMesh = new THREE.Mesh(groundGeo, groundMat);
+groundMesh.rotation.x = -Math.PI / 2; // 평면을 수평으로 눕힘
+groundMesh.position.y = -5; // 원하는 높이 (도로 높이와 맞춰서)
+scene.add(groundMesh);
+const groundShape = new CANNON.Plane();
+const groundBody = new CANNON.Body({ mass: 0 });
+groundBody.addShape(groundShape);
+groundBody.quaternion.setFromEuler(-Math.PI / 2, 0, 0); // 평면을 수평으로
+groundBody.position.y = -5; // 바닥 높이
+world.addBody(groundBody);
+
 // 재질 정의
 const sidewalkMat = new CANNON.Material("sidewalk");
 const roadMat = new CANNON.Material("road");
@@ -330,7 +343,7 @@ scene.add(sidewalkGroup, buildingGroup, streetGroup, propsGroup);
 
 // 도시 기본 변수
 const citySize = 8;
-const baseBlockSize = 100;
+const baseBlockSize = 50;
 
 // 무작위 폭 산출 함수
 function randomWidth(base, variance=20) {
