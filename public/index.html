@@ -347,8 +347,8 @@ const propsGroup = new THREE.Group();
 scene.add(sidewalkGroup, buildingGroup, streetGroup, propsGroup);
 
 // 도시 관련 변수
-const citySize = 8;
-const baseBlockSize = 50;
+const citySize = 6;
+const baseBlockSize = 40;
 const buildingClearance = 15; // 고가도로 주변 건물 여백 15m
 
 // 무작위 폭 산출 함수 (base ± variance/2)
@@ -397,10 +397,12 @@ function createBuilding(x, z) {
   ];
   const bldg = types[Math.floor(Math.random() * types.length)];
 
+  // 건물 크기 (폭, 깊이, 높이)
   const w = randomWidth(20, 10);
   const d = randomWidth(20, 10);
   const h = bldg.minH * 0.5 + Math.random() * (bldg.maxH * 0.5 - bldg.minH * 0.5);
 
+  // 건물 메쉬 생성 및 배치
   const material = new THREE.MeshStandardMaterial({
     color: bldg.color,
     transparent: true,
@@ -412,36 +414,30 @@ function createBuilding(x, z) {
   mesh.position.set(x, -4.5 + h / 2, z);
   buildingGroup.add(mesh);
 
+  // 건물 물리 바디 생성 및 배치
   const shape = new CANNON.Box(new CANNON.Vec3(w / 2, h / 2, d / 2));
   const body = new CANNON.Body({ mass: 0, material: buildingMat });
   body.addShape(shape);
   body.position.set(x, -4.5 + h / 2, z);
   world.addBody(body);
 
-  // 인도 생성 (건물 주변 네 모서리, 폭 8m, 높이 0.3)
-  const sidewalkSize = 8;
-  const offset = sidewalkSize / 2;
+  // 건물 주변을 감싸는 인도 생성 (폭 8, 높이 0.3, y = -4.5 기준)
+  const sidewalkWidth = w + 5 * 2; // 건물 폭 + 양쪽 인도 폭 8씩
+  const sidewalkHeight = 0.15;
+  const sidewalkDepth = d + 5 * 2; // 건물 깊이 + 양쪽 인도 폭 8씩
 
-  const corners = [
-    { sx: x - w / 2 - offset, sz: z - d / 2 - offset },
-    { sx: x + w / 2 + offset, sz: z - d / 2 - offset },
-    { sx: x - w / 2 - offset, sz: z + d / 2 + offset },
-    { sx: x + w / 2 + offset, sz: z + d / 2 + offset },
-  ];
+  const sidewalkGeo = new THREE.BoxGeometry(sidewalkWidth, sidewalkHeight, sidewalkDepth);
+  const sidewalkMatVisual = new THREE.MeshStandardMaterial({ color: 0x888888 });
+  const sidewalkMesh = new THREE.Mesh(sidewalkGeo, sidewalkMatVisual);
+  sidewalkMesh.position.set(x, -4.5 + sidewalkHeight / 2, z);
+  sidewalkGroup.add(sidewalkMesh);
 
-  corners.forEach(corner => {
-    const geo = new THREE.BoxGeometry(sidewalkSize, 0.3, sidewalkSize);
-    const mat = new THREE.MeshStandardMaterial({ color: 0x888888 });
-    const mesh = new THREE.Mesh(geo, mat);
-    mesh.position.set(corner.sx, -4.5 + 0.3 / 2, corner.sz);
-    sidewalkGroup.add(mesh);
-
-    const shape = new CANNON.Box(new CANNON.Vec3(sidewalkSize / 2, 0.3 / 2, sidewalkSize / 2));
-    const body = new CANNON.Body({ mass: 0, material: sidewalkMat });
-    body.addShape(shape);
-    body.position.set(corner.sx, -4.5 + 0.3 / 2, corner.sz);
-    world.addBody(body);
-  });
+  // 인도 물리 바디 생성 및 배치
+  const sidewalkShape = new CANNON.Box(new CANNON.Vec3(sidewalkWidth / 2, sidewalkHeight / 2, sidewalkDepth / 2));
+  const sidewalkBody = new CANNON.Body({ mass: 0, material: sidewalkMat });
+  sidewalkBody.addShape(sidewalkShape);
+  sidewalkBody.position.set(x, -4.5 + sidewalkHeight / 2, z);
+  world.addBody(sidewalkBody);
 }
 function generateCity() {
   const ringRoadDist = (citySize + 1) * baseBlockSize;
