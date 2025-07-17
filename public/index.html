@@ -306,134 +306,93 @@ function getYRotation(q) {
   return Math.atan2(siny_cosp, cosy_cosp);
 }
 
-// === 초기 설정 ===
-const world = new CANNON.World({ gravity: new CANNON.Vec3(0, -9.82, 0) });
-world.broadphase = new CANNON.SAPBroadphase(world);
-world.defaultContactMaterial.friction = 0.6;
+// 도시 생성 기본 설정
+const BLOCK_SIZE = 100;
+const ROAD_WIDTH = 20;
+const SIDEWALK_WIDTH = 10;
+const BUILDING_AREA = BLOCK_SIZE - ROAD_WIDTH - SIDEWALK_WIDTH * 2;
+const GRID_COUNT = 5; // 5x5 블록
 
-// THREE.js 바닥 (검정색)
-const groundMat = new THREE.MeshStandardMaterial({ color: 0x000000 });
-const groundGeo = new THREE.PlaneGeometry(5000, 5000);
-const groundMesh = new THREE.Mesh(groundGeo, groundMat);
-groundMesh.rotation.x = -Math.PI / 2;
-groundMesh.position.y = -5;
-scene.add(groundMesh);
+const COLORS = {
+  road: 0x000000,       // 검은색으로 진하게 변경
+  sidewalk: 0x222222,   // 인도는 차도보다 조금 밝게
+  grass: 0x44aa44,
+  water: 0x3399ff,
+  building: [0x444444, 0x777777, 0xaaaaaa]
+};
 
-// Cannon 바닥
-const groundBody = new CANNON.Body({ mass: 0 });
-groundBody.addShape(new CANNON.Plane());
-groundBody.quaternion.setFromEuler(-Math.PI / 2, 0, 0);
-groundBody.position.y = -5;
-world.addBody(groundBody);
-
-// 재질
-const roadMat = new CANNON.Material("road");
-const buildingMat = new CANNON.Material("building");
-const sidewalkMat = new CANNON.Material("sidewalk");
-
-// 그룹
-const streetGroup = new THREE.Group();
+// 그룹화
+const roadGroup = new THREE.Group();
 const buildingGroup = new THREE.Group();
-const sidewalkGroup = new THREE.Group();
-scene.add(streetGroup, buildingGroup, sidewalkGroup);
+const parkGroup = new THREE.Group();
+scene.add(roadGroup, buildingGroup, parkGroup);
 
-// 도시 설정
-const citySize = 6; // -6~6 범위
-const blockSize = 60;
+// 블록 순회
+for (let i = -GRID_COUNT; i <= GRID_COUNT; i++) {
+  for (let j = -GRID_COUNT; j <= GRID_COUNT; j++) {
+    const x = i * BLOCK_SIZE;
+    const z = j * BLOCK_SIZE;
 
-// 유틸
-function randomBetween(min, max) {
-  return min + Math.random() * (max - min);
-}
-
-// 차도 (검정색)
-function createRoad(x, z) {
-  const geo = new THREE.BoxGeometry(blockSize, 0.2, blockSize);
-  const mat = new THREE.MeshStandardMaterial({ color: 0x000000 });
-  const mesh = new THREE.Mesh(geo, mat);
-  mesh.position.set(x, -4.9, z);
-  streetGroup.add(mesh);
-
-  const shape = new CANNON.Box(new CANNON.Vec3(blockSize / 2, 0.1, blockSize / 2));
-  const body = new CANNON.Body({ mass: 0, material: roadMat });
-  body.addShape(shape);
-  body.position.set(x, -4.9, z);
-  world.addBody(body);
-}
-
-// 인도 (폭 8, 높이 0.05)
-function createSidewalk(x, z, w, d) {
-  const geo = new THREE.BoxGeometry(w, 0.05, d);
-  const mat = new THREE.MeshStandardMaterial({ color: 0x666666 });
-  const mesh = new THREE.Mesh(geo, mat);
-  mesh.position.set(x, -4.925, z);
-  sidewalkGroup.add(mesh);
-
-  const shape = new CANNON.Box(new CANNON.Vec3(w / 2, 0.025, d / 2));
-  const body = new CANNON.Body({ mass: 0, material: sidewalkMat });
-  body.addShape(shape);
-  body.position.set(x, -4.925, z);
-  world.addBody(body);
-}
-
-// 건물
-function createBuilding(x, z) {
-  const w = randomBetween(10, 20);
-  const d = randomBetween(10, 20);
-  const h = randomBetween(40, 100);
-
-  const mat = new THREE.MeshStandardMaterial({
-    color: new THREE.Color().setHSL(Math.random(), 0.4, 0.5),
-    roughness: 0.6,
-    metalness: 0.2,
-  });
-  const geo = new THREE.BoxGeometry(w, h, d);
-  const mesh = new THREE.Mesh(geo, mat);
-  mesh.position.set(x, -4.5 + h / 2, z);
-  buildingGroup.add(mesh);
-
-  const shape = new CANNON.Box(new CANNON.Vec3(w / 2, h / 2, d / 2));
-  const body = new CANNON.Body({ mass: 0, material: buildingMat });
-  body.addShape(shape);
-  body.position.set(x, -4.5 + h / 2, z);
-  world.addBody(body);
-
-  // 건물 주변 인도 (폭 8)
-  const sw = 8;
-  createSidewalk(x - (w / 2 + sw / 2), z, sw, d + sw * 2); // 좌
-  createSidewalk(x + (w / 2 + sw / 2), z, sw, d + sw * 2); // 우
-  createSidewalk(x, z - (d / 2 + sw / 2), w + sw * 2, sw); // 앞
-  createSidewalk(x, z + (d / 2 + sw / 2), w + sw * 2, sw); // 뒤
-}
-
-// 도시 생성
-function generateCity() {
-  for (let i = -citySize; i <= citySize; i++) {
-    for (let j = -citySize; j <= citySize; j++) {
-      const x = i * blockSize;
-      const z = j * blockSize;
-
-      createRoad(x, z);
-
-      const numBuildings = Math.floor(Math.random() * 3);
-      for (let b = 0; b < numBuildings; b++) {
-        const offsetX = (Math.random() - 0.5) * blockSize * 0.6;
-        const offsetZ = (Math.random() - 0.5) * blockSize * 0.6;
-
-        const bx = x + offsetX;
-        const bz = z + offsetZ;
-
-        // 고가도로가 없으므로 중심 반경 15m만 제외
-        const distFromCenter = Math.sqrt(bx * bx + bz * bz);
-        if (distFromCenter > 15) {
-          createBuilding(bx, bz);
-        }
-      }
-    }
+    createRoadBlock(x, z);
+    createSidewalk(x, z);
+    
+    // 공원 or 물
+    const isPark = Math.random() < 0.1;
+    const isWater = !isPark && Math.random() < 0.05;
+    if (isPark) createPark(x, z);
+    else if (isWater) createWater(x, z);
+    else createBuilding(x, z);
   }
 }
 
-generateCity();
+function createRoadBlock(x, z) {
+  const geo = new THREE.BoxGeometry(BLOCK_SIZE, 0.1, BLOCK_SIZE);
+  const mat = new THREE.MeshStandardMaterial({ color: COLORS.road });
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.position.set(x, -4.95, z);
+  roadGroup.add(mesh);
+}
+
+function createSidewalk(x, z) {
+  const size = BLOCK_SIZE - ROAD_WIDTH;
+  const geo = new THREE.BoxGeometry(size, 0.2, size);
+  const mat = new THREE.MeshStandardMaterial({ color: COLORS.sidewalk });
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.position.set(x, -4.8, z);
+  roadGroup.add(mesh);
+}
+
+function createBuilding(x, z) {
+  const w = THREE.MathUtils.randFloat(20, BUILDING_AREA);
+  const d = THREE.MathUtils.randFloat(20, BUILDING_AREA);
+  const h = THREE.MathUtils.randFloat(40, 100);
+  const color = COLORS.building[Math.floor(Math.random() * COLORS.building.length)];
+
+  const geo = new THREE.BoxGeometry(w, h, d);
+  const mat = new THREE.MeshStandardMaterial({ color });
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.position.set(x, -4.5 + h / 2, z);
+  buildingGroup.add(mesh);
+}
+
+function createPark(x, z) {
+  const geo = new THREE.PlaneGeometry(BLOCK_SIZE - 10, BLOCK_SIZE - 10);
+  const mat = new THREE.MeshStandardMaterial({ color: COLORS.grass, side: THREE.DoubleSide });
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.rotation.x = -Math.PI / 2;
+  mesh.position.set(x, -4.94, z);
+  parkGroup.add(mesh);
+}
+
+function createWater(x, z) {
+  const geo = new THREE.PlaneGeometry(BLOCK_SIZE - 20, BLOCK_SIZE - 20);
+  const mat = new THREE.MeshStandardMaterial({ color: COLORS.water, side: THREE.DoubleSide });
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.rotation.x = -Math.PI / 2;
+  mesh.position.set(x, -4.93, z);
+  parkGroup.add(mesh);
+}
+
   
     // 자동차 차체 물리 (박스)
     const chassisShape = new CANNON.Box(new CANNON.Vec3(1.5, 0.5, 3));
