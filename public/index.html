@@ -306,6 +306,10 @@ function getYRotation(q) {
   return Math.atan2(siny_cosp, cosy_cosp);
 }
 
+  const world = new CANNON.World({
+  gravity: new CANNON.Vec3(0, -9.82, 0), // 중력 설정
+});
+
 // 도시 생성 기본 설정
 const BLOCK_SIZE = 100;
 const ROAD_WIDTH = 20;
