@@ -310,6 +310,22 @@ function getYRotation(q) {
   gravity: new CANNON.Vec3(0, -9.82, 0), // 중력 설정
 });
 
+  const floorGeo = new THREE.PlaneGeometry(1000, 1000);
+const floorMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
+const floorMesh = new THREE.Mesh(floorGeo, floorMat);
+floorMesh.rotation.x = -Math.PI / 2; // 평면을 XZ 평면으로 놓기
+floorMesh.position.y = -5;            // 바닥 높이 맞추기 (도시 블록 y위치 기준)
+scene.add(floorMesh);
+floorMesh.receiveShadow = true;       // 그림자 받도록
+
+  const floorBody = new CANNON.Body({
+  mass: 0, // 고정된 바닥이니까 질량 0
+  shape: new CANNON.Plane(),
+  position: new CANNON.Vec3(0, -5, 0),
+});
+floorBody.quaternion.setFromEuler(-Math.PI / 2, 0, 0); // 평면 회전 (Three.js와 동일)
+world.addBody(floorBody);
+
 // 도시 생성 기본 설정
 const BLOCK_SIZE = 100;
 const ROAD_WIDTH = 20;
