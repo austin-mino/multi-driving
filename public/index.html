@@ -370,7 +370,7 @@ function createRoadBlock(x, z) {
   const geo = new THREE.BoxGeometry(BLOCK_SIZE, 0.01, BLOCK_SIZE);
   const mat = new THREE.MeshStandardMaterial({ color: COLORS.road });
   const mesh = new THREE.Mesh(geo, mat);
-  mesh.position.set(x, -6, z);
+  mesh.position.set(x, -6.2, z);
   mesh.receiveShadow = true;
   roadGroup.add(mesh);
 }
