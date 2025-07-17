@@ -316,7 +316,7 @@ const floorGeo = new THREE.PlaneGeometry(10000, 10000);
 const floorMat = new THREE.MeshStandardMaterial({ color: 0x000000 });
 const floorMesh = new THREE.Mesh(floorGeo, floorMat);
 floorMesh.rotation.x = -Math.PI / 2;
-floorMesh.position.y = -5.4;
+floorMesh.position.y = -5;
 scene.add(floorMesh);
 floorMesh.receiveShadow = true;
 
@@ -367,20 +367,20 @@ for (let i = -GRID_COUNT; i <= GRID_COUNT; i++) {
 // 6. 함수 정의
 
 function createRoadBlock(x, z) {
-  const geo = new THREE.BoxGeometry(BLOCK_SIZE, 0.01, BLOCK_SIZE);
+  const geo = new THREE.BoxGeometry(BLOCK_SIZE, 0, BLOCK_SIZE);
   const mat = new THREE.MeshStandardMaterial({ color: COLORS.road });
   const mesh = new THREE.Mesh(geo, mat);
-  mesh.position.set(x, -5.2, z);
+  mesh.position.set(x, -5, z);
   mesh.receiveShadow = true;
   roadGroup.add(mesh);
 }
 
 function createSidewalk(x, z) {
   const size = BLOCK_SIZE - ROAD_WIDTH;
-  const geo = new THREE.BoxGeometry(size, 0.001, size);
+  const geo = new THREE.BoxGeometry(size, 0.002, size);
   const mat = new THREE.MeshStandardMaterial({ color: COLORS.sidewalk });
   const mesh = new THREE.Mesh(geo, mat);
-  mesh.position.set(x, -5.19, z);
+  mesh.position.set(x, -5.001, z);
   mesh.receiveShadow = true;
   roadGroup.add(mesh);
 }
