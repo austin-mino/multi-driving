@@ -377,10 +377,10 @@ function createRoadBlock(x, z) {
 
 function createSidewalk(x, z) {
   const size = BLOCK_SIZE - ROAD_WIDTH;
-  const geo = new THREE.BoxGeometry(size, 0.01, size);
+  const geo = new THREE.BoxGeometry(size, 0.001, size);
   const mat = new THREE.MeshStandardMaterial({ color: COLORS.sidewalk });
   const mesh = new THREE.Mesh(geo, mat);
-  mesh.position.set(x, -5.2, z);
+  mesh.position.set(x, -5.19, z);
   mesh.receiveShadow = true;
   roadGroup.add(mesh);
 }
@@ -518,6 +518,10 @@ scene.add(new THREE.AmbientLight(0x404040));
   const bodyMat = new THREE.MeshStandardMaterial({ color: color, metalness: 0.6, roughness: 0.4 });
   const mainBody = new THREE.Mesh(new THREE.BoxGeometry(3, 1.2, 6), bodyMat);
   mainBody.name = 'MainBody';
+  mainBody.userData.physics = {
+  mass: 1500,
+  shape: new CANNON.Box(new CANNON.Vec3(1.5, 0.6, 3))  // half extents
+};
   mainBody.position.y = 0.6;
   group.add(mainBody);
 
@@ -606,6 +610,10 @@ function createSportsCar(color = '#ffffff') {
   // 메인 차체 높이 1.2 -> 1.0, 위치 y 0.6 -> 0.55 (약간 낮게)
   const mainBody = new THREE.Mesh(new THREE.BoxGeometry(3, 1.0, 6), bodyMat);
   mainBody.name = 'MainBody';
+  mainBody.userData.physics = {
+  mass: 1200,
+  shape: new CANNON.Box(new CANNON.Vec3(1.5, 0.6, 3))  // half extents
+};
   mainBody.position.y = 0.55;
   group.add(mainBody);
 
@@ -708,6 +716,11 @@ function createSUVCar(color = '#ffffff') {
     new RoundedBoxGeometry(3.5, 1.6, 6, 5, 0.3),
     bodyMat
   );
+  mainBody.name = 'MainBody';
+  mainBody.userData.physics = {
+  mass: 2000,
+  shape: new CANNON.Box(new CANNON.Vec3(1.5, 0.6, 3))  // half extents
+};
   mainBody.position.y = 0.8;  // 차체 높이 절반
   group.add(mainBody);
 
