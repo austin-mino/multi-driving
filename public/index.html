@@ -1136,16 +1136,15 @@ setInterval(() => {
        requestAnimationFrame(animate);
 
   // 물리 시뮬레이션 스텝 (예시)
+       const delta = clock.getDelta();
+
+      updateVehicleControls();
+      
+      world.step(1/60, delta, 3);
 
   // 자동차 모델 위치/회전을 물리 바디에 맞게 업데이트
   carModel.position.copy(chassisBody.position);
   carModel.quaternion.copy(chassisBody.quaternion);
-
-      const delta = clock.getDelta();
-
-      updateVehicleControls();
-
-      world.step(1/60, delta, 3);
 
       // 휠 mesh 위치/회전 업데이트
       for (let i = 0; i < vehicle.wheelInfos.length; i++) {
