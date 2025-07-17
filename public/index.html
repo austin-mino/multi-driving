@@ -312,7 +312,7 @@ const world = new CANNON.World({
 });
 
 // 2. Three.js 바닥 (도로 밑 바닥)
-const floorGeo = new THREE.PlaneGeometry(1000, 1000);
+const floorGeo = new THREE.PlaneGeometry(10000, 10000);
 const floorMat = new THREE.MeshStandardMaterial({ color: 0x000000 });
 const floorMesh = new THREE.Mesh(floorGeo, floorMat);
 floorMesh.rotation.x = -Math.PI / 2;
