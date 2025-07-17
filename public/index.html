@@ -340,7 +340,6 @@ const COLORS = {
   road: 0x000000,
   sidewalk: 0xcccccc,    // 연한 회색 인도로 변경
   grass: 0x228B22,
-  water: 0x1E90FF,
   building: [0x444444, 0x777777, 0xaaaaaa, 0xffffff]  // 흰색 추가
 };
 
@@ -360,9 +359,7 @@ for (let i = -GRID_COUNT; i <= GRID_COUNT; i++) {
     createSidewalk(x, z);
     
     const isPark = Math.random() < 0.1;
-    const isWater = !isPark && Math.random() < 0.05;
     if (isPark) createPark(x, z);
-    else if (isWater) createWater(x, z);
     else createBuilding(x, z);
   }
 }
@@ -370,7 +367,7 @@ for (let i = -GRID_COUNT; i <= GRID_COUNT; i++) {
 // 6. 함수 정의
 
 function createRoadBlock(x, z) {
-  const geo = new THREE.BoxGeometry(BLOCK_SIZE, 0.1, BLOCK_SIZE);
+  const geo = new THREE.BoxGeometry(BLOCK_SIZE, 0.01, BLOCK_SIZE);
   const mat = new THREE.MeshStandardMaterial({ color: COLORS.road });
   const mesh = new THREE.Mesh(geo, mat);
   mesh.position.set(x, -5.2, z);
@@ -383,7 +380,7 @@ function createSidewalk(x, z) {
   const geo = new THREE.BoxGeometry(size, 0.01, size);
   const mat = new THREE.MeshStandardMaterial({ color: COLORS.sidewalk });
   const mesh = new THREE.Mesh(geo, mat);
-  mesh.position.set(x, -5.15, z);
+  mesh.position.set(x, -5.2, z);
   mesh.receiveShadow = true;
   roadGroup.add(mesh);
 }
@@ -408,6 +405,7 @@ function createBuilding(x, z) {
   const body = new CANNON.Body({ mass: 0, shape });
   body.position.set(x, -4.8 + h / 2, z);
   world.addBody(body);
+  addPropsAroundBuilding(x, z, w, d);
 }
 
 function createPark(x, z) {
@@ -420,21 +418,88 @@ function createPark(x, z) {
   parkGroup.add(mesh);
 }
 
-function createWater(x, z) {
-  const geo = new THREE.PlaneGeometry(BLOCK_SIZE - 20, BLOCK_SIZE - 20);
-  const mat = new THREE.MeshStandardMaterial({ color: COLORS.water, side: THREE.DoubleSide });
-  const mesh = new THREE.Mesh(geo, mat);
-  mesh.rotation.x = -Math.PI / 2;
-  mesh.position.set(x, -4.93, z);
-  mesh.receiveShadow = true;
-  parkGroup.add(mesh);
-}
-
 // 7. 하늘색 배경 설정
 scene.background = new THREE.Color(0x87ceeb); // 하늘색 (skyblue)
 
+  const light = new THREE.DirectionalLight(0xffffff, 1);
+light.position.set(100, 200, 100);
+light.castShadow = true;
 
-  
+// 그림자 품질 설정
+light.shadow.mapSize.width = 2048;
+light.shadow.mapSize.height = 2048;
+light.shadow.camera.near = 0.5;
+light.shadow.camera.far = 1000;
+light.shadow.camera.left = -500;
+light.shadow.camera.right = 500;
+light.shadow.camera.top = 500;
+light.shadow.camera.bottom = -500;
+
+scene.add(light);
+
+// Ambient Light 추가
+scene.add(new THREE.AmbientLight(0x404040));
+
+ function addPropsAroundBuilding(x, z, w, d) {
+  const propsGroup = new THREE.Group();
+
+  const sidewalkRange = BLOCK_SIZE / 2 - SIDEWALK_WIDTH / 2;
+
+  const benchGeo = new THREE.BoxGeometry(4, 0.5, 1);
+  const benchMat = new THREE.MeshStandardMaterial({ color: 0x8B4513 });
+
+  const lightGeo = new THREE.CylinderGeometry(0.1, 0.1, 6, 8);
+  const lightMat = new THREE.MeshStandardMaterial({ color: 0x888888 });
+
+  const treeGeo = new THREE.CylinderGeometry(0.3, 0.3, 3, 6);
+  const treeTopGeo = new THREE.SphereGeometry(1.5, 8, 8);
+  const treeTrunkMat = new THREE.MeshStandardMaterial({ color: 0x8B4513 });
+  const treeTopMat = new THREE.MeshStandardMaterial({ color: 0x228B22 });
+
+  const offsets = [
+    [w / 2 + 2, d / 2 + 2],
+    [-w / 2 - 2, d / 2 + 2],
+    [w / 2 + 2, -d / 2 - 2],
+    [-w / 2 - 2, -d / 2 - 2],
+  ];
+
+  for (const [dx, dz] of offsets) {
+    const px = x + dx;
+    const pz = z + dz;
+
+    // 인도 영역 안에만 배치 (BLOCK_SIZE/2 기준)
+    const localX = px % BLOCK_SIZE;
+    const localZ = pz % BLOCK_SIZE;
+
+    if (Math.abs(localX) > sidewalkRange || Math.abs(localZ) > sidewalkRange) continue;
+
+    const rand = Math.random();
+    if (rand < 0.33) {
+      const bench = new THREE.Mesh(benchGeo, benchMat);
+      bench.position.set(px, -4.75, pz);
+      bench.castShadow = true;
+      propsGroup.add(bench);
+    } else if (rand < 0.66) {
+      const light = new THREE.Mesh(lightGeo, lightMat);
+      light.position.set(px, -2.5, pz);
+      light.castShadow = true;
+      propsGroup.add(light);
+    } else {
+      const trunk = new THREE.Mesh(treeGeo, treeTrunkMat);
+      trunk.position.set(px, -3.0, pz);
+      const top = new THREE.Mesh(treeTopGeo, treeTopMat);
+      top.position.set(px, 0, pz);
+
+      trunk.castShadow = true;
+      top.castShadow = true;
+      propsGroup.add(trunk);
+      propsGroup.add(top);
+    }
+  }
+
+  scene.add(propsGroup);
+}
+
     // 자동차 차체 물리 (박스)
     const chassisShape = new CANNON.Box(new CANNON.Vec3(1.5, 0.5, 3));
     const chassisBody = new CANNON.Body({ mass: 110 });
@@ -794,13 +859,6 @@ function createSUVCar(color = '#ffffff') {
       tireMesh.rotation.z = Math.PI / 2; // 눕히기
       holder.add(tireMesh);
     });
-
-   const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.6);
-scene.add(hemiLight);
-
-const dirLight = new THREE.DirectionalLight(0xffffff, 1);
-dirLight.position.set(300, 400, 100);
-scene.add(dirLight);
   
 // 사용자 입력 상태
 let input = { left: false, right: false, accel: false, brake: false };
