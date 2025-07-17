@@ -373,7 +373,7 @@ function createRoadBlock(x, z) {
   const geo = new THREE.BoxGeometry(BLOCK_SIZE, 0.1, BLOCK_SIZE);
   const mat = new THREE.MeshStandardMaterial({ color: COLORS.road });
   const mesh = new THREE.Mesh(geo, mat);
-  mesh.position.set(x, -5.2, z);
+  mesh.position.set(x, -5.1, z);
   mesh.receiveShadow = true;
   roadGroup.add(mesh);
 }
@@ -383,7 +383,7 @@ function createSidewalk(x, z) {
   const geo = new THREE.BoxGeometry(size, 0.01, size);
   const mat = new THREE.MeshStandardMaterial({ color: COLORS.sidewalk });
   const mesh = new THREE.Mesh(geo, mat);
-  mesh.position.set(x, -5, z);
+  mesh.position.set(x, -5.01, z);
   mesh.receiveShadow = true;
   roadGroup.add(mesh);
 }
