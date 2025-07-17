@@ -380,7 +380,7 @@ function createRoadBlock(x, z) {
 
 function createSidewalk(x, z) {
   const size = BLOCK_SIZE - ROAD_WIDTH;
-  const geo = new THREE.BoxGeometry(size, 0.2, size);
+  const geo = new THREE.BoxGeometry(size, 0.01, size);
   const mat = new THREE.MeshStandardMaterial({ color: COLORS.sidewalk });
   const mesh = new THREE.Mesh(geo, mat);
   mesh.position.set(x, -5, z);
