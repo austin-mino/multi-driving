@@ -324,7 +324,7 @@ floorMesh.receiveShadow = true;
 const floorBody = new CANNON.Body({
   mass: 0,
   shape: new CANNON.Plane(),
-  position: new CANNON.Vec3(0, -5.4, 0),
+  position: new CANNON.Vec3(0, -6, 0),
 });
 floorBody.quaternion.setFromEuler(-Math.PI / 2, 0, 0);
 world.addBody(floorBody);
@@ -367,20 +367,20 @@ for (let i = -GRID_COUNT; i <= GRID_COUNT; i++) {
 // 6. 함수 정의
 
 function createRoadBlock(x, z) {
-  const geo = new THREE.BoxGeometry(BLOCK_SIZE, 0, BLOCK_SIZE);
+  const geo = new THREE.BoxGeometry(BLOCK_SIZE, 0.01, BLOCK_SIZE);
   const mat = new THREE.MeshStandardMaterial({ color: COLORS.road });
   const mesh = new THREE.Mesh(geo, mat);
-  mesh.position.set(x, -5, z);
+  mesh.position.set(x, -6, z);
   mesh.receiveShadow = true;
   roadGroup.add(mesh);
 }
 
 function createSidewalk(x, z) {
   const size = BLOCK_SIZE - ROAD_WIDTH;
-  const geo = new THREE.BoxGeometry(size, 0.08, size);
+  const geo = new THREE.BoxGeometry(size, 0.1, size);
   const mat = new THREE.MeshStandardMaterial({ color: COLORS.sidewalk });
   const mesh = new THREE.Mesh(geo, mat);
-  mesh.position.set(x, -5.001, z);
+  mesh.position.set(x, -6, z);
   mesh.receiveShadow = true;
   roadGroup.add(mesh);
 }
@@ -395,7 +395,7 @@ function createBuilding(x, z) {
   const geo = new THREE.BoxGeometry(w, h, d);
   const mat = new THREE.MeshStandardMaterial({ color });
   const mesh = new THREE.Mesh(geo, mat);
-  mesh.position.set(x, -4.8 + h / 2, z);
+  mesh.position.set(x, -5 + h / 2, z);
   mesh.castShadow = true;
   mesh.receiveShadow = true;
   buildingGroup.add(mesh);
@@ -403,7 +403,7 @@ function createBuilding(x, z) {
   // Cannon-es 물리 바디 (박스 모양)
   const shape = new CANNON.Box(new CANNON.Vec3(w / 2, h / 2, d / 2));
   const body = new CANNON.Body({ mass: 0, shape });
-  body.position.set(x, -4.8 + h / 2, z);
+  body.position.set(x, -5 + h / 2, z);
   world.addBody(body);
   addPropsAroundBuilding(x, z, w, d);
 }
