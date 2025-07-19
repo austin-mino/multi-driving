@@ -305,18 +305,27 @@ function getYRotation(q) {
   const cosy_cosp = 1 - 2 * (q.y * q.y + q.z * q.z);
   return Math.atan2(siny_cosp, cosy_cosp);
 }
-
 // 1. 물리 월드 생성
 const world = new CANNON.World({
   gravity: new CANNON.Vec3(0, -9.82, 0),
 });
+
+// 마찰 재질 설정
+const groundMaterial = new CANNON.Material("groundMaterial");
+const wheelMaterial = new CANNON.Material("wheelMaterial");
+
+const contactMaterial = new CANNON.ContactMaterial(groundMaterial, wheelMaterial, {
+  friction: 0.5,
+  restitution: 0.0,
+});
+world.addContactMaterial(contactMaterial);
 
 // 2. Three.js 바닥 (도로 밑 바닥)
 const floorGeo = new THREE.PlaneGeometry(10000, 10000);
 const floorMat = new THREE.MeshStandardMaterial({ color: 0x000000 });
 const floorMesh = new THREE.Mesh(floorGeo, floorMat);
 floorMesh.rotation.x = -Math.PI / 2;
-floorMesh.position.y = -6;
+floorMesh.position.y = -10;
 scene.add(floorMesh);
 floorMesh.receiveShadow = true;
 
@@ -324,26 +333,26 @@ floorMesh.receiveShadow = true;
 const floorBody = new CANNON.Body({
   mass: 0,
   shape: new CANNON.Plane(),
-  position: new CANNON.Vec3(0, -6, 0),
+  position: new CANNON.Vec3(0, -10, 0),
 });
 floorBody.quaternion.setFromEuler(-Math.PI / 2, 0, 0);
+floorBody.material = groundMaterial;
 world.addBody(floorBody);
 
 // 4. 도시 생성 기본 설정
 const BLOCK_SIZE = 100;
 const ROAD_WIDTH = 20;
-const SIDEWALK_WIDTH = 12; // 인도 폭 살짝 키움
+const SIDEWALK_WIDTH = 12;
 const BUILDING_AREA = BLOCK_SIZE - ROAD_WIDTH - SIDEWALK_WIDTH * 2;
 const GRID_COUNT = 5;
 
 const COLORS = {
   road: 0x000000,
-  sidewalk: 0xcccccc,    // 연한 회색 인도로 변경
+  sidewalk: 0xcccccc,
   grass: 0x228B22,
-  building: [0x444444, 0x777777, 0xaaaaaa, 0xffffff]  // 흰색 추가
+  building: [0x444444, 0x777777, 0xaaaaaa, 0xffffff]
 };
 
-// 그룹
 const roadGroup = new THREE.Group();
 const buildingGroup = new THREE.Group();
 const parkGroup = new THREE.Group();
@@ -357,7 +366,7 @@ for (let i = -GRID_COUNT; i <= GRID_COUNT; i++) {
 
     createRoadBlock(x, z);
     createSidewalk(x, z);
-    
+
     const isPark = Math.random() < 0.1;
     if (isPark) createPark(x, z);
     else createBuilding(x, z);
@@ -365,14 +374,23 @@ for (let i = -GRID_COUNT; i <= GRID_COUNT; i++) {
 }
 
 // 6. 함수 정의
-
 function createRoadBlock(x, z) {
   const geo = new THREE.BoxGeometry(BLOCK_SIZE, 0.01, BLOCK_SIZE);
   const mat = new THREE.MeshStandardMaterial({ color: COLORS.road });
   const mesh = new THREE.Mesh(geo, mat);
-  mesh.position.set(x, -6.2, z);
+  mesh.position.set(x, -5.5, z);
   mesh.receiveShadow = true;
   roadGroup.add(mesh);
+
+  // Cannon 바디 추가
+  const shape = new CANNON.Box(new CANNON.Vec3(BLOCK_SIZE / 2, 0.005, BLOCK_SIZE / 2));
+  const body = new CANNON.Body({
+    mass: 0,
+    shape,
+    material: groundMaterial,
+  });
+  body.position.set(x, -5.5, z);
+  world.addBody(body);
 }
 
 function createSidewalk(x, z) {
@@ -380,7 +398,7 @@ function createSidewalk(x, z) {
   const geo = new THREE.BoxGeometry(size, 0.1, size);
   const mat = new THREE.MeshStandardMaterial({ color: COLORS.sidewalk });
   const mesh = new THREE.Mesh(geo, mat);
-  mesh.position.set(x, -6, z);
+  mesh.position.set(x, -5.4, z);
   mesh.receiveShadow = true;
   roadGroup.add(mesh);
 }
@@ -391,7 +409,6 @@ function createBuilding(x, z) {
   const h = THREE.MathUtils.randFloat(40, 100);
   const color = COLORS.building[Math.floor(Math.random() * COLORS.building.length)];
 
-  // Three.js 메쉬
   const geo = new THREE.BoxGeometry(w, h, d);
   const mat = new THREE.MeshStandardMaterial({ color });
   const mesh = new THREE.Mesh(geo, mat);
@@ -400,11 +417,11 @@ function createBuilding(x, z) {
   mesh.receiveShadow = true;
   buildingGroup.add(mesh);
 
-  // Cannon-es 물리 바디 (박스 모양)
   const shape = new CANNON.Box(new CANNON.Vec3(w / 2, h / 2, d / 2));
   const body = new CANNON.Body({ mass: 0, shape });
   body.position.set(x, -5 + h / 2, z);
   world.addBody(body);
+
   addPropsAroundBuilding(x, z, w, d);
 }
 
@@ -418,31 +435,9 @@ function createPark(x, z) {
   parkGroup.add(mesh);
 }
 
-// 7. 하늘색 배경 설정
-scene.background = new THREE.Color(0x87ceeb); // 하늘색 (skyblue)
-
-  const light = new THREE.DirectionalLight(0xffffff, 1);
-light.position.set(100, 200, 100);
-light.castShadow = true;
-
-// 그림자 품질 설정
-light.shadow.mapSize.width = 2048;
-light.shadow.mapSize.height = 2048;
-light.shadow.camera.near = 0.5;
-light.shadow.camera.far = 1000;
-light.shadow.camera.left = -500;
-light.shadow.camera.right = 500;
-light.shadow.camera.top = 500;
-light.shadow.camera.bottom = -500;
-
-scene.add(light);
-
-// Ambient Light 추가
-scene.add(new THREE.AmbientLight(0x404040));
-
- function addPropsAroundBuilding(x, z, w, d) {
+// 7. 소품 생성
+function addPropsAroundBuilding(x, z, w, d) {
   const propsGroup = new THREE.Group();
-
   const sidewalkRange = BLOCK_SIZE / 2 - SIDEWALK_WIDTH / 2;
 
   const benchGeo = new THREE.BoxGeometry(4, 0.5, 1);
@@ -467,7 +462,6 @@ scene.add(new THREE.AmbientLight(0x404040));
     const px = x + dx;
     const pz = z + dz;
 
-    // 인도 영역 안에만 배치 (BLOCK_SIZE/2 기준)
     const localX = px % BLOCK_SIZE;
     const localZ = pz % BLOCK_SIZE;
 
@@ -489,16 +483,34 @@ scene.add(new THREE.AmbientLight(0x404040));
       trunk.position.set(px, -3.0, pz);
       const top = new THREE.Mesh(treeTopGeo, treeTopMat);
       top.position.set(px, 0, pz);
-
       trunk.castShadow = true;
       top.castShadow = true;
       propsGroup.add(trunk);
       propsGroup.add(top);
     }
   }
+
   scene.add(propsGroup);
 }
 
+// 8. 조명 및 배경
+scene.background = new THREE.Color(0x87ceeb);
+
+const light = new THREE.DirectionalLight(0xffffff, 1);
+light.position.set(100, 200, 100);
+light.castShadow = true;
+light.shadow.mapSize.width = 2048;
+light.shadow.mapSize.height = 2048;
+light.shadow.camera.near = 0.5;
+light.shadow.camera.far = 1000;
+light.shadow.camera.left = -500;
+light.shadow.camera.right = 500;
+light.shadow.camera.top = 500;
+light.shadow.camera.bottom = -500;
+scene.add(light);
+
+scene.add(new THREE.AmbientLight(0x404040));
+  
     // 자동차 차체 물리 (박스)
     const chassisShape = new CANNON.Box(new CANNON.Vec3(1.5, 0.5, 3));
     const chassisBody = new CANNON.Body({ mass: 110 });
