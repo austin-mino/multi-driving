@@ -305,7 +305,8 @@ function getYRotation(q) {
   const cosy_cosp = 1 - 2 * (q.y * q.y + q.z * q.z);
   return Math.atan2(siny_cosp, cosy_cosp);
 }
-// 1. 물리 월드 생성
+
+  // 1. 물리 월드 생성
 const world = new CANNON.World({
   gravity: new CANNON.Vec3(0, -9.82, 0),
 });
@@ -325,7 +326,7 @@ const floorGeo = new THREE.PlaneGeometry(10000, 10000);
 const floorMat = new THREE.MeshStandardMaterial({ color: 0x000000 });
 const floorMesh = new THREE.Mesh(floorGeo, floorMat);
 floorMesh.rotation.x = -Math.PI / 2;
-floorMesh.position.y = -10;
+floorMesh.position.y = -15;
 scene.add(floorMesh);
 floorMesh.receiveShadow = true;
 
@@ -333,7 +334,7 @@ floorMesh.receiveShadow = true;
 const floorBody = new CANNON.Body({
   mass: 0,
   shape: new CANNON.Plane(),
-  position: new CANNON.Vec3(0, -10, 0),
+  position: new CANNON.Vec3(0, -15, 0),
 });
 floorBody.quaternion.setFromEuler(-Math.PI / 2, 0, 0);
 floorBody.material = groundMaterial;
@@ -378,18 +379,17 @@ function createRoadBlock(x, z) {
   const geo = new THREE.BoxGeometry(BLOCK_SIZE, 0.01, BLOCK_SIZE);
   const mat = new THREE.MeshStandardMaterial({ color: COLORS.road });
   const mesh = new THREE.Mesh(geo, mat);
-  mesh.position.set(x, -5.5, z);
+  mesh.position.set(x, -10.5, z);
   mesh.receiveShadow = true;
   roadGroup.add(mesh);
 
-  // Cannon 바디 추가
   const shape = new CANNON.Box(new CANNON.Vec3(BLOCK_SIZE / 2, 0.005, BLOCK_SIZE / 2));
   const body = new CANNON.Body({
     mass: 0,
     shape,
     material: groundMaterial,
   });
-  body.position.set(x, -5.5, z);
+  body.position.set(x, -10.5, z);
   world.addBody(body);
 }
 
@@ -398,7 +398,7 @@ function createSidewalk(x, z) {
   const geo = new THREE.BoxGeometry(size, 0.1, size);
   const mat = new THREE.MeshStandardMaterial({ color: COLORS.sidewalk });
   const mesh = new THREE.Mesh(geo, mat);
-  mesh.position.set(x, -5.4, z);
+  mesh.position.set(x, -10.4, z);
   mesh.receiveShadow = true;
   roadGroup.add(mesh);
 }
@@ -412,14 +412,14 @@ function createBuilding(x, z) {
   const geo = new THREE.BoxGeometry(w, h, d);
   const mat = new THREE.MeshStandardMaterial({ color });
   const mesh = new THREE.Mesh(geo, mat);
-  mesh.position.set(x, -5 + h / 2, z);
+  mesh.position.set(x, -10 + h / 2, z);
   mesh.castShadow = true;
   mesh.receiveShadow = true;
   buildingGroup.add(mesh);
 
   const shape = new CANNON.Box(new CANNON.Vec3(w / 2, h / 2, d / 2));
   const body = new CANNON.Body({ mass: 0, shape });
-  body.position.set(x, -5 + h / 2, z);
+  body.position.set(x, -10 + h / 2, z);
   world.addBody(body);
 
   addPropsAroundBuilding(x, z, w, d);
@@ -430,7 +430,7 @@ function createPark(x, z) {
   const mat = new THREE.MeshStandardMaterial({ color: COLORS.grass, side: THREE.DoubleSide });
   const mesh = new THREE.Mesh(geo, mat);
   mesh.rotation.x = -Math.PI / 2;
-  mesh.position.set(x, -4.94, z);
+  mesh.position.set(x, -9.94, z);
   mesh.receiveShadow = true;
   parkGroup.add(mesh);
 }
@@ -470,19 +470,19 @@ function addPropsAroundBuilding(x, z, w, d) {
     const rand = Math.random();
     if (rand < 0.33) {
       const bench = new THREE.Mesh(benchGeo, benchMat);
-      bench.position.set(px, -4.75, pz);
+      bench.position.set(px, -9.75, pz);
       bench.castShadow = true;
       propsGroup.add(bench);
     } else if (rand < 0.66) {
       const light = new THREE.Mesh(lightGeo, lightMat);
-      light.position.set(px, -2.5, pz);
+      light.position.set(px, -7.5, pz);
       light.castShadow = true;
       propsGroup.add(light);
     } else {
       const trunk = new THREE.Mesh(treeGeo, treeTrunkMat);
-      trunk.position.set(px, -3.0, pz);
+      trunk.position.set(px, -8.0, pz);
       const top = new THREE.Mesh(treeTopGeo, treeTopMat);
-      top.position.set(px, 0, pz);
+      top.position.set(px, -5.0, pz);
       trunk.castShadow = true;
       top.castShadow = true;
       propsGroup.add(trunk);
@@ -515,7 +515,7 @@ scene.add(new THREE.AmbientLight(0x404040));
     const chassisShape = new CANNON.Box(new CANNON.Vec3(1.5, 0.5, 3));
     const chassisBody = new CANNON.Body({ mass: 110 });
     chassisBody.addShape(chassisShape);
-    chassisBody.position.set(-38, 0.6, 0);
+    chassisBody.position.set(-50, 0.6, 0);
     chassisBody.angularDamping = 0.5;
     chassisBody.linearDamping = 0.0;
     world.addBody(chassisBody);
