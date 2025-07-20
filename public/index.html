@@ -369,6 +369,7 @@ function createRoadBlock(x, z) {
   mesh.position.set(x, -5, z); // -5 + 4.5 = -0.5 (도로 표면)
   mesh.receiveShadow = true;
   roadGroup.add(mesh);
+}
 
 function createSidewalk(x, z) {
   const size = BLOCK_SIZE - ROAD_WIDTH;
