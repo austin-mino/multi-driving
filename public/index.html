@@ -383,16 +383,6 @@ function createRoadBlock(x, z) {
   mesh.receiveShadow = true;
   roadGroup.add(mesh);
 
-  const shape = new CANNON.Box(new CANNON.Vec3(BLOCK_SIZE / 2, 0.005, BLOCK_SIZE / 2));
-  const body = new CANNON.Body({
-    mass: 0,
-    shape,
-    material: groundMaterial,
-  });
-  body.position.set(x, -5, z);
-  world.addBody(body);
-}
-
 function createSidewalk(x, z) {
   const size = BLOCK_SIZE - ROAD_WIDTH;
   const geo = new THREE.BoxGeometry(size, 0.1, size);
@@ -515,9 +505,9 @@ scene.add(new THREE.AmbientLight(0x404040));
     const chassisShape = new CANNON.Box(new CANNON.Vec3(1.5, 0.5, 3));
     const chassisBody = new CANNON.Body({ mass: 110 });
     chassisBody.addShape(chassisShape);
-    chassisBody.position.set(-50, -4, 0);
+    chassisBody.position.set(-50, -3, 0);
     chassisBody.angularDamping = 0.5;
-    chassisBody.linearDamping = 0.0;
+    chassisBody.linearDamping = 0.1;
     world.addBody(chassisBody);
   let carModel; // 선언만
 
@@ -850,7 +840,7 @@ function createSUVCar(color = '#ffffff') {
       dampingRelaxation: 2.3,
       dampingCompression: 4.4,
       maxSuspensionForce: 1e4,
-      rollInfluence: 0.02,
+      rollInfluence: 0.01,
       axleLocal: new CANNON.Vec3(1, 0, 0),
       maxSuspensionTravel: 0.3,
       useCustomSlidingRotationalSpeed: true,
