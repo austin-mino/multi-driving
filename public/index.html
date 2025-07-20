@@ -527,11 +527,11 @@ scene.add(new THREE.AmbientLight(0x404040));
   const group = new THREE.Group();
 
   const bodyMat = new THREE.MeshStandardMaterial({ color: color, metalness: 0.6, roughness: 0.4 });
-  const mainBody = new THREE.Mesh(new THREE.BoxGeometry(3, 1.2, 6), bodyMat);
+  const mainBody = new THREE.Mesh(new THREE.BoxGeometry(3, 1.0, 6), bodyMat);
   mainBody.name = 'MainBody';
   mainBody.userData.physics = {
   mass: 1500,
-  shape: new CANNON.Box(new CANNON.Vec3(1.5, 0.5, 3))  // half extents
+  shape: new CANNON.Box(new CANNON.Vec3(1.5, 0.45, 3))  // half extents
 };
   mainBody.position.y = 0.6;
   group.add(mainBody);
