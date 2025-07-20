@@ -306,10 +306,10 @@ function getYRotation(q) {
   return Math.atan2(siny_cosp, cosy_cosp);
 }
 
-// 1. 월드 설정
-const world = new CANNON.World({ gravity: new CANNON.Vec3(0, -9.82, 0) });
-world.broadphase = new CANNON.SAPBroadphase(world);
-world.defaultContactMaterial.friction = 0.6;
+// 1. 물리 월드 생성
+const world = new CANNON.World({
+  gravity: new CANNON.Vec3(0, -9.82, 0),
+});
 
 // 2. 마찰 재질 설정
 const groundMaterial = new CANNON.Material("groundMaterial");
@@ -330,6 +330,15 @@ const groundBody = new CANNON.Body({
 });
 groundBody.position.set(0, -5, 0); // y = -5
 world.addBody(groundBody);
+  
+  // THREE.js 시각용 지면 메쉬 생성
+const groundGeo = new THREE.BoxGeometry(2000, 0.2, 2000); // CANNON.Box 크기 * 2 (half extents → full size)
+const groundMat = new THREE.MeshStandardMaterial({ color: 0x000000 }); // 검은색
+const groundMesh = new THREE.Mesh(groundGeo, groundMat);
+groundMesh.position.set(0, -5, 0);
+groundMesh.receiveShadow = true;
+scene.add(groundMesh);
+
 
 // 4. 도시 생성 기본 설정
 const BLOCK_SIZE = 100;
@@ -497,7 +506,7 @@ scene.add(new THREE.AmbientLight(0x404040));
     const chassisShape = new CANNON.Box(new CANNON.Vec3(1.5, 0.5, 3));
     const chassisBody = new CANNON.Body({ mass: 110 });
     chassisBody.addShape(chassisShape);
-    chassisBody.position.set(-50, -4.5, 0);
+    chassisBody.position.set(-50, -4, 0);
     chassisBody.angularDamping = 0.5;
     chassisBody.linearDamping = 0.0;
     world.addBody(chassisBody);
@@ -827,7 +836,7 @@ function createSUVCar(color = '#ffffff') {
       radius: 0.46,
       directionLocal: new CANNON.Vec3(0, -1, 0),
       suspensionStiffness: 45,
-      suspensionRestLength: 0.5,
+      suspensionRestLength: 0.4,
       frictionSlip: 5,
       dampingRelaxation: 2.3,
       dampingCompression: 4.4,
