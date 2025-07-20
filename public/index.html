@@ -311,11 +311,16 @@ const world = new CANNON.World({ gravity: new CANNON.Vec3(0, -9.82, 0) });
 world.broadphase = new CANNON.SAPBroadphase(world);
 world.defaultContactMaterial.friction = 0.6;
 
-// 2. 지면 생성
-const groundBody = new CANNON.Body({ mass: 0 });
-groundBody.addShape(new CANNON.Plane());
-groundBody.quaternion.setFromEuler(-Math.PI / 2, 0, 0);
+// 2. 지면 생성 (y = -5, 박스 형태)
+const groundShape = new CANNON.Box(new CANNON.Vec3(1000, 0.1, 1000)); // 큰 평면
+const groundBody = new CANNON.Body({
+  mass: 0,
+  shape: groundShape,
+  material: groundMaterial,
+});
+groundBody.position.set(0, -5, 0); // y = -5
 world.addBody(groundBody);
+
   
 // 마찰 재질 설정
 const groundMaterial = new CANNON.Material("groundMaterial");
