@@ -515,7 +515,7 @@ scene.add(new THREE.AmbientLight(0x404040));
     const chassisShape = new CANNON.Box(new CANNON.Vec3(1.5, 0.5, 3));
     const chassisBody = new CANNON.Body({ mass: 110 });
     chassisBody.addShape(chassisShape);
-    chassisBody.position.set(-50, -3, 0);
+    chassisBody.position.set(-50, -4, 0);
     chassisBody.angularDamping = 0.5;
     chassisBody.linearDamping = 0.0;
     world.addBody(chassisBody);
@@ -531,7 +531,7 @@ scene.add(new THREE.AmbientLight(0x404040));
   mainBody.name = 'MainBody';
   mainBody.userData.physics = {
   mass: 1500,
-  shape: new CANNON.Box(new CANNON.Vec3(1.5, 0.6, 3))  // half extents
+  shape: new CANNON.Box(new CANNON.Vec3(1.5, 0.5, 3))  // half extents
 };
   mainBody.position.y = 0.6;
   group.add(mainBody);
@@ -845,7 +845,7 @@ function createSUVCar(color = '#ffffff') {
       radius: 0.4,
       directionLocal: new CANNON.Vec3(0, -1, 0),
       suspensionStiffness: 45,
-      suspensionRestLength: 0.6,
+      suspensionRestLength: 0.3,
       frictionSlip: 5,
       dampingRelaxation: 2.3,
       dampingCompression: 4.4,
@@ -858,7 +858,7 @@ function createSUVCar(color = '#ffffff') {
     };
 
     // 휠 위치 및 앞바퀴 여부 설정
-    [[-1.2, 0.3, 2.4, true], [1.2, 0.3, 2.4, true], [-1.2, 0.3, -2.4, false], [1.2, 0.3, -2.4, false]].forEach(
+    [[-1.2, 0.4, 2.4, true], [1.2, 0.4, 2.4, true], [-1.2, 0.4, -2.4, false], [1.2, 0.4, -2.4, false]].forEach(
       ([x, y, z, isFront]) => {
         vehicle.addWheel({
           ...wheelOptions,
