@@ -306,11 +306,17 @@ function getYRotation(q) {
   return Math.atan2(siny_cosp, cosy_cosp);
 }
 
-// 1. 물리 월드 생성
-const world = new CANNON.World({
-  gravity: new CANNON.Vec3(0, -9.82, 0),
-});
+// 1. 월드 설정
+const world = new CANNON.World({ gravity: new CANNON.Vec3(0, -9.82, 0) });
+world.broadphase = new CANNON.SAPBroadphase(world);
+world.defaultContactMaterial.friction = 0.6;
 
+// 2. 지면 생성
+const groundBody = new CANNON.Body({ mass: 0 });
+groundBody.addShape(new CANNON.Plane());
+groundBody.quaternion.setFromEuler(-Math.PI / 2, 0, 0);
+world.addBody(groundBody);
+  
 // 마찰 재질 설정
 const groundMaterial = new CANNON.Material("groundMaterial");
 const wheelMaterial = new CANNON.Material("wheelMaterial");
@@ -320,25 +326,6 @@ const contactMaterial = new CANNON.ContactMaterial(groundMaterial, wheelMaterial
   restitution: 0.0,
 });
 world.addContactMaterial(contactMaterial);
-
-// 2. Three.js 바닥 (도로 밑 바닥)
-const floorGeo = new THREE.PlaneGeometry(10000, 10000);
-const floorMat = new THREE.MeshStandardMaterial({ color: 0x000000 });
-const floorMesh = new THREE.Mesh(floorGeo, floorMat);
-floorMesh.rotation.x = -Math.PI / 2;
-floorMesh.position.y = -5;
-scene.add(floorMesh);
-floorMesh.receiveShadow = true;
-
-// 3. Cannon-es 바닥 물리
-const floorBody = new CANNON.Body({
-  mass: 0,
-  shape: new CANNON.Plane(),
-  position: new CANNON.Vec3(0, -5, 0),
-});
-floorBody.quaternion.setFromEuler(-Math.PI / 2, 0, 0);
-floorBody.material = groundMaterial;
-world.addBody(floorBody);
 
 // 4. 도시 생성 기본 설정
 const BLOCK_SIZE = 100;
@@ -382,16 +369,6 @@ function createRoadBlock(x, z) {
   mesh.position.set(x, -5, z); // -5 + 4.5 = -0.5 (도로 표면)
   mesh.receiveShadow = true;
   roadGroup.add(mesh);
-
-  const shape = new CANNON.Box(new CANNON.Vec3(BLOCK_SIZE / 2, 0.005, BLOCK_SIZE / 2));
-  const body = new CANNON.Body({
-    mass: 0,
-    shape,
-    material: groundMaterial,
-  });
-  body.position.set(x, -5, z);
-  world.addBody(body);
-}
 
 function createSidewalk(x, z) {
   const size = BLOCK_SIZE - ROAD_WIDTH;
@@ -858,7 +835,7 @@ function createSUVCar(color = '#ffffff') {
     };
 
     // 휠 위치 및 앞바퀴 여부 설정
-    [[-1.2, 0.3, 2.4, true], [1.2, 0.3, 2.4, true], [-1.2, 0.3, -2.4, false], [1.2, 0.3, -2.4, false]].forEach(
+    [[-1.2, 0.25, 2.4, true], [1.2, 0.25, 2.4, true], [-1.2, 0.25, -2.4, false], [1.2, 0.25, -2.4, false]].forEach(
       ([x, y, z, isFront]) => {
         vehicle.addWheel({
           ...wheelOptions,
