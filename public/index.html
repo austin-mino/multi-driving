@@ -305,13 +305,13 @@ function getYRotation(q) {
   const cosy_cosp = 1 - 2 * (q.y * q.y + q.z * q.z);
   return Math.atan2(siny_cosp, cosy_cosp);
 }
-
-// 1. 물리 월드 생성
+  
+  // 1. 물리 월드 생성
 const world = new CANNON.World({
   gravity: new CANNON.Vec3(0, -9.82, 0),
 });
 
-// 2. 마찰 재질 설정
+// 마찰 재질 설정
 const groundMaterial = new CANNON.Material("groundMaterial");
 const wheelMaterial = new CANNON.Material("wheelMaterial");
 
@@ -320,25 +320,25 @@ const contactMaterial = new CANNON.ContactMaterial(groundMaterial, wheelMaterial
   restitution: 0.0,
 });
 world.addContactMaterial(contactMaterial);
-  
-// 3. 지면 생성 (y = -5, 박스 형태)
-const groundShape = new CANNON.Box(new CANNON.Vec3(1000, 0.1, 1000)); // 큰 평면
-const groundBody = new CANNON.Body({
-  mass: 0,
-  shape: groundShape,
-  material: groundMaterial,
-});
-groundBody.position.set(0, -5.02, 0); // y = -5
-world.addBody(groundBody);
-  
-  // THREE.js 시각용 지면 메쉬 생성
-const groundGeo = new THREE.BoxGeometry(2000, 0.2, 2000); // CANNON.Box 크기 * 2 (half extents → full size)
-const groundMat = new THREE.MeshStandardMaterial({ color: 0x000000 }); // 검은색
-const groundMesh = new THREE.Mesh(groundGeo, groundMat);
-groundMesh.position.set(0, -5.02, 0);
-groundMesh.receiveShadow = true;
-scene.add(groundMesh);
 
+// 2. Three.js 바닥 (도로 밑 바닥)
+const floorGeo = new THREE.PlaneGeometry(10000, 10000);
+const floorMat = new THREE.MeshStandardMaterial({ color: 0x000000 });
+const floorMesh = new THREE.Mesh(floorGeo, floorMat);
+floorMesh.rotation.x = -Math.PI / 2;
+floorMesh.position.y = -5;
+scene.add(floorMesh);
+floorMesh.receiveShadow = true;
+
+// 3. Cannon-es 바닥 물리
+const floorBody = new CANNON.Body({
+  mass: 0,
+  shape: new CANNON.Plane(),
+  position: new CANNON.Vec3(0, -5, 0),
+});
+floorBody.quaternion.setFromEuler(-Math.PI / 2, 0, 0);
+floorBody.material = groundMaterial;
+world.addBody(floorBody);
 
 // 4. 도시 생성 기본 설정
 const BLOCK_SIZE = 100;
