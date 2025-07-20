@@ -858,7 +858,7 @@ function createSUVCar(color = '#ffffff') {
     };
 
     // 휠 위치 및 앞바퀴 여부 설정
-    [[-1.2, 0.4, 2.4, true], [1.2, 0.4, 2.4, true], [-1.2, 0.4, -2.4, false], [1.2, 0.4, -2.4, false]].forEach(
+    [[-1.2, 0.25, 2.4, true], [1.2, 0.25, 2.4, true], [-1.2, 0.25, -2.4, false], [1.2, 0.25, -2.4, false]].forEach(
       ([x, y, z, isFront]) => {
         vehicle.addWheel({
           ...wheelOptions,
