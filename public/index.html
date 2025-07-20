@@ -328,14 +328,14 @@ const groundBody = new CANNON.Body({
   shape: groundShape,
   material: groundMaterial,
 });
-groundBody.position.set(0, -5, 0); // y = -5
+groundBody.position.set(0, -5.02, 0); // y = -5
 world.addBody(groundBody);
   
   // THREE.js 시각용 지면 메쉬 생성
 const groundGeo = new THREE.BoxGeometry(2000, 0.2, 2000); // CANNON.Box 크기 * 2 (half extents → full size)
 const groundMat = new THREE.MeshStandardMaterial({ color: 0x000000 }); // 검은색
 const groundMesh = new THREE.Mesh(groundGeo, groundMat);
-groundMesh.position.set(0, -5, 0);
+groundMesh.position.set(0, -5.02, 0);
 groundMesh.receiveShadow = true;
 scene.add(groundMesh);
 
