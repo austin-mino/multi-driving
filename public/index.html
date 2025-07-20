@@ -305,8 +305,8 @@ function getYRotation(q) {
   const cosy_cosp = 1 - 2 * (q.y * q.y + q.z * q.z);
   return Math.atan2(siny_cosp, cosy_cosp);
 }
-  
-  // 1. 물리 월드 생성
+
+// 1. 물리 월드 생성
 const world = new CANNON.World({
   gravity: new CANNON.Vec3(0, -9.82, 0),
 });
@@ -382,6 +382,15 @@ function createRoadBlock(x, z) {
   mesh.position.set(x, -5, z); // -5 + 4.5 = -0.5 (도로 표면)
   mesh.receiveShadow = true;
   roadGroup.add(mesh);
+
+  const shape = new CANNON.Box(new CANNON.Vec3(BLOCK_SIZE / 2, 0.005, BLOCK_SIZE / 2));
+  const body = new CANNON.Body({
+    mass: 0,
+    shape,
+    material: groundMaterial,
+  });
+  body.position.set(x, -5, z);
+  world.addBody(body);
 }
 
 function createSidewalk(x, z) {
@@ -518,7 +527,7 @@ scene.add(new THREE.AmbientLight(0x404040));
   const group = new THREE.Group();
 
   const bodyMat = new THREE.MeshStandardMaterial({ color: color, metalness: 0.6, roughness: 0.4 });
-  const mainBody = new THREE.Mesh(new THREE.BoxGeometry(3, 1.0, 6), bodyMat);
+  const mainBody = new THREE.Mesh(new THREE.BoxGeometry(3, 1, 6), bodyMat);
   mainBody.name = 'MainBody';
   mainBody.userData.physics = {
   mass: 1500,
@@ -849,7 +858,7 @@ function createSUVCar(color = '#ffffff') {
     };
 
     // 휠 위치 및 앞바퀴 여부 설정
-    [[-1.2, 0.2, 2.4, true], [1.2, 0.2, 2.4, true], [-1.2, 0.2, -2.4, false], [1.2, 0.2, -2.4, false]].forEach(
+    [[-1.2, 0.22, 2.4, true], [1.2, 0.22, 2.4, true], [-1.2, 0.22, -2.4, false], [1.2, 0.22, -2.4, false]].forEach(
       ([x, y, z, isFront]) => {
         vehicle.addWheel({
           ...wheelOptions,
