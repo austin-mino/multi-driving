@@ -978,62 +978,65 @@ btnToggleCam.addEventListener('click', () => {
     });
 
     // 차량 조향, 가속, 브레이크 처리
-    function updateVehicleControls() {
-      const maxSpeed = 180;
-const speed = getSpeedKmH();
+ function updateVehicleControls() {
+  const maxSpeed = 180;
+  const speed = getSpeedKmH();
 
-if (speed > maxSpeed) {
-  const excess = speed - maxSpeed;
+  // 조향
+  const steerSpeed = 0.01;
 
-  // 초과 속도에 비례해서 감속
-  const brakeForce = Math.min(excess * 10, 500);
+  if (input.left) {
+    steeringValue = Math.max(steeringValue - steerSpeed, -maxSteerVal);
+  } else if (input.right) {
+    steeringValue = Math.min(steeringValue + steerSpeed, maxSteerVal);
+  } else {
+    if (steeringValue > 0) steeringValue = Math.max(steeringValue - steerSpeed, 0);
+    else if (steeringValue < 0) steeringValue = Math.min(steeringValue + steerSpeed, 0);
+  }
 
-  vehicle.applyEngineForce(-brakeForce, 2);
-  vehicle.applyEngineForce(-brakeForce, 3);
+  vehicle.setSteeringValue(steeringValue, 0);
+  vehicle.setSteeringValue(steeringValue, 1);
+  vehicle.setSteeringValue(0, 2);
+  vehicle.setSteeringValue(0, 3);
+
+  // 🔥 엔진 힘 초기화
+  engineForce = 0;
+
+  // 기어별 처리
+  if (gearState === 'D') {
+    if (input.accel) engineForce = maxEngineForce;
+    if (input.brake) applyBrake(maxBrakeForce);
+    else applyBrake(0);
+
+  } else if (gearState === 'R') {
+    if (input.accel) engineForce = -maxEngineForce * 0.6;
+    if (input.brake) applyBrake(maxBrakeForce);
+    else applyBrake(0);
+
+  } else if (gearState === 'N') {
+    applyBrake(input.brake ? maxBrakeForce : 0);
+
+  } else if (gearState === 'P') {
+    applyBrake(maxBrakeForce * 1.5);
+  }
+
+  // 🔥 여기서 속도 제한 (핵심 위치)
+  if (gearState === 'D' && speed > maxSpeed) {
+    const excess = speed - maxSpeed;
+
+    // 가속 차단
+    engineForce = 0;
+
+    // 자연 감속 추가
+    const brakeForce = Math.min(excess * 10, 500);
+    vehicle.applyEngineForce(-brakeForce, 2);
+    vehicle.applyEngineForce(-brakeForce, 3);
+  }
+
+  // 🔥 마지막에 단 한 번만 적용
+  vehicle.applyEngineForce(engineForce, 2);
+  vehicle.applyEngineForce(engineForce, 3);
 }
-      // 조향: 좌우 키 또는 버튼에 따라 steeringValue 조절
-      const steerSpeed = 0.01;  // 조향이 변화하는 속도 (더 작을수록 느리게 반응)
-
-if (input.left) {
-  steeringValue = Math.max(steeringValue - steerSpeed, -maxSteerVal);
-} else if (input.right) {
-  steeringValue = Math.min(steeringValue + steerSpeed, maxSteerVal);
-} else {
-  // 중립 방향으로 천천히 복귀
-  if (steeringValue > 0) steeringValue = Math.max(steeringValue - steerSpeed, 0);
-  else if (steeringValue < 0) steeringValue = Math.min(steeringValue + steerSpeed, 0);
-}
-
-      // 앞바퀴 조향에 적용
-      vehicle.setSteeringValue(steeringValue, 0);
-      vehicle.setSteeringValue(steeringValue, 1);
-
-      vehicle.setSteeringValue(0, 2); // 뒷왼쪽 바퀴 → 조향 없음
-      vehicle.setSteeringValue(0, 3); // 뒷오른쪽 바퀴 → 조향 없음
-      // 엔진 힘 초기화
-      engineForce = 0;
-
-      // 기어별 힘 전달
-      if (gearState === 'D') {
-        if (input.accel) engineForce = maxEngineForce;
-        if (input.brake) applyBrake(maxBrakeForce);
-        else applyBrake(0);
-      } else if (gearState === 'R') {
-        if (input.accel) engineForce = -maxEngineForce * 0.6; // 후진은 힘 약간 줄임
-        if (input.brake) applyBrake(maxBrakeForce);
-        else applyBrake(0);
-      } else if (gearState === 'N') {
-        applyBrake(input.brake ? maxBrakeForce : 0);
-        engineForce = 0;
-      } else if (gearState === 'P') {
-        applyBrake(maxBrakeForce * 1.5); // 주차브레이크 강하게
-        engineForce = 0;
-      }
-
-      // 엔진 힘 앞바퀴에 적용 (후륜 구동 가정)
-      vehicle.applyEngineForce(engineForce, 2);
-      vehicle.applyEngineForce(engineForce, 3);
-    }
 
     // 속도 측정 (m/s -> km/h)
     function getSpeedKmH() {
