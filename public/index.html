@@ -979,6 +979,18 @@ btnToggleCam.addEventListener('click', () => {
 
     // 차량 조향, 가속, 브레이크 처리
     function updateVehicleControls() {
+      const maxSpeed = 180;
+const speed = getSpeedKmH();
+
+if (speed > maxSpeed) {
+  const excess = speed - maxSpeed;
+
+  // 초과 속도에 비례해서 감속
+  const brakeForce = Math.min(excess * 10, 500);
+
+  vehicle.applyEngineForce(-brakeForce, 2);
+  vehicle.applyEngineForce(-brakeForce, 3);
+}
       // 조향: 좌우 키 또는 버튼에 따라 steeringValue 조절
       const steerSpeed = 0.01;  // 조향이 변화하는 속도 (더 작을수록 느리게 반응)
 
@@ -1195,11 +1207,15 @@ if (
   setInterval(() => {
     socket.emit('updateInput', input);
   }, 50);
-
-  // 위치 상태 전송
 setInterval(() => {
-  sendPlayerState();
-}, 50);
+  if (chassisBody.velocity.length() > 0.1) {
+    sendPlayerState();
+  }
+}, 100);
+//  // 위치 상태 전송
+//setInterval(() => {
+  //sendPlayerState();
+//}, 50);
 
 // ------------------------------------------------------------
 
