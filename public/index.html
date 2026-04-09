@@ -999,45 +999,52 @@ btnToggleCam.addEventListener('click', () => {
   vehicle.setSteeringValue(0, 2);
   vehicle.setSteeringValue(0, 3);
 
-  // 🔥 엔진 힘 초기화
-  engineForce = 0;
+  // 엔진 힘 초기화
+engineForce = 0;
 
-  // 기어별 처리
-  if (gearState === 'D') {
-    if (input.accel) engineForce = maxEngineForce;
-    if (input.brake) applyBrake(maxBrakeForce);
-    else applyBrake(0);
+// 기어별 처리
+if (gearState === 'D') {
+  if (input.accel) engineForce = maxEngineForce;
+  if (input.brake) applyBrake(maxBrakeForce);
+  else applyBrake(0);
 
-  } else if (gearState === 'R') {
-    if (input.accel) engineForce = -maxEngineForce * 0.6;
-    if (input.brake) applyBrake(maxBrakeForce);
-    else applyBrake(0);
+} else if (gearState === 'R') {
+  if (input.accel) engineForce = -maxEngineForce * 0.6;
+  if (input.brake) applyBrake(maxBrakeForce);
+  else applyBrake(0);
 
-  } else if (gearState === 'N') {
-    applyBrake(input.brake ? maxBrakeForce : 0);
+} else if (gearState === 'N') {
+  applyBrake(input.brake ? maxBrakeForce : 0);
 
-  } else if (gearState === 'P') {
-    applyBrake(maxBrakeForce * 1.5);
-  }
+} else if (gearState === 'P') {
+  applyBrake(maxBrakeForce * 1.5);
+}
 
-  // 🔥 여기서 속도 제한 (핵심 위치)
-  if (gearState === 'D' && speed > maxSpeed) {
+
+// 🔥 🔥 🔥 여기 넣기 (핵심 위치)
+const maxSpeed = 180;
+const releaseSpeed = 170;
+const speed = getSpeedKmH();
+
+if (gearState === 'D') {
+  if (speed > maxSpeed) {
     const excess = speed - maxSpeed;
 
-    // 가속 차단
     engineForce = 0;
 
-    // 자연 감속 추가
     const brakeForce = Math.min(excess * 10, 500);
     vehicle.applyEngineForce(-brakeForce, 2);
     vehicle.applyEngineForce(-brakeForce, 3);
-  }
 
-  // 🔥 마지막에 단 한 번만 적용
-  vehicle.applyEngineForce(engineForce, 2);
-  vehicle.applyEngineForce(engineForce, 3);
+  } else if (speed < releaseSpeed) {
+    if (input.accel) engineForce = maxEngineForce;
+  }
 }
 
+
+// 🔥 마지막 (이건 항상 맨 끝)
+vehicle.applyEngineForce(engineForce, 2);
+vehicle.applyEngineForce(engineForce, 3);
     // 속도 측정 (m/s -> km/h)
     function getSpeedKmH() {
       const velocity = chassisBody.velocity;
