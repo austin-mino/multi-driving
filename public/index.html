@@ -337,7 +337,7 @@ const floorBody = new CANNON.Body({
 });
 floorBody.quaternion.setFromEuler(-Math.PI / 2, 0, 0);
 floorBody.material = groundMaterial;
-//world.addBody(floorBody);
+world.addBody(floorBody);
 
 // 4. 도시 생성 기본 설정
 const BLOCK_SIZE = 100;
@@ -505,8 +505,8 @@ scene.add(new THREE.AmbientLight(0x404040));
     const chassisShape = new CANNON.Box(new CANNON.Vec3(1.5, 0.5, 3));
     const chassisBody = new CANNON.Body({ mass: 1200 });
     chassisBody.addShape(chassisShape);
-    chassisBody.position.set(-50, -3, 0);
-    chassisBody.angularDamping = 0.5;
+    chassisBody.position.set(-50, 0, 0);
+    chassisBody.angularDamping = 0.2;
     chassisBody.linearDamping = 0.1;
     world.addBody(chassisBody);
   let carModel; // 선언만
@@ -834,7 +834,7 @@ function createSUVCar(color = '#ffffff') {
     const wheelOptions = {
       radius: 0.46,
       directionLocal: new CANNON.Vec3(0, -1, 0),
-      suspensionStiffness: 45,
+      suspensionStiffness: 70,
       suspensionRestLength: 0.4,
       frictionSlip: 5,
       dampingRelaxation: 2.3,
