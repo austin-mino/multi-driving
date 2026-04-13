@@ -875,8 +875,7 @@ function createSUVCar(color = '#ffffff') {
     });
   
 // 사용자 입력 상태
-let input = { left: false, right: false, accel: false, brake: false };
-
+let input = { left: false, right: false, accel: false, brake: false, handbrake: false };
     
     // DOM 요소 바인딩
     const btnLeft = document.getElementById('btnLeft'),
@@ -905,6 +904,8 @@ btnToggleCam.addEventListener('click', () => {
     window.addEventListener('keydown', e => {
       const key = (e.key ||'').toLowerCase();
       switch(key) {
+        case ' ':
+        case 'spacebar': input.handbrake = true; break;
         case 'arrowleft':
         case 'a': input.left = true; break;
         case 'arrowright':
@@ -923,6 +924,8 @@ btnToggleCam.addEventListener('click', () => {
     window.addEventListener('keyup', e => {
       const key = (e.key||'').toLowerCase();
       switch(key) {
+        case ' ':
+        case 'spacebar': input.handbrake = false; break;
         case 'arrowleft':
         case 'a': input.left = false; break;
         case 'arrowright':
@@ -1049,6 +1052,23 @@ vehicle.applyEngineForce(engineForce, 3);
       const velocity = chassisBody.velocity;
       return velocity.length() * 3.6;
     }
+   // 🔥 사이드 브레이크 드리프트
+if (input.handbrake) {
+  // 뒷바퀴 강한 브레이크
+  vehicle.setBrake(20, 2);
+  vehicle.setBrake(20, 3);
+
+  // 뒷바퀴 마찰 감소 → 미끄러짐
+  vehicle.wheelInfos[2].frictionSlip = 1.5;
+  vehicle.wheelInfos[3].frictionSlip = 1.5;
+} else {
+  // 원래 상태 복구
+  vehicle.setBrake(0, 2);
+  vehicle.setBrake(0, 3);
+
+  vehicle.wheelInfos[2].frictionSlip = 5;
+  vehicle.wheelInfos[3].frictionSlip = 5;
+}
 
     // 카메라 차량 뒤쪽 위치로 고정
     function updateCamera() {
