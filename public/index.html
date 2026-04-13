@@ -979,7 +979,13 @@ btnToggleCam.addEventListener('click', () => {
     gearButtons.forEach(button => {
       button.addEventListener('click', () => setGear(button.textContent));
     });
-
+  
+// 속도 측정 (m/s -> km/h)
+    function getSpeedKmH() {
+      const velocity = chassisBody.velocity;
+      return velocity.length() * 3.6;
+    }
+  
     // 차량 조향, 가속, 브레이크 처리
  function updateVehicleControls() {
   const maxSpeed = 180;
@@ -1047,11 +1053,7 @@ if (gearState === 'D') {
 // 🔥 마지막 (이건 항상 맨 끝)
 vehicle.applyEngineForce(engineForce, 2);
 vehicle.applyEngineForce(engineForce, 3);
-    // 속도 측정 (m/s -> km/h)
-    function getSpeedKmH() {
-      const velocity = chassisBody.velocity;
-      return velocity.length() * 3.6;
-    }
+    
   
    // 🔥 사이드 브레이크 드리프트
 if (input.handbrake) {
@@ -1070,6 +1072,7 @@ if (input.handbrake) {
   vehicle.wheelInfos[2].frictionSlip = 5;
   vehicle.wheelInfos[3].frictionSlip = 5;
 }
+ }
 
     // 카메라 차량 뒤쪽 위치로 고정
     function updateCamera() {
