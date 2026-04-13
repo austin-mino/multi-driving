@@ -333,7 +333,7 @@ floorMesh.receiveShadow = true;
 const floorBody = new CANNON.Body({
   mass: 0,
   shape: new CANNON.Plane(),
-  position: new CANNON.Vec3(0, -6, 0),
+  position: new CANNON.Vec3(0, -4, 0),
 });
 floorBody.quaternion.setFromEuler(-Math.PI / 2, 0, 0);
 floorBody.material = groundMaterial;
@@ -848,7 +848,7 @@ function createSUVCar(color = '#ffffff') {
     };
 
     // 휠 위치 및 앞바퀴 여부 설정
-    [[-1.2, 0.2, 2.4, true], [1.2, 0.2, 2.4, true], [-1.2, 0.2, -2.4, false], [1.2, 0.2, -2.4, false]].forEach(
+    [[-1.2, 0.3, 2.4, true], [1.2, 0.3, 2.4, true], [-1.2, 0.3, -2.4, false], [1.2, 0.3, -2.4, false]].forEach(
       ([x, y, z, isFront]) => {
         vehicle.addWheel({
           ...wheelOptions,
