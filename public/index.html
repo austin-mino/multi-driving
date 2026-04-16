@@ -505,7 +505,7 @@ scene.add(new THREE.AmbientLight(0x404040));
     const chassisShape = new CANNON.Box(new CANNON.Vec3(1.5, 0.12, 3));
     const chassisBody = new CANNON.Body({ mass: 1200 });
     chassisBody.addShape(chassisShape);
-    chassisBody.position.set(-50, -3, 0);
+    chassisBody.position.set(-50, -3.5, 0);
     chassisBody.angularDamping = 0.2;
     chassisBody.linearDamping = 0.1;
     world.addBody(chassisBody);
@@ -835,7 +835,7 @@ function createSUVCar(color = '#ffffff') {
       radius: 0.46,
       directionLocal: new CANNON.Vec3(0, -1, 0),
       suspensionStiffness: 70,
-      suspensionRestLength: 0.4,
+      suspensionRestLength: 0.25,
       frictionSlip: 5,
       dampingRelaxation: 2.3,
       dampingCompression: 4.4,
@@ -848,7 +848,7 @@ function createSUVCar(color = '#ffffff') {
     };
 
     // 휠 위치 및 앞바퀴 여부 설정
-    [[-1.2, -0.5, 2.4, true], [1.2, -0.5, 2.4, true], [-1.2, -0.5, -2.4, false], [1.2, -0.5, -2.4, false]].forEach(
+    [[-1.2, -0.2, 2.4, true], [1.2, -0.2, 2.4, true], [-1.2, -0.2, -2.4, false], [1.2, -0.2, -2.4, false]].forEach(
       ([x, y, z, isFront]) => {
         vehicle.addWheel({
           ...wheelOptions,
@@ -960,8 +960,8 @@ btnToggleCam.addEventListener('click', () => {
     }
 
     // 기어 상태와 UI 업데이트 함수
-    const maxEngineForce = 1200;
-    const maxBrakeForce = 30;
+    const maxEngineForce = 1600;
+    const maxBrakeForce = 40;
     const maxSteerVal = Math.PI / 8;
     let engineForce = 0;
     let steeringValue = 0;
