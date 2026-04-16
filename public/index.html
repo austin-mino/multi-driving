@@ -960,9 +960,9 @@ btnToggleCam.addEventListener('click', () => {
     }
 
     // 기어 상태와 UI 업데이트 함수
-    const maxEngineForce = 6000;
+    const maxEngineForce = 5000;
     const maxBrakeForce = 400;
-    const maxSteerVal = Math.PI / 14;
+    const maxSteerVal = Math.PI / 8;
     let engineForce = 0;
     let steeringValue = 0;
 
@@ -1030,23 +1030,13 @@ if (gearState === 'D') {
 }
 
 
-// 🔥 🔥 🔥 여기 넣기 (핵심 위치)
-const releaseSpeed = 170;
-
-
 if (gearState === 'D') {
-  if (speed > maxSpeed) {
-    const excess = speed - maxSpeed;
-
-    engineForce = 0;
-
-    const brakeForce = Math.min(excess * 10, 500);
-    vehicle.applyEngineForce(-brakeForce, 2);
-    vehicle.applyEngineForce(-brakeForce, 3);
-
-  } else if (speed < releaseSpeed) {
-    if (input.accel) engineForce = maxEngineForce;
+  if (input.accel) {
+    if (speed < maxSpeed) engineForce = maxEngineForce;
+    else engineForce = maxEngineForce * 0.15;
   }
+
+  applyBrake(input.brake ? maxBrakeForce : 0);
 }
 
 
