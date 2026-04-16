@@ -504,8 +504,8 @@ scene.add(new THREE.AmbientLight(0x404040));
     // 자동차 차체 물리 (박스)
     const chassisShape = new CANNON.Box(new CANNON.Vec3(1.5, 0.12, 3));
     const chassisBody = new CANNON.Body({ mass: 1200 });
-    chassisBody.addShape(chassisShape);
-    chassisBody.position.set(-50, -3.5, 0);
+    chassisBody.addShape(chassisShape, new CANNON.Vec3(0, 0, -0.5));
+    chassisBody.position.set(-50, -3.0, 0);
     chassisBody.angularDamping = 0.2;
     chassisBody.linearDamping = 0.1;
     world.addBody(chassisBody);
