@@ -836,7 +836,7 @@ function createSUVCar(color = '#ffffff') {
       directionLocal: new CANNON.Vec3(0, -1, 0),
       suspensionStiffness: 70,
       suspensionRestLength: 0.25,
-      frictionSlip: 5,
+      frictionSlip: 3.8,
       dampingRelaxation: 2.3,
       dampingCompression: 4.4,
       maxSuspensionForce: 1e4,
@@ -848,7 +848,7 @@ function createSUVCar(color = '#ffffff') {
     };
 
     // 휠 위치 및 앞바퀴 여부 설정
-    [[-1.2, -0.09, 2.4, true], [1.2, -0.09, 2.4, true], [-1.2, -0.09, -2.4, false], [1.2, -0.09, -2.4, false]].forEach(
+    [[-1.2, 0.2, 2.4, true], [1.2, 0.2, 2.4, true], [-1.2, 0.2, -2.4, false], [1.2, 0.2, -2.4, false]].forEach(
       ([x, y, z, isFront]) => {
         vehicle.addWheel({
           ...wheelOptions,
@@ -962,7 +962,7 @@ btnToggleCam.addEventListener('click', () => {
     // 기어 상태와 UI 업데이트 함수
     const maxEngineForce = 6000;
     const maxBrakeForce = 400;
-    const maxSteerVal = Math.PI / 8;
+    const maxSteerVal = Math.PI / 14;
     let engineForce = 0;
     let steeringValue = 0;
 
@@ -992,7 +992,7 @@ btnToggleCam.addEventListener('click', () => {
   const speed = getSpeedKmH();
 
   // 조향
-  const steerSpeed = 0.01;
+  const steerSpeed = 0.006;
 
   if (input.left) {
     steeringValue = Math.max(steeringValue - steerSpeed, -maxSteerVal);
@@ -1058,12 +1058,12 @@ vehicle.applyEngineForce(engineForce, 3);
    // 🔥 사이드 브레이크 드리프트
 if (input.handbrake) {
   // 뒷바퀴 강한 브레이크
-  vehicle.setBrake(600, 2);
-  vehicle.setBrake(600, 3);
+  vehicle.setBrake(20, 2);
+  vehicle.setBrake(20, 3);
 
   // 뒷바퀴 마찰 감소 → 미끄러짐
-  vehicle.wheelInfos[2].frictionSlip = 1.5;
-  vehicle.wheelInfos[3].frictionSlip = 1.5;
+  vehicle.wheelInfos[2].frictionSlip = 1.0;
+  vehicle.wheelInfos[3].frictionSlip = 1.0;
 } else {
   // 원래 상태 복구
   vehicle.setBrake(0, 2);
