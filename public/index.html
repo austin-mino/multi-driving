@@ -335,6 +335,8 @@ const floorBody = new CANNON.Body({
   shape: new CANNON.Plane(),
   position: new CANNON.Vec3(0, -5, 0),
 });
+  floorBody.collisionFilterGroup = 1;
+  floorBody.collisionFilterMask = -1;
 floorBody.quaternion.setFromEuler(-Math.PI / 2, 0, 0);
 floorBody.material = groundMaterial;
 world.addBody(floorBody);
@@ -833,6 +835,8 @@ function createSUVCar(color = '#ffffff') {
     // 휠 옵션 - 디자인 및 물리 조정
     const wheelOptions = {
       radius: 0.46,
+      collisionFilterGroup: 2,
+      collisionFilterMask: 1,
       directionLocal: new CANNON.Vec3(0, -1, 0),
       suspensionStiffness: 45,
       suspensionRestLength: 0.38,
@@ -1250,7 +1254,7 @@ setInterval(() => {
 
       updateVehicleControls();
       
-      world.step(1/60, delta, 8);
+      world.step(1/120, delta, 10);
 
   // 자동차 모델 위치/회전을 물리 바디에 맞게 업데이트
   carModel.position.copy(chassisBody.position);
