@@ -962,7 +962,7 @@ btnToggleCam.addEventListener('click', () => {
     // 기어 상태와 UI 업데이트 함수
     const maxEngineForce = 5000;
     const maxBrakeForce = 400;
-    const maxSteerVal = Math.PI / 8;
+    const maxSteerVal = Math.PI / 16;
     let engineForce = 0;
     let steeringValue = 0;
 
@@ -992,7 +992,7 @@ btnToggleCam.addEventListener('click', () => {
   const speed = getSpeedKmH();
 
   // 조향
-  const steerSpeed = 0.006;
+  const steerSpeed = 0.0025;
 
   if (input.left) {
     steeringValue = Math.max(steeringValue - steerSpeed, -maxSteerVal);
