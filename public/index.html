@@ -834,15 +834,15 @@ function createSUVCar(color = '#ffffff') {
     const wheelOptions = {
       radius: 0.46,
       directionLocal: new CANNON.Vec3(0, -1, 0),
-      suspensionStiffness: 70,
-      suspensionRestLength: 0.32,
+      suspensionStiffness: 45,
+      suspensionRestLength: 0.38,
       frictionSlip: 5.5,
-      dampingRelaxation: 2.3,
-      dampingCompression: 4.4,
+      dampingRelaxation: 3.5,
+      dampingCompression: 5.5,
       maxSuspensionForce: 1e4,
-      rollInfluence: 0.25,
+      rollInfluence: 0.15,
       axleLocal: new CANNON.Vec3(1, 0, 0),
-      maxSuspensionTravel: 0.4,
+      maxSuspensionTravel: 0.45,
       useCustomSlidingRotationalSpeed: true,
       customSlidingRotationalSpeed: -30,
     };
@@ -1250,7 +1250,7 @@ setInterval(() => {
 
       updateVehicleControls();
       
-      world.step(1/60, delta, 3);
+      world.step(1/60, delta, 8);
 
   // 자동차 모델 위치/회전을 물리 바디에 맞게 업데이트
   carModel.position.copy(chassisBody.position);
