@@ -1254,9 +1254,7 @@ setInterval(() => {
 // ------------------------------------------------------------
 
     
-    function animate() {
-       requestAnimationFrame(animate);
-      
+    
   // 물리 시뮬레이션 스텝 (예시)
       let accumulator = 0;
 const fixedTimeStep = 1 / 60;
@@ -1297,7 +1295,7 @@ if (chassisBody.position.y < -3) {
   chassisBody.position.y = -3;
   chassisBody.velocity.y = 0;
 }
-}
+
 
      
       
