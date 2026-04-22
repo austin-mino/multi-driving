@@ -1166,7 +1166,6 @@ function sendPlayerState() {
   });
 }
 // 예시: 키 입력 처리 후
-socket.emit('updateInput', input);
   const targetQuaternion = new THREE.Quaternion(); // 회전 보간용
 socket.on('updatePlayers', async (players) => {
   for (const [id, player] of Object.entries(players)) {
@@ -1239,8 +1238,10 @@ if (
 
 // 매 프레임 또는 50ms 간격으로 내 위치/상태 서버 전송
   setInterval(() => {
+  if (playerId) {
     socket.emit('updateInput', input);
-  }, 50);
+  }
+}, 50);
 setInterval(() => {
   if (chassisBody.velocity.length() > 0.1) {
     sendPlayerState();
