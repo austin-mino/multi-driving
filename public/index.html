@@ -1048,43 +1048,37 @@ vehicle.applyEngineForce(engineForce, 3);
     
   
    // 🔥 사이드 브레이크 드리프트
+let handbrakeActive = false; // 위쪽에 추가
+
 if (input.handbrake) {
-  // 🔥 뒷바퀴 잠금 + 미끄러짐
+  const speed = chassisBody.velocity.length();
+
+  // 🔥 처음 눌렀을 때만 강한 킥
+  if (!handbrakeActive) {
+    chassisBody.angularVelocity.y += steeringValue * speed * 0.25;
+    handbrakeActive = true;
+  }
+
+  // 🔥 뒷바퀴 잠금
   vehicle.setBrake(80, 2);
   vehicle.setBrake(80, 3);
 
   vehicle.wheelInfos[2].frictionSlip = 0.2;
   vehicle.wheelInfos[3].frictionSlip = 0.2;
 
-  // 🔥 핵심: 옆 미끄러짐만 조작
-  const vel = chassisBody.velocity;
-  const right = new CANNON.Vec3(1, 0, 0);
-  const worldRight = chassisBody.quaternion.vmult(right);
-
-  // 👉 현재 속도를 "앞/옆"으로 분해
-  const lateralSpeed =
-    vel.x * worldRight.x +
-    vel.y * worldRight.y +
-    vel.z * worldRight.z;
-
-  // 🔥 옆 속도 일부만 제거 (완전 제거 X)
-  const driftFactor = 0.3; // ← 낮을수록 더 미끄러짐
-
-  chassisBody.velocity.x -= worldRight.x * lateralSpeed * driftFactor;
-  chassisBody.velocity.z -= worldRight.z * lateralSpeed * driftFactor;
-
-  // 🔥 회전 추가 (드리프트 방향 잡기)
-  const speed = vel.length();
-  chassisBody.angularVelocity.y += steeringValue * speed * 0.03;
+  // 🔥 슬라이딩 유지
+  chassisBody.angularVelocity.y += steeringValue * speed * 0.02;
 
 } else {
+  handbrakeActive = false;
+
   vehicle.setBrake(0, 2);
   vehicle.setBrake(0, 3);
 
   vehicle.wheelInfos[2].frictionSlip = 5.5;
   vehicle.wheelInfos[3].frictionSlip = 5.5;
 }
- }
+}
  
 
     // 카메라 차량 뒤쪽 위치로 고정
