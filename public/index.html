@@ -1055,7 +1055,7 @@ if (input.handbrake) {
 
   // 🔥 방향 반대로 수정 + 초기 킥 줄임
   if (!handbrakeActive) {
-    chassisBody.angularVelocity.y -= steeringValue * speed * 0.15;
+    chassisBody.angularVelocity.y -= steeringValue * speed * 0.11;
     handbrakeActive = true;
   }
 
@@ -1067,10 +1067,10 @@ if (input.handbrake) {
   vehicle.wheelInfos[3].frictionSlip = 0.25;
 
   // 🔥 회전 유지 (약하게)
-  chassisBody.angularVelocity.y -= steeringValue * speed * 0.01;
+  chassisBody.angularVelocity.y -= steeringValue * speed * 0.008;
 
   // 🔥 회전 제한 (핵심)
-  chassisBody.angularVelocity.y *= 0.92;
+  chassisBody.angularVelocity.y *= 0.88;
 
 } else {
   handbrakeActive = false;
