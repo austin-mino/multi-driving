@@ -315,8 +315,10 @@ const groundMaterial = new CANNON.Material("groundMaterial");
 const wheelMaterial = new CANNON.Material("wheelMaterial");
 
 const contactMaterial = new CANNON.ContactMaterial(groundMaterial, wheelMaterial, {
-  friction: 0.5,
+  friction: 1.2,
   restitution: 0.0,
+  contactEquationStiffness: 1e8,
+  contactEquationRelaxation: 3,
 });
 world.addContactMaterial(contactMaterial);
 
@@ -507,7 +509,7 @@ scene.add(new THREE.AmbientLight(0x404040));
     const chassisShape = new CANNON.Box(new CANNON.Vec3(1.5, 0.33, 3));
     const chassisBody = new CANNON.Body({ mass: 1200 });
     chassisBody.addShape(chassisShape, new CANNON.Vec3(0, 0.25, -0.3));
-    chassisBody.position.set(-50, -2, 0);
+    chassisBody.position.set(-50, -1, 0);
     chassisBody.angularDamping = 0.32;
     chassisBody.linearDamping = 0.16;
     world.addBody(chassisBody);
@@ -834,12 +836,12 @@ function createSUVCar(color = '#ffffff') {
 
     // 휠 옵션 - 디자인 및 물리 조정
     const wheelOptions = {
-      radius: 0.6,
+      radius: 0.65,
       collisionFilterGroup: 2,
       collisionFilterMask: 1,
       directionLocal: new CANNON.Vec3(0, -1, 0),
-      suspensionStiffness: 45,
-      suspensionRestLength: 0.38,
+      suspensionStiffness: 80,
+      suspensionRestLength: 0.2,
       frictionSlip: 5.5,
       dampingRelaxation: 3.5,
       dampingCompression: 5.5,
@@ -1051,21 +1053,27 @@ vehicle.applyEngineForce(engineForce, 3);
    // 🔥 사이드 브레이크 드리프트
 if (input.handbrake) {
   // 뒷바퀴 강한 브레이크
-  vehicle.setBrake(20, 2);
-  vehicle.setBrake(20, 3);
+  vehicle.setBrake(40, 2);
+  vehicle.setBrake(40, 3);
 
-  // 뒷바퀴 마찰 감소 → 미끄러짐
-  vehicle.wheelInfos[2].frictionSlip = 1.0;
-  vehicle.wheelInfos[3].frictionSlip = 1.0;
+  // 🔥 마찰 크게 감소 → 강한 드리프트
+  vehicle.wheelInfos[2].frictionSlip = 0.4;
+  vehicle.wheelInfos[3].frictionSlip = 0.4;
+
+  // 🔥 드리프트 보조 (살짝 미끄러지게 힘 추가)
+  vehicle.applyEngineForce(engineForce * 1.2, 2);
+  vehicle.applyEngineForce(engineForce * 1.2, 3);
+
 } else {
-  // 원래 상태 복구
   vehicle.setBrake(0, 2);
   vehicle.setBrake(0, 3);
 
-  vehicle.wheelInfos[2].frictionSlip = 5;
-  vehicle.wheelInfos[3].frictionSlip = 5;
+  // 원래 상태
+  vehicle.wheelInfos[2].frictionSlip = 5.5;
+  vehicle.wheelInfos[3].frictionSlip = 5.5;
 }
- }
+}
+ 
 
     // 카메라 차량 뒤쪽 위치로 고정
     function updateCamera() {
@@ -1254,7 +1262,7 @@ setInterval(() => {
 
       updateVehicleControls();
       
-      world.step(1/120, delta, 10);
+      world.step(1/60, delta, 5);
 
   // 자동차 모델 위치/회전을 물리 바디에 맞게 업데이트
   carModel.position.copy(chassisBody.position);
