@@ -1047,40 +1047,37 @@ vehicle.applyEngineForce(engineForce, 2);
 vehicle.applyEngineForce(engineForce, 3);
     
   
-   // 사이드 브레이크 드리프트
+   // 🔥 사이드 브레이크 드리프트
 if (input.handbrake) {
-  // 🔥 뒷바퀴 강하게 잠금
-  vehicle.setBrake(60, 2);
-  vehicle.setBrake(60, 3);
+  // 🔥 강한 브레이크
+  vehicle.setBrake(80, 2);
+  vehicle.setBrake(80, 3);
 
-  // 🔥 마찰 감소
-  vehicle.wheelInfos[2].frictionSlip = 0.25;
-  vehicle.wheelInfos[3].frictionSlip = 0.25;
+  // 🔥 마찰 거의 제거 (핵심)
+  vehicle.wheelInfos[2].frictionSlip = 0.2;
+  vehicle.wheelInfos[3].frictionSlip = 0.2;
 
-  const speed = chassisBody.velocity.length();
+  // 🔥 드리프트 밀어주기 (살짝)
+  vehicle.applyEngineForce(engineForce * 1.5, 2);
+  vehicle.applyEngineForce(engineForce * 1.5, 3);
 
-  // 🔥 후륜 조향 강화 (핵심)
-  const driftSteer = steeringValue * 2.5;
-  vehicle.setSteeringValue(driftSteer, 2);
-  vehicle.setSteeringValue(driftSteer, 3);
+  // 🔥 회전 보조 (이게 진짜 핵심)
+  const driftForce = 15;
 
-  // 🔥 회전 유도 (차 꼬리 날리기)
-  chassisBody.angularVelocity.y += steeringValue * speed * 0.02;
-
-  // 🔥 약간 밀어줘서 흐르게
-  vehicle.applyEngineForce(engineForce * 1.1, 2);
-  vehicle.applyEngineForce(engineForce * 1.1, 3);
+  if (input.left) {
+    chassisBody.angularVelocity.y += driftForce * 0.01;
+  }
+  if (input.right) {
+    chassisBody.angularVelocity.y -= driftForce * 0.01;
+  }
 
 } else {
   vehicle.setBrake(0, 2);
   vehicle.setBrake(0, 3);
 
+  // 원래 상태 복구
   vehicle.wheelInfos[2].frictionSlip = 5.5;
   vehicle.wheelInfos[3].frictionSlip = 5.5;
-
-  // 원래 조향 유지
-  vehicle.setSteeringValue(steeringValue, 2);
-  vehicle.setSteeringValue(steeringValue, 3);
 }
 }
  
