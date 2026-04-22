@@ -1048,26 +1048,29 @@ vehicle.applyEngineForce(engineForce, 3);
     
   
    // 🔥 사이드 브레이크 드리프트
-let handbrakeActive = false; // 위쪽에 추가
+let handbrakeActive = false;
 
 if (input.handbrake) {
   const speed = chassisBody.velocity.length();
 
-  // 🔥 처음 눌렀을 때만 강한 킥
+  // 🔥 방향 반대로 수정 + 초기 킥 줄임
   if (!handbrakeActive) {
-    chassisBody.angularVelocity.y += steeringValue * speed * 0.25;
+    chassisBody.angularVelocity.y -= steeringValue * speed * 0.15;
     handbrakeActive = true;
   }
 
   // 🔥 뒷바퀴 잠금
-  vehicle.setBrake(80, 2);
-  vehicle.setBrake(80, 3);
+  vehicle.setBrake(70, 2);
+  vehicle.setBrake(70, 3);
 
-  vehicle.wheelInfos[2].frictionSlip = 0.2;
-  vehicle.wheelInfos[3].frictionSlip = 0.2;
+  vehicle.wheelInfos[2].frictionSlip = 0.25;
+  vehicle.wheelInfos[3].frictionSlip = 0.25;
 
-  // 🔥 슬라이딩 유지
-  chassisBody.angularVelocity.y += steeringValue * speed * 0.02;
+  // 🔥 회전 유지 (약하게)
+  chassisBody.angularVelocity.y -= steeringValue * speed * 0.01;
+
+  // 🔥 회전 제한 (핵심)
+  chassisBody.angularVelocity.y *= 0.92;
 
 } else {
   handbrakeActive = false;
@@ -1078,7 +1081,7 @@ if (input.handbrake) {
   vehicle.wheelInfos[2].frictionSlip = 5.5;
   vehicle.wheelInfos[3].frictionSlip = 5.5;
 }
-}
+ }
  
 
     // 카메라 차량 뒤쪽 위치로 고정
