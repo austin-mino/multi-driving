@@ -1254,51 +1254,16 @@ setInterval(() => {
 // ------------------------------------------------------------
 
     
-    
+    function animate() {
+       requestAnimationFrame(animate);
+
   // 물리 시뮬레이션 스텝 (예시)
-      let accumulator = 0;
-const fixedTimeStep = 1 / 60;
-const maxSubSteps = 3;
+       const delta = clock.getDelta();
 
-function animate() {
-  requestAnimationFrame(animate);
-
-let accumulator = 0;
-const fixedTimeStep = 1 / 60;
-const maxSubSteps = 3;
-
-function animate() {
-  requestAnimationFrame(animate);
-
-  const delta = clock.getDelta();
-  accumulator += delta;
-
-  updateVehicleControls();
-
-  let substeps = 0;
-
-  // 🔥 최소 1번은 실행되게 do-while 느낌으로
-  while ((accumulator >= fixedTimeStep || substeps === 0) && substeps < maxSubSteps) {
-    world.step(fixedTimeStep);
-    accumulator -= fixedTimeStep;
-    substeps++;
-  }
-
-  // 안전장치
-  if (accumulator > fixedTimeStep * maxSubSteps) {
-    accumulator = 0;
-  }
-}
-
-   // 바닥 뚫림 방지 안전장치
-if (chassisBody.position.y < -3) {
-  chassisBody.position.y = -3;
-  chassisBody.velocity.y = 0;
-}
-
-
-     
+      updateVehicleControls();
       
+      world.step(1/60, delta, 5);
+
   // 자동차 모델 위치/회전을 물리 바디에 맞게 업데이트
   carModel.position.copy(chassisBody.position);
   carModel.quaternion.copy(chassisBody.quaternion);
