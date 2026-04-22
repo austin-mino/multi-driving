@@ -334,8 +334,8 @@ floorMesh.receiveShadow = true;
 // 3. Cannon-es 바닥 물리
 const floorBody = new CANNON.Body({
   mass: 0,
-  shape: new CANNON.Plane(),
-  position: new CANNON.Vec3(0, -5, 0),
+  shape: new CANNON.Box(new CANNON.Vec3(10000, 5, 10000)), // 크게
+  position: new CANNON.Vec3(0, -10, 0), // 윗면이 -5 위치 맞추기
 });
   floorBody.collisionFilterGroup = 1;
   floorBody.collisionFilterMask = -1;
