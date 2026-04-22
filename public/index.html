@@ -1265,31 +1265,41 @@ const maxSubSteps = 3;
 function animate() {
   requestAnimationFrame(animate);
 
+let accumulator = 0;
+const fixedTimeStep = 1 / 60;
+const maxSubSteps = 3;
+
+function animate() {
+  requestAnimationFrame(animate);
+
   const delta = clock.getDelta();
   accumulator += delta;
 
-  // 입력 먼저 처리 (중요)
   updateVehicleControls();
 
   let substeps = 0;
 
-  while (accumulator >= fixedTimeStep && substeps < maxSubSteps) {
+  // 🔥 최소 1번은 실행되게 do-while 느낌으로
+  while ((accumulator >= fixedTimeStep || substeps === 0) && substeps < maxSubSteps) {
     world.step(fixedTimeStep);
     accumulator -= fixedTimeStep;
     substeps++;
   }
 
-  // 🔥 혹시 렉 걸렸을 때 폭주 방지 (중요)
+  // 안전장치
   if (accumulator > fixedTimeStep * maxSubSteps) {
     accumulator = 0;
   }
 }
 
-      // 바닥 뚫림 방지 안전장치
+   // 바닥 뚫림 방지 안전장치
 if (chassisBody.position.y < -3) {
   chassisBody.position.y = -3;
   chassisBody.velocity.y = 0;
 }
+}
+
+     
       
   // 자동차 모델 위치/회전을 물리 바디에 맞게 업데이트
   carModel.position.copy(chassisBody.position);
