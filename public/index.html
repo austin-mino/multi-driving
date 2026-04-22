@@ -506,7 +506,7 @@ scene.add(new THREE.AmbientLight(0x404040));
     const chassisShape = new CANNON.Box(new CANNON.Vec3(1.5, 0.33, 3));
     const chassisBody = new CANNON.Body({ mass: 1200 });
     chassisBody.addShape(chassisShape, new CANNON.Vec3(0, 0.25, -0.3));
-    chassisBody.position.set(-50, -2, 0);
+    chassisBody.position.set(-50, -2.8, 0);
     chassisBody.angularDamping = 0.32;
     chassisBody.linearDamping = 0.16;
     world.addBody(chassisBody);
@@ -1049,31 +1049,33 @@ vehicle.applyEngineForce(engineForce, 3);
   
    // 🔥 사이드 브레이크 드리프트
 if (input.handbrake) {
-  // 🔥 뒷바퀴 강하게 잠금
-  vehicle.setBrake(90, 2);
-  vehicle.setBrake(90, 3);
+  // 🔥 뒷바퀴 잠금 + 미끄러짐
+  vehicle.setBrake(80, 2);
+  vehicle.setBrake(80, 3);
 
-  // 🔥 마찰 감소
-  vehicle.wheelInfos[2].frictionSlip = 0.25;
-  vehicle.wheelInfos[3].frictionSlip = 0.25;
+  vehicle.wheelInfos[2].frictionSlip = 0.2;
+  vehicle.wheelInfos[3].frictionSlip = 0.2;
 
-  const speed = chassisBody.velocity.length();
-
-  // 🔥 회전만 강하게 (핵심)
-  chassisBody.angularVelocity.y += steeringValue * speed * 0.05;
-
-  // 🔥 약하게만 옆 흐름 (없어도 됨)
+  // 🔥 핵심: 옆 미끄러짐만 조작
+  const vel = chassisBody.velocity;
   const right = new CANNON.Vec3(1, 0, 0);
   const worldRight = chassisBody.quaternion.vmult(right);
 
-  chassisBody.applyForce(
-    worldRight.scale(steeringValue * speed * 50),
-    chassisBody.position
-  );
+  // 👉 현재 속도를 "앞/옆"으로 분해
+  const lateralSpeed =
+    vel.x * worldRight.x +
+    vel.y * worldRight.y +
+    vel.z * worldRight.z;
 
-  // 🔥 추진력 유지
-  vehicle.applyEngineForce(engineForce * 0.9, 2);
-  vehicle.applyEngineForce(engineForce * 0.9, 3);
+  // 🔥 옆 속도 일부만 제거 (완전 제거 X)
+  const driftFactor = 0.3; // ← 낮을수록 더 미끄러짐
+
+  chassisBody.velocity.x -= worldRight.x * lateralSpeed * driftFactor;
+  chassisBody.velocity.z -= worldRight.z * lateralSpeed * driftFactor;
+
+  // 🔥 회전 추가 (드리프트 방향 잡기)
+  const speed = vel.length();
+  chassisBody.angularVelocity.y += steeringValue * speed * 0.03;
 
 } else {
   vehicle.setBrake(0, 2);
