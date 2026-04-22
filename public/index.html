@@ -1047,35 +1047,46 @@ vehicle.applyEngineForce(engineForce, 2);
 vehicle.applyEngineForce(engineForce, 3);
     
   
-   // 🔥 사이드 브레이크 드리프트
+   // 사이드 브레이크 드리프트
 if (input.handbrake) {
-  // 🔥 강한 브레이크
-  vehicle.setBrake(80, 2);
-  vehicle.setBrake(80, 3);
+  // 뒷바퀴 잠금
+  vehicle.setBrake(120, 2);
+  vehicle.setBrake(120, 3);
 
-  // 🔥 마찰 거의 제거 (핵심)
-  vehicle.wheelInfos[2].frictionSlip = 0.2;
-  vehicle.wheelInfos[3].frictionSlip = 0.2;
+  // 마찰 제거
+  vehicle.wheelInfos[2].frictionSlip = 0.15;
+  vehicle.wheelInfos[3].frictionSlip = 0.15;
 
-  // 🔥 드리프트 밀어주기 (살짝)
-  vehicle.applyEngineForce(engineForce * 1.5, 2);
-  vehicle.applyEngineForce(engineForce * 1.5, 3);
+  // 옆으로 미끄러지는 힘 추가
+  const forward = new THREE.Vector3(0, 0, 1);
+  forward.applyQuaternion(carModel.quaternion);
 
-  // 🔥 회전 보조 (이게 진짜 핵심)
-  const driftForce = 15;
+  // 옆 방향 벡터 (핵심)
+  const sideways = new THREE.Vector3(forward.z, 0, -forward.x);
+
+  const driftPower = 180; // 이 값이 핵심 (크면 더 잘 미끄러짐)
 
   if (input.left) {
-    chassisBody.angularVelocity.y += driftForce * 0.01;
+    chassisBody.applyForce(
+      new CANNON.Vec3(sideways.x * driftPower, 0, sideways.z * driftPower),
+      chassisBody.position
+    );
   }
+
   if (input.right) {
-    chassisBody.angularVelocity.y -= driftForce * 0.01;
+    chassisBody.applyForce(
+      new CANNON.Vec3(-sideways.x * driftPower, 0, -sideways.z * driftPower),
+      chassisBody.position
+    );
   }
+
+  // 회전 보조
+  chassisBody.angularVelocity.y *= 1.02;
 
 } else {
   vehicle.setBrake(0, 2);
   vehicle.setBrake(0, 3);
 
-  // 원래 상태 복구
   vehicle.wheelInfos[2].frictionSlip = 5.5;
   vehicle.wheelInfos[3].frictionSlip = 5.5;
 }
