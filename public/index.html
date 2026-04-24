@@ -1050,11 +1050,11 @@ engineForce = 0;
 
 // 기어별 처리
 if (gearState === 'D') {
-
-if (input.accel) {
-
-  rpm = calculateRPM(speed);
+  
+ rpm = calculateRPM(speed);
   updateGearAuto();
+  
+if (input.accel) {
 
   if (!isFinite(rpm)) rpm = idleRPM;
 
