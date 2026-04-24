@@ -1058,19 +1058,19 @@ if (input.accel) {
   rpm = calculateRPM(speed);
   updateGearAuto();
 
-  // RPM 기반 토크 곡선 (핵심)
-  const rpmFactor = rpm / maxRPM;
+  if (!isFinite(rpm)) rpm = idleRPM;
 
-  // 자연스러운 토크 곡선 (중간 RPM에서 가장 강함)
+  const rpmFactor = rpm / maxRPM;
   const torqueCurve = Math.sin(rpmFactor * Math.PI);
 
-  const gearRatio = gearRatios[currentGear] * finalDrive;
+  engineForce = maxEngineForce * torqueCurve;
 
-  engineForce = maxEngineForce * torqueCurve * gearRatio * 0.5;
-
-  // 공기 저항
-  const drag = 0.0025 * speed * speed;
+  // 공기저항
+  const drag = Math.min(3000, 0.002 * speed * speed);
   engineForce -= drag;
+
+  // 🔥 물리 안정화 (핵심)
+  engineForce = Math.max(-8000, Math.min(engineForce, 8000));
 }
 
   applyBrake(input.brake ? maxBrakeForce : 0);
