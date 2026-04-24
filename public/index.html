@@ -1032,7 +1032,7 @@ function updateGearAuto() {
   }
 }
     // 차량 조향, 가속, 브레이크 처리
- function updateVehicleControls() {
+function updateVehicleControls(delta) {
 
  const speed = getSpeedKmH();
 
@@ -1329,7 +1329,7 @@ setInterval(() => {
   // 물리 시뮬레이션 스텝 (예시)
        const delta = clock.getDelta();
 
-      updateVehicleControls();
+     updateVehicleControls(delta);
       
       world.step(1/60, delta, 5);
 
