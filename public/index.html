@@ -991,6 +991,17 @@ btnToggleCam.addEventListener('click', () => {
   
     // 차량 조향, 가속, 브레이크 처리
  function updateVehicleControls() {
+  let currentGear = 1;
+const maxGear = 6;
+
+const gearRatios = [0, 3.2, 2.1, 1.5, 1.2, 1.0, 0.8]; // 1~6단
+const finalDrive = 3.4;
+
+let rpm = 800; // idle
+const idleRPM = 800;
+const maxRPM = 7000;
+const shiftUpRPM = 6500;
+const shiftDownRPM = 1500;
   const maxSpeed = 180;
   const speed = getSpeedKmH();
 
@@ -1020,16 +1031,27 @@ engineForce = 0;
 
 // 기어별 처리
 if (gearState === 'D') {
-if (input.accel) {
-if (speed < maxSpeed) {engineForce = maxEngineForce;
-    } 
-else {engineForce = maxEngineForce * 0.2;
+if (gearState === 'D') {
+
+  if (input.accel) {
+    const speedRatio = speed / 200;
+
+    let powerFactor = Math.max(0.15, 1 - speedRatio * speedRatio);
+    engineForce = maxEngineForce * powerFactor;
+
+    // 저속 보정
+    if (speed < 10) {
+      engineForce *= 1.3;
     }
+
+    // 공기 저항
+    const drag = 0.0025 * speed * speed;
+    engineForce -= drag;
   }
 
   applyBrake(input.brake ? maxBrakeForce : 0);
-
-} else if (gearState === 'R') {
+}
+else if (gearState === 'R') {
   if (input.accel) engineForce = -maxEngineForce * 0.6;
   if (input.brake) applyBrake(maxBrakeForce);
   else applyBrake(0);
