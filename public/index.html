@@ -888,8 +888,8 @@ const finalDrive = 3.4;
 let rpm = 800;
 const idleRPM = 800;
 const maxRPM = 7000;
-const shiftUpRPM = 2600;
-const shiftDownRPM = 1500;
+const shiftUpRPM = 4600;
+const shiftDownRPM = 2000;
     // DOM 요소 바인딩
     const btnLeft = document.getElementById('btnLeft'),
           btnRight = document.getElementById('btnRight'),
@@ -1024,7 +1024,7 @@ function updateGearAuto() {
   // 가속 중일 때만 업쉬프트
 if (input.accel && rpm > shiftUpRPM && currentGear < maxGear) {
   currentGear++;
-  rpm *= 0.7;
+  rpm *= 0.85;
 }
 
   // 감속 중일 때만 다운쉬프트
@@ -1083,8 +1083,7 @@ if (rpmFactor < 0.3) {
 }
   // 기어비 추가
 const gearRatio = gearRatios[currentGear] * finalDrive;
-  
-  engineForce = maxEngineForce * torqueCurve;
+  engineForce = (maxEngineForce * torqueCurve * gearRatio) / 10;
 // 힘 제한 (필수)
 engineForce = Math.max(-8000, Math.min(engineForce, 8000));
   // 공기저항
