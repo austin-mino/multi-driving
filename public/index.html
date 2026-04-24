@@ -968,7 +968,8 @@ btnToggleCam.addEventListener('click', () => {
     const maxSteerVal = Math.PI / 16;
     let engineForce = 0;
     let steeringValue = 0;
-
+    let rpm = 800;          // 현재 RPM
+    let currentGear = 1;    // 현재 기어
     function updateGearDisplay() {
       gearDisplay.textContent = `기어: ${gearState}`;
       const colorMap = { P: '#00ffff', R: '#ff5555', N: '#ffff55', D: '#55ff55' };
