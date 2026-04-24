@@ -888,7 +888,7 @@ const finalDrive = 3.4;
 let rpm = 800;
 const idleRPM = 800;
 const maxRPM = 7000;
-const shiftUpRPM = 6500;
+const shiftUpRPM = 2600;
 const shiftDownRPM = 1500;
     // DOM 요소 바인딩
     const btnLeft = document.getElementById('btnLeft'),
@@ -1022,9 +1022,10 @@ function calculateRPM(speed, delta) {
 }
 function updateGearAuto() {
   // 가속 중일 때만 업쉬프트
-  if (input.accel && rpm > shiftUpRPM && currentGear < maxGear) {
-    currentGear++;
-  }
+if (input.accel && rpm > shiftUpRPM && currentGear < maxGear) {
+  currentGear++;
+  rpm *= 0.7;
+}
 
   // 감속 중일 때만 다운쉬프트
   if (!input.accel && rpm < shiftDownRPM && currentGear > 1) {
@@ -1071,7 +1072,15 @@ if (input.accel) {
   if (!isFinite(rpm)) rpm = idleRPM;
 
   const rpmFactor = rpm / maxRPM;
-  const torqueCurve = Math.sin(rpmFactor * Math.PI);
+let torqueCurve;
+
+if (rpmFactor < 0.3) {
+  torqueCurve = 0.5 + rpmFactor;
+} else if (rpmFactor < 0.7) {
+  torqueCurve = 1.0;
+} else {
+  torqueCurve = 0.8;
+}
   // 기어비 추가
 const gearRatio = gearRatios[currentGear] * finalDrive;
   
