@@ -998,7 +998,7 @@ btnToggleCam.addEventListener('click', () => {
       const velocity = chassisBody.velocity;
       return velocity.length() * 3.6;
     }
-  function calculateRPM(speed) {
+function calculateRPM(speed, delta) {
   const wheelRadius = 0.65;
   const wheelCircumference = 2 * Math.PI * wheelRadius;
 
@@ -1006,16 +1006,28 @@ btnToggleCam.addEventListener('click', () => {
 
   const gearRatio = gearRatios[currentGear] * finalDrive;
 
-  let engineRPM = wheelRPM * gearRatio;
+  const speedRPM = wheelRPM * gearRatio;
 
-  return Math.max(idleRPM, Math.min(engineRPM, maxRPM));
+  // ✅ 가속하면 RPM 상승
+  if (input.accel) {
+    rpm += 300 * delta;
+  } else {
+    rpm -= 400 * delta;
+  }
+
+  // ✅ 속도 기반과 섞기 (핵심)
+  rpm = rpm * 0.7 + speedRPM * 0.3;
+
+  return Math.max(idleRPM, Math.min(rpm, maxRPM));
 }
 function updateGearAuto() {
-  if (rpm > shiftUpRPM && currentGear < maxGear) {
+  // 가속 중일 때만 업쉬프트
+  if (input.accel && rpm > shiftUpRPM && currentGear < maxGear) {
     currentGear++;
   }
 
-  if (rpm < shiftDownRPM && currentGear > 1) {
+  // 감속 중일 때만 다운쉬프트
+  if (!input.accel && rpm < shiftDownRPM && currentGear > 1) {
     currentGear--;
   }
 }
@@ -1051,7 +1063,7 @@ engineForce = 0;
 // 기어별 처리
 if (gearState === 'D') {
   
- rpm = calculateRPM(speed);
+rpm = calculateRPM(speed, delta);
   updateGearAuto();
   
 if (input.accel) {
@@ -1060,9 +1072,12 @@ if (input.accel) {
 
   const rpmFactor = rpm / maxRPM;
   const torqueCurve = Math.sin(rpmFactor * Math.PI);
-
+  // 기어비 추가
+const gearRatio = gearRatios[currentGear] * finalDrive;
+  
   engineForce = maxEngineForce * torqueCurve;
-
+// 힘 제한 (필수)
+engineForce = Math.max(-8000, Math.min(engineForce, 8000));
   // 공기저항
   const drag = Math.min(3000, 0.002 * speed * speed);
   engineForce -= drag;
@@ -1349,8 +1364,7 @@ setInterval(() => {
 
       // 속도 UI 업데이트
     // 속도 + RPM + 기어 표시
-    hud.textContent = `속도: ${getSpeedKmH().toFixed(1)} km/h | RPM: ${Math.floor(rpm)} | 기어: ${currentGear}`;
-
+hud.textContent = `속도: ${getSpeedKmH().toFixed(1)} km/h | RPM: ${Math.floor(rpm)} | 기어: ${currentGear}`;
       // 카메라 따라가기
   if (cameraFollow) {
     updateCamera();
