@@ -879,7 +879,17 @@ function createSUVCar(color = '#ffffff') {
   
 // 사용자 입력 상태
 let input = { left: false, right: false, accel: false, brake: false, handbrake: false };
-    
+    let currentGear = 1;
+const maxGear = 6;
+
+const gearRatios = [0, 3.2, 2.1, 1.5, 1.2, 1.0, 0.8];
+const finalDrive = 3.4;
+
+let rpm = 800;
+const idleRPM = 800;
+const maxRPM = 7000;
+const shiftUpRPM = 6500;
+const shiftDownRPM = 1500;
     // DOM 요소 바인딩
     const btnLeft = document.getElementById('btnLeft'),
           btnRight = document.getElementById('btnRight'),
@@ -1012,19 +1022,8 @@ function updateGearAuto() {
 }
     // 차량 조향, 가속, 브레이크 처리
  function updateVehicleControls() {
-  let currentGear = 1;
-const maxGear = 6;
 
-const gearRatios = [0, 3.2, 2.1, 1.5, 1.2, 1.0, 0.8]; // 1~6단
-const finalDrive = 3.4;
-
-let rpm = 800; // idle
-const idleRPM = 800;
-const maxRPM = 7000;
-const shiftUpRPM = 6500;
-const shiftDownRPM = 1500;
-  const maxSpeed = 180;
-  const speed = getSpeedKmH();
+ const speed = getSpeedKmH();
 
   // 조향
   const steerSpeed = 0.004;
