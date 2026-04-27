@@ -1017,7 +1017,7 @@ function calculateRPM(speed, delta) {
   }
 
   if (input.accel) {
-    rpm += (targetRPM * 1.05 - rpm) * delta * 8; // ← 5→8 더 빠르게 반응
+    rpm += (targetRPM * 1.05 - rpm) * delta * 16; // ← 5→8 더 빠르게 반응
   } else {
     rpm += (targetRPM * 0.85 - rpm) * delta * 4;
   }
