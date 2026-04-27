@@ -978,7 +978,7 @@ btnToggleCam.addEventListener('click', () => {
     }
 
     // 기어 상태와 UI 업데이트 함수
-    const maxEngineForce = 7500;
+    const maxEngineForce = 6000;
     const maxBrakeForce = 400;
     const maxSteerVal = Math.PI / 16;
     let engineForce = 0;
@@ -1022,7 +1022,7 @@ function calculateRPM(speed, delta) {
   const speedBasedRPM = wheelRPM * gearRatios[currentGear] * finalDrive;
 
   // 순수 엔진 RPM 70% + 속도 기반 RPM 30% 혼합
-  rpm = rpm * 0.7 + speedBasedRPM * 0.3;
+rpm = rpm * 0.95 + speedBasedRPM * 0.05;
 
   return Math.max(idleRPM, Math.min(rpm, maxRPM));
 }
