@@ -890,7 +890,7 @@ const idleRPM = 800;
 const maxRPM = 7000;
 const shiftUpRPM   = 5500;
 const shiftDownRPM = 1400;
-const rpmRiseSpeed = 2600;
+const rpmRiseSpeed = 3600;
 
 let isShifting = false;
 let shiftTimer = 0;
@@ -1002,30 +1002,28 @@ btnToggleCam.addEventListener('click', () => {
     function getSpeedKmH() {
       const velocity = chassisBody.velocity;
       return velocity.length() * 3.6;
-    }
-function calculateRPM(speed, delta) {
+    }function calculateRPM(speed, delta) {
   if (isShifting) {
     rpm -= 2000 * delta;
     return Math.max(idleRPM, rpm);
   }
 
   if (input.accel) {
-    rpm += rpmRiseSpeed * delta;
+    rpm += rpmRiseSpeed * delta; // 로컬 const 없이 전역 변수 사용
   } else {
     rpm -= 2500 * delta;
   }
 
-  // ← 속도 기반 RPM과 혼합 (속도 떨어지면 RPM도 같이 내려옴)
   const wheelRadius = 0.65;
   const wheelCircumference = 2 * Math.PI * wheelRadius;
   const wheelRPM = (speed / 3.6) / wheelCircumference * 60;
   const speedBasedRPM = wheelRPM * gearRatios[currentGear] * finalDrive;
 
-  // 순수 엔진 RPM 70% + 속도 기반 RPM 30% 혼합
-rpm = rpm * 0.95 + speedBasedRPM * 0.05;
+  rpm = rpm * 0.95 + speedBasedRPM * 0.05;
 
   return Math.max(idleRPM, Math.min(rpm, maxRPM));
 }
+  
 function updateGearAuto(delta) {
   if (isShifting) {
     shiftTimer -= delta;
