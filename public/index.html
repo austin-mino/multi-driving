@@ -508,7 +508,7 @@ scene.add(new THREE.AmbientLight(0x404040));
     chassisBody.addShape(chassisShape, new CANNON.Vec3(0, 0.25, -0.3));
     chassisBody.position.set(-50, -2.8, 0);
     chassisBody.angularDamping = 0.32;
-    chassisBody.linearDamping = 0.02;
+    chassisBody.linearDamping = 0.06;
     world.addBody(chassisBody);
   let carModel; // 선언만
 
@@ -883,13 +883,13 @@ let currentGear = 1;
 const maxGear = 6;
 
 const gearRatios = [0, 3.5, 2.1, 1.4, 1.0, 0.8, 0.65];
-const finalDrive = 2.2;
+const finalDrive = 3.0;
 
 let rpm = 800;
 const idleRPM = 800;
 const maxRPM = 7000;
 
-const shiftUpRPM   = 5500;
+const shiftUpRPM   = 4000;
 const shiftDownRPM = 1800;
 
 let isShifting = false;
