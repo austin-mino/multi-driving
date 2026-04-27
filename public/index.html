@@ -883,7 +883,7 @@ let currentGear = 1;
 const maxGear = 6;
 
 const gearRatios = [0, 1.8, 1.5, 1.4, 1.26, 1.16, 1.0];
-const finalDrive = 2.0;
+const finalDrive = 3.0;
 
 let rpm = 800;
 const idleRPM = 800;
@@ -1019,7 +1019,7 @@ btnToggleCam.addEventListener('click', () => {
   const wheelRPM = (speed / 3.6) / wheelCircumference * 60;
   const speedBasedRPM = wheelRPM * gearRatios[currentGear] * finalDrive;
 
-  rpm = rpm * 0.95 + speedBasedRPM * 0.05;
+  rpm = rpm * 0.99 + speedBasedRPM * 0.01;
 
   return Math.max(idleRPM, Math.min(rpm, maxRPM));
 }
