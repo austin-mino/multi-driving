@@ -1082,7 +1082,8 @@ function updateVehicleControls(delta) {
   // 엔진 힘 초기화
 engineForce = 0;
 
-// 기어별 처리if (gearState === 'D') {
+// 기어별 처리
+  if (gearState === 'D') {
   rpm = calculateRPM(speed, delta);
   updateGearAuto(delta);
 
