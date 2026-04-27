@@ -888,7 +888,7 @@ const finalDrive = 2.8;
 let rpm = 800;
 const idleRPM = 800;
 const maxRPM = 7000;
-const shiftUpRPM = 3000;
+const shiftUpRPM = 2600;
 const shiftDownRPM = 1600;
     // DOM 요소 바인딩
     const btnLeft = document.getElementById('btnLeft'),
@@ -1016,7 +1016,7 @@ function calculateRPM(speed, delta) {
   }
 
   // ✅ 속도 기반과 섞기 (핵심)
-  rpm = rpm * 0.7 + speedRPM * 0.3;
+rpm = rpm * 0.5 + speedRPM * 0.5;
 
   return Math.max(idleRPM, Math.min(rpm, maxRPM));
 }
