@@ -1011,7 +1011,7 @@ function calculateRPM(speed, delta) {
 
   if (input.accel) {
     // 엔진 자체적으로 RPM 상승 (속도와 독립)
-    const rpmRiseSpeed = 1600; // 높을수록 RPM 빠르게 상승
+    const rpmRiseSpeed = 900; // 높을수록 RPM 빠르게 상승
     rpm += rpmRiseSpeed * delta;
   } else {
     // 가속 안 할 때 RPM 하강 (엔진 브레이크)
