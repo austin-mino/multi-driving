@@ -888,14 +888,12 @@ const finalDrive = 3.0;
 let rpm = 800;
 const idleRPM = 800;
 const maxRPM = 7000;
-
-const shiftUpRPM   = 3000;
-const shiftDownRPM = 1200;
+const shiftUpRPM   = 5500;
+const shiftDownRPM = 1400;
 
 let isShifting = false;
 let shiftTimer = 0;
-const shiftDelay = 0.35;
-  
+const shiftDelay = 0.3;  
     // DOM 요소 바인딩
     const btnLeft = document.getElementById('btnLeft'),
           btnRight = document.getElementById('btnRight'),
@@ -1005,52 +1003,45 @@ btnToggleCam.addEventListener('click', () => {
       return velocity.length() * 3.6;
     }
 function calculateRPM(speed, delta) {
-  const wheelRadius = 0.65;
-  const wheelCircumference = 2 * Math.PI * wheelRadius;
-  const wheelRPM = (speed / 3.6) / wheelCircumference * 60;
-  const gearRatio = gearRatios[currentGear] * finalDrive;
-  const targetRPM = wheelRPM * gearRatio;
-
   if (isShifting) {
-    rpm += (targetRPM - rpm) * delta * 3;
-    return Math.max(idleRPM, Math.min(rpm, maxRPM));
+    // 변속 중 RPM 자연스럽게 내려감
+    rpm -= 2000 * delta;
+    return Math.max(idleRPM, rpm);
   }
 
   if (input.accel) {
-    rpm += (targetRPM * 1.05 - rpm) * delta * 26; // ← 5→8 더 빠르게 반응
+    // 엔진 자체적으로 RPM 상승 (속도와 독립)
+    const rpmRiseSpeed = 4000; // 높을수록 RPM 빠르게 상승
+    rpm += rpmRiseSpeed * delta;
   } else {
-    rpm += (targetRPM * 0.85 - rpm) * delta * 4;
+    // 가속 안 할 때 RPM 하강 (엔진 브레이크)
+    rpm -= 2500 * delta;
   }
 
+  // RPM 범위 제한
   return Math.max(idleRPM, Math.min(rpm, maxRPM));
 }
 function updateGearAuto(delta) {
   if (isShifting) {
     shiftTimer -= delta;
-    if (shiftTimer <= 0) {
-      isShifting = false; // 변속 완료
-    }
-    return; // 변속 중엔 기어 변경 없음
+    if (shiftTimer <= 0) isShifting = false;
+    return;
   }
 
-  // 업시프트: 가속 중 + RPM 높을 때
-  if (input.accel && rpm > shiftUpRPM && currentGear < maxGear) {
+  // 업시프트: RPM이 한계에 도달하면 다음 기어로
+  if (input.accel && rpm >= shiftUpRPM && currentGear < maxGear) {
     currentGear++;
-    // 업시프트 시 RPM 자연스럽게 드롭 (기어비 차이만큼)
-    const ratioDrop = gearRatios[currentGear] / gearRatios[currentGear - 1];
-    rpm *= ratioDrop * 0.92;
+    rpm *= 0.62; // 업시프트 시 RPM 드롭
     isShifting = true;
     shiftTimer = shiftDelay;
   }
 
-  // 다운시프트: 가속 안 할 때 + RPM 낮을 때
+  // 다운시프트: 가속 없고 RPM 낮으면
   if (!input.accel && rpm < shiftDownRPM && currentGear > 1) {
     currentGear--;
-    // 다운시프트 시 RPM 약간 올라감
-    const ratioRise = gearRatios[currentGear] / gearRatios[currentGear + 1];
-    rpm *= ratioRise * 0.95;
+    rpm *= 1.35; // 다운시프트 시 RPM 약간 올라감
     isShifting = true;
-    shiftTimer = shiftDelay * 0.6; // 다운시프트는 조금 빠르게
+    shiftTimer = shiftDelay * 0.5;
   }
 }
     // 차량 조향, 가속, 브레이크 처리
