@@ -5,7 +5,6 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>multi driving</title>
-  
   <style>
     body {
       margin: 0;
@@ -185,7 +184,7 @@ import { TextGeometry } from 'https://cdn.jsdelivr.net/npm/three@0.152.2/example
 import { RoundedBoxGeometry } from 'https://cdn.jsdelivr.net/npm/three@0.152.2/examples/jsm/geometries/RoundedBoxGeometry.js';
 import * as CANNON from 'https://cdn.jsdelivr.net/npm/cannon-es@0.20.0/dist/cannon-es.js';
 
-    const socket = io('https://multi-driving.onrender.com'); // ← 여기에 배포 주소 정확히 기입
+    const socket = io('https://multi-driving.onrender.com'); // 배포 주소
     document.getElementById('startButton').addEventListener('click', () => {
   const nickname = document.getElementById('nicknameInput').value.trim();
   const modelName = document.getElementById('modelSelect').value || 'GrandeurIG';
@@ -226,7 +225,7 @@ const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
     // 자유 카메라 각도 변수 (구면좌표)
-// 초기 각도는 뒤쪽 약간 위에서 바라보는 느낌으로 설정
+// 초기 각도 설정
 let camAzimuth = Math.PI;       // 좌우 회전 (0~2PI)
 let camElevation = Math.PI / 6; // 위아래 회전 (0~PI, 0:위, PI:아래)
 
@@ -254,13 +253,13 @@ function onPointerMove(event) {
     const deltaX = event.clientX - dragStart.x;
     const deltaY = event.clientY - dragStart.y;
 
-    // 회전 속도 조절 (적당히 조정 가능)
+    // 회전 속도 조절
     const rotationSpeed = 0.05
 
     camAzimuth = camAzimuthStart - deltaX * rotationSpeed;
     camElevation = camElevationStart - deltaY * rotationSpeed;
 
-    // camElevation 제한 (0.1 ~ PI-0.1)으로 너무 위아래 제한
+    // camElevation 제한
     camElevation = Math.min(Math.max(camElevation, 0.1), Math.PI - 0.1);
   }
 }
@@ -289,7 +288,7 @@ function resetCar() {
   const pos = chassisBody.position;
   chassisBody.position.set(pos.x, pos.y + 1.5, pos.z);
 
-  // 회전 초기화 (y축은 유지해서 방향은 그대로)
+  // 회전 초기화
   const yRot = getYRotation(chassisBody.quaternion);
   chassisBody.quaternion.setFromEuler(0, yRot, 0);
 
@@ -513,7 +512,7 @@ scene.add(new THREE.AmbientLight(0x404040));
   let carModel; // 선언만
 
 
-    // 자동차 시각 모델 (둥근 차체)
+    // 자동차 시각 모델
     function createGrandeurIGCarDetailed(color = '#ffffff') {
   const group = new THREE.Group();
 
@@ -574,7 +573,7 @@ scene.add(new THREE.AmbientLight(0x404040));
   roughness: 0.3
 });
 
-// 왼쪽 헤드라이트 (가로로 길고 납작한 박스)
+// 왼쪽 헤드라이트
 const headLamp = new THREE.Mesh(
   new THREE.BoxGeometry(0.8, 0.2, 0.1),  // X: 가로길이, Y: 높이, Z: 두께
   headMat
@@ -587,7 +586,7 @@ const headLampR = headLamp.clone();
 headLampR.position.x = 1.1;
 group.add(headLampR);
 
-  // ✅ 사이드미러 추가
+  // 사이드미러 추가
   const mirrorMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
   for (let side of [-1, 1]) {
     const mirror = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.1, 0.5), mirrorMat);
@@ -596,7 +595,7 @@ group.add(headLampR);
     group.add(mirror);
   }
 
-  // ✅ 후미등 추가
+  // 후미등 추가
   const tailMat = new THREE.MeshStandardMaterial({ color: 0xff3333, emissive: 0xff3333, emissiveIntensity: 0.6 });
 const tailBar = new THREE.Mesh(new THREE.BoxGeometry(2.5, 0.15, 0.05), tailMat);
 tailBar.position.set(0, 0.85, 3.3);  // 차 뒷부분, 중심 위치
@@ -609,7 +608,7 @@ function createSportsCar(color = '#ffffff') {
   const group = new THREE.Group();
 
   const bodyMat = new THREE.MeshStandardMaterial({ color: color, metalness: 0.6, roughness: 0.4 });
-  // 메인 차체 높이 1.2 -> 1.0, 위치 y 0.6 -> 0.55 (약간 낮게)
+  // 메인 차체 높이, 위치
   const mainBody = new THREE.Mesh(new THREE.BoxGeometry(3, 1.0, 6), bodyMat);
   mainBody.name = 'MainBody';
   mainBody.userData.physics = {
@@ -620,14 +619,14 @@ function createSportsCar(color = '#ffffff') {
   group.add(mainBody);
 
   const sphereGeom = new THREE.SphereGeometry(0.6, 16, 16);
-  // 구 위치 y도 0.6 -> 0.55로 맞춤
+  // 구 위치
   [[-1.2, 0.55, -2.7], [1.2, 0.55, -2.7], [-1.2, 0.55, 2.7], [1.2, 0.55, 2.7]].forEach(([x,y,z])=>{
     const s = new THREE.Mesh(sphereGeom, bodyMat);
     s.position.set(x, y, z);
     group.add(s);
   });
 
-  // 루프 높이 0.4 -> 0.3, 위치 y 1.3 -> 1.1, 약간 앞으로 기울임
+  // 루프 높이, 위치 약간 앞으로 기울임
   const roof = new THREE.Mesh(
     new THREE.BoxGeometry(2.5, 0.3, 3),
     new THREE.MeshStandardMaterial({ color: 0xcccccc, metalness: 0.5, roughness: 0.5 })
@@ -639,19 +638,19 @@ function createSportsCar(color = '#ffffff') {
   // 유리창 재질
   const windowMat = new THREE.MeshStandardMaterial({ color: 0x446688, transparent: true, opacity: 0.5, roughness: 0.1 });
 
-  // 앞 유리창, 높이 1.25 -> 1.05, 위치 그대로, 앞쪽으로 기울임
+  // 앞 유리창, 높이, 위치, 앞쪽으로 기울임
   const frontWin = new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.5, 0.05), windowMat);
   frontWin.position.set(0, 1.05, -1.5);
   frontWin.rotation.x = -Math.PI / 9;  // 약 -20도 기울임
   group.add(frontWin);
 
-  // 뒤 유리창, 위치 y 1.25 -> 1.05, 뒤쪽으로 약간 젖힘
+  // 뒤 유리창, 위치 뒤쪽으로 약간 젖힘
   const rearWin = frontWin.clone();
   rearWin.position.z = 1.5;
   rearWin.rotation.x = Math.PI / 12;
   group.add(rearWin);
 
-  // 좌우 유리창 높이 1.25 -> 1.05
+  // 좌우 유리창 높이
   const leftWin = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.5, 3), windowMat);
   leftWin.position.set(-1.25, 1.05, 0);
   group.add(leftWin);
@@ -660,18 +659,18 @@ function createSportsCar(color = '#ffffff') {
   rightWin.position.x = 1.25;
   group.add(rightWin);
 
-  // 앞 범퍼 높이 0.6 -> 0.45, 위치 y 0.5 -> 0.4
+  // 앞 범퍼 높이, 위치
   const bumperMat = new THREE.MeshStandardMaterial({ color: 0x888888, metalness: 0.7, roughness: 0.3 });
   const fBump = new THREE.Mesh(new THREE.BoxGeometry(3, 0.45, 0.5), bumperMat);
   fBump.position.set(0, 0.4, -3.1);
   group.add(fBump);
 
-  // 뒤 범퍼도 y 0.4로 맞춤
+  // 뒤 범퍼
   const rBump = fBump.clone();
   rBump.position.z = 3.1;
   group.add(rBump);
 
-  // 헤드라이트 높이 0.65 -> 0.5
+  // 헤드라이트 높이
   const headMat = new THREE.MeshStandardMaterial({
     color: 0xffffee,
     emissive: 0xffffee,
@@ -690,7 +689,7 @@ function createSportsCar(color = '#ffffff') {
   headLampR.position.x = 1.1;
   group.add(headLampR);
 
-  // 사이드미러 높이 1.2 -> 1.0
+  // 사이드미러 높이
   const mirrorMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
   for (let side of [-1, 1]) {
     const mirror = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.1, 0.5), mirrorMat);
@@ -699,7 +698,7 @@ function createSportsCar(color = '#ffffff') {
     group.add(mirror);
   }
 
-  // 후미등 높이 0.85 -> 0.65
+  // 후미등 높이
   const tailMat = new THREE.MeshStandardMaterial({ color: 0xff3333, emissive: 0xff3333, emissiveIntensity: 0.6 });
   const tailBar = new THREE.Mesh(new THREE.BoxGeometry(2.5, 0.15, 0.05), tailMat);
   tailBar.position.set(0, 0.65, 3.3);
@@ -726,7 +725,7 @@ function createSUVCar(color = '#ffffff') {
   mainBody.position.y = 0.8;  // 차체 높이 절반
   group.add(mainBody);
 
-  // 루프: 날렵하게 앞쪽으로 낮추고 뒤로 약간 올라감 (BoxGeometry를 Rotate 하면서 조정)
+  // 루프: 날렵하게 앞쪽으로 낮추고 뒤로 약간 올라감
   const roofMat = new THREE.MeshStandardMaterial({ color: 0xdddddd, metalness: 0.5, roughness: 0.4 });
   const roof = new THREE.Mesh(
     new RoundedBoxGeometry(3.2, 0.4, 4, 4, 0.2),
@@ -739,7 +738,7 @@ function createSUVCar(color = '#ffffff') {
   // 창문 재질과 투명도
   const windowMat = new THREE.MeshStandardMaterial({ color: 0x335577, transparent: true, opacity: 0.4, roughness: 0.1 });
 
-  // 앞 유리창: 얇고 약간 기울임, 위치 앞쪽 (앞유리 느낌)
+  // 앞 유리창: 얇고 약간 기울임, 위치 앞쪽
   const frontWin = new THREE.Mesh(
     new RoundedBoxGeometry(3, 0.5, 0.1, 3, 0.1),
     windowMat
@@ -863,7 +862,7 @@ function createSUVCar(color = '#ffffff') {
 
     vehicle.addToWorld(world);
 
-    // 휠 메시 생성 - 실제 타이어 모양에 가깝게 디자인 및 각도 조정
+    // 휠 메시 생성 - 실제 타이어 모양에 가깝게
     const wheelHolders = [];
     vehicle.wheelInfos.forEach((wheel) => {
       const holder = new THREE.Group();
@@ -1096,7 +1095,7 @@ engineForce = 0;
     const gearRatio = gearRatios[currentGear] * finalDrive;
     engineForce = (maxEngineForce * torqueCurve * gearRatio) / 10;
 
-    // ← drag 계수 0.002 → 0.0005로 대폭 감소
+    // drag 계수
     const drag = Math.min(1000, 0.0005 * speed * speed);
     engineForce -= drag;
     engineForce = Math.max(-8000, Math.min(engineForce, 8000));
@@ -1120,34 +1119,34 @@ else if (gearState === 'R') {
 }
 
 
-// 🔥 마지막 (이건 항상 맨 끝)
+// 마지막 (이건 항상 맨 끝)
 vehicle.applyEngineForce(engineForce, 2);
 vehicle.applyEngineForce(engineForce, 3);
     
   
-   // 🔥 사이드 브레이크 드리프트
+   // 사이드 브레이크 드리프트
 let handbrakeActive = false;
 
 if (input.handbrake) {
   const speed = chassisBody.velocity.length();
 
-  // 🔥 방향 반대로 수정 + 초기 킥 줄임
+  // 방향 + 초기 킥
   if (!handbrakeActive) {
     chassisBody.angularVelocity.y -= steeringValue * speed * 0.11;
     handbrakeActive = true;
   }
 
-  // 🔥 뒷바퀴 잠금
+  // 뒷바퀴 잠금
   vehicle.setBrake(70, 2);
   vehicle.setBrake(70, 3);
 
   vehicle.wheelInfos[2].frictionSlip = 0.25;
   vehicle.wheelInfos[3].frictionSlip = 0.25;
 
-  // 🔥 회전 유지 (약하게)
+  // 회전 유지 (약하게)
   chassisBody.angularVelocity.y -= steeringValue * speed * 0.008;
 
-  // 🔥 회전 제한 (핵심)
+  // 회전 제한
   chassisBody.angularVelocity.y *= 0.88;
 
 } else {
@@ -1296,11 +1295,11 @@ if (
     } else {
       const playerData = otherPlayers[id];
 
-      // ✅ 위치/회전 보간용 타겟 업데이트
+      // 위치/회전 보간용 타겟 업데이트
       playerData.targetPosition.set(player.position.x, player.position.y, player.position.z);
       playerData.targetQuaternion.set(player.rotation.x, player.rotation.y, player.rotation.z, player.rotation.w);
 
-      // ✅ 차량 색상 업데이트 (변경 시만 반영)
+      // 차량 색상 업데이트 (변경 시만 반영)
       playerData.model.traverse(child => {
         if (child.isMesh && child.name === 'MainBody' && child.material && child.material.color) {
           const newColor = new THREE.Color(player.carColor || '#888888');
@@ -1345,7 +1344,7 @@ setInterval(() => {
     function animate() {
        requestAnimationFrame(animate);
 
-  // 물리 시뮬레이션 스텝 (예시)
+  // 물리 시뮬레이션 스텝
        const delta = clock.getDelta();
 
      updateVehicleControls(delta);
@@ -1364,7 +1363,7 @@ setInterval(() => {
         wheelHolders[i].quaternion.copy(t.quaternion);
       }
 
-       // 💡 상대방 차량 위치 보간 처리
+       // 상대방 차량 위치 보간 처리
   const now = performance.now();
   for (const id in otherPlayers) {
     const player = otherPlayers[id];
@@ -1381,8 +1380,8 @@ setInterval(() => {
   }
 
 
-      // 속도 UI 업데이트
-    // 속도 + RPM + 기어 표시
+    
+    // 속도 + RPM + 기어 UI 표시
 hud.textContent = `속도: ${getSpeedKmH().toFixed(1)} km/h | RPM: ${Math.floor(rpm)} | 기어: ${currentGear}`;
       // 카메라 따라가기
   if (cameraFollow) {
@@ -1397,7 +1396,7 @@ hud.textContent = `속도: ${getSpeedKmH().toFixed(1)} km/h | RPM: ${Math.floor(
     // 목표 위치 벡터 생성
     const desiredPos = new THREE.Vector3(desiredX, desiredY, desiredZ);
 
-    // 현재 카메라 위치에서 목표 위치까지 lerp (보간값 0.2 ~ 0.3 권장)
+    // 현재 카메라 위치에서 목표 위치까지 lerp
     camera.position.lerp(desiredPos, 0.2);
 
     // 부드러운 시선 방향 보간
