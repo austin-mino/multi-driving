@@ -879,23 +879,23 @@ function createSUVCar(color = '#ffffff') {
   
 // 사용자 입력 상태
 let input = { left: false, right: false, accel: false, brake: false, handbrake: false };
-    let currentGear = 1;
+let currentGear = 1;
 const maxGear = 6;
 
-const gearRatios = [0, 3.5, 2.1, 1.4, 1.0, 0.8, 0.65]; // 1~6단
+const gearRatios = [0, 3.5, 2.1, 1.4, 1.0, 0.8, 0.65];
 const finalDrive = 3.2;
 
 let rpm = 800;
 const idleRPM = 800;
 const maxRPM = 7000;
 
-// 자동변속 기준 RPM (실제 AT처럼 구간 조정)
-const shiftUpRPM   = 5500; // 이 RPM 넘으면 업시프트
-const shiftDownRPM = 1800; // 이 RPM 아래면 다운시프트
+const shiftUpRPM   = 5500;
+const shiftDownRPM = 1800;
 
-  let isShifting = false;      // 변속 중 플래그
-let shiftTimer = 0;          // 변속 딜레이 타이머
-const shiftDelay = 0.35;     // 변속 걸리는 시간 (초)
+let isShifting = false;
+let shiftTimer = 0;
+const shiftDelay = 0.35;
+  
     // DOM 요소 바인딩
     const btnLeft = document.getElementById('btnLeft'),
           btnRight = document.getElementById('btnRight'),
@@ -1090,31 +1090,28 @@ engineForce = 0;
 // 기어별 처리
 if (gearState === 'D') {
   rpm = calculateRPM(speed, delta);
-  updateGearAuto(delta); // ← delta 인자 추가
+  updateGearAuto(delta);
 
   if (input.accel && !isShifting) {
     const rpmFactor = rpm / maxRPM;
 
-    // 토크 커브: 저RPM 약함 → 중RPM 최대 → 고RPM 약간 감소
     let torqueCurve;
     if (rpmFactor < 0.25) {
-      torqueCurve = 0.4 + rpmFactor * 2.4; // 0.4 ~ 1.0
+      torqueCurve = 0.4 + rpmFactor * 2.4;
     } else if (rpmFactor < 0.75) {
       torqueCurve = 1.0;
     } else {
-      torqueCurve = 1.0 - (rpmFactor - 0.75) * 1.2; // 1.0 → 0.7
+      torqueCurve = 1.0 - (rpmFactor - 0.75) * 1.2;
     }
 
     const gearRatio = gearRatios[currentGear] * finalDrive;
     engineForce = (maxEngineForce * torqueCurve * gearRatio) / 10;
 
-    // 공기저항
     const drag = Math.min(3000, 0.002 * speed * speed);
     engineForce -= drag;
     engineForce = Math.max(-8000, Math.min(engineForce, 8000));
 
   } else if (isShifting) {
-    // 변속 중 엔진 힘 차단 (변속 충격 느낌)
     engineForce = 0;
   }
 
