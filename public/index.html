@@ -1009,21 +1009,16 @@ function calculateRPM(speed, delta) {
   const wheelCircumference = 2 * Math.PI * wheelRadius;
   const wheelRPM = (speed / 3.6) / wheelCircumference * 60;
   const gearRatio = gearRatios[currentGear] * finalDrive;
-
-  // 속도 기반 목표 RPM
   const targetRPM = wheelRPM * gearRatio;
 
-  // 변속 중이면 RPM을 천천히 보간만 함 (엔진 힘 차단은 별도)
   if (isShifting) {
     rpm += (targetRPM - rpm) * delta * 3;
     return Math.max(idleRPM, Math.min(rpm, maxRPM));
   }
 
   if (input.accel) {
-    // 가속 시: 목표 RPM 향해 빠르게 상승
-    rpm += (targetRPM * 1.05 - rpm) * delta * 5;
+    rpm += (targetRPM * 1.05 - rpm) * delta * 8; // ← 5→8 더 빠르게 반응
   } else {
-    // 비가속: 엔진 브레이크 — 속도 기반 RPM으로 자연스럽게 내려감
     rpm += (targetRPM * 0.85 - rpm) * delta * 4;
   }
 
@@ -1087,8 +1082,7 @@ function updateVehicleControls(delta) {
   // 엔진 힘 초기화
 engineForce = 0;
 
-// 기어별 처리
-if (gearState === 'D') {
+// 기어별 처리if (gearState === 'D') {
   rpm = calculateRPM(speed, delta);
   updateGearAuto(delta);
 
@@ -1107,7 +1101,8 @@ if (gearState === 'D') {
     const gearRatio = gearRatios[currentGear] * finalDrive;
     engineForce = (maxEngineForce * torqueCurve * gearRatio) / 10;
 
-    const drag = Math.min(3000, 0.002 * speed * speed);
+    // ← drag 계수 0.002 → 0.0005로 대폭 감소
+    const drag = Math.min(1000, 0.0005 * speed * speed);
     engineForce -= drag;
     engineForce = Math.max(-8000, Math.min(engineForce, 8000));
 
