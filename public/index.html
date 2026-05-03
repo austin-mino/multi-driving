@@ -1103,13 +1103,13 @@ engineForce = 0;
       torqueCurve = 1.0 - (rpmFactor - 0.75) * 1.2;
     }
 
-    const gearRatio = gearRatios[currentGear] * finalDrive;
-    engineForce = (maxEngineForce * torqueCurve * gearRatio) / 10;
+const gearRatio = gearRatios[currentGear] * finalDrive;
+const torque = maxEngineForce * torqueCurve / gearRatios[currentGear];
+engineForce = Math.min(torque, maxEngineForce * 0.9);
 
-    // drag 계수
-    const drag = Math.min(1000, 0.0005 * speed * speed);
-    engineForce -= drag;
-    engineForce = Math.max(-8000, Math.min(engineForce, 8000));
+const drag = 0.003 * speed * speed;
+engineForce -= drag;
+engineForce = Math.max(-8000, Math.min(engineForce, 8000));
 
   } else if (isShifting) {
     engineForce = 0;
