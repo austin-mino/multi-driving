@@ -889,7 +889,7 @@ const idleRPM = 800;
 const maxRPM = 9700;
 const shiftUpRPM   = 5500;
 const shiftDownRPM = 1400;
-const rpmRiseSpeed = 3600;
+const rpmRiseSpeed = 1800;
 
 let isShifting = false;
 let shiftTimer = 0;
@@ -1010,10 +1010,11 @@ btnToggleCam.addEventListener('click', () => {
   }
 
   if (input.accel) {
-    // 커브 중이면 RPM 상승 억제 (조향값이 클수록 더 억제)
-    const steerFactor = 1.0 - Math.abs(steeringValue) * 4.0;
-    const clampedFactor = Math.max(0.3, steerFactor); // 최소 30%는 상승
-    rpm += rpmRiseSpeed * delta * clampedFactor;
+    // 핸드브레이크 중이면 조향 억제 없이 그냥 상승
+    const steerFactor = input.handbrake
+      ? 1.0
+      : Math.max(0.4, 1.0 - Math.abs(steeringValue) * 4.0);
+    rpm += rpmRiseSpeed * delta * steerFactor;
   } else {
     rpm -= 2500 * delta;
   }
@@ -1023,8 +1024,8 @@ btnToggleCam.addEventListener('click', () => {
   const wheelRPM = (speed / 3.6) / wheelCircumference * 60;
   const speedBasedRPM = wheelRPM * gearRatios[currentGear] * finalDrive;
 
-  // 커브 중이면 속도 반영 비율 높이기
-  const steerBlend = Math.abs(steeringValue) * 4.0; // 0~1
+  // 핸드브레이크 중이면 속도 반영 줄이기 (드리프트 중 RPM 독립)
+  const steerBlend = input.handbrake ? 0 : Math.abs(steeringValue) * 4.0;
   const engineBlend = Math.max(0.95 - steerBlend * 0.3, 0.7);
   const speedBlend = 1.0 - engineBlend;
 
