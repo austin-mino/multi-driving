@@ -1001,14 +1001,19 @@ btnToggleCam.addEventListener('click', () => {
     function getSpeedKmH() {
       const velocity = chassisBody.velocity;
       return velocity.length() * 3.6;
-    }function calculateRPM(speed, delta) {
+    }
+  
+ function calculateRPM(speed, delta) {
   if (isShifting) {
     rpm -= 2000 * delta;
     return Math.max(idleRPM, rpm);
   }
 
   if (input.accel) {
-    rpm += rpmRiseSpeed * delta; // 로컬 const 없이 전역 변수 사용
+    // 커브 중이면 RPM 상승 억제 (조향값이 클수록 더 억제)
+    const steerFactor = 1.0 - Math.abs(steeringValue) * 4.0;
+    const clampedFactor = Math.max(0.3, steerFactor); // 최소 30%는 상승
+    rpm += rpmRiseSpeed * delta * clampedFactor;
   } else {
     rpm -= 2500 * delta;
   }
@@ -1018,7 +1023,12 @@ btnToggleCam.addEventListener('click', () => {
   const wheelRPM = (speed / 3.6) / wheelCircumference * 60;
   const speedBasedRPM = wheelRPM * gearRatios[currentGear] * finalDrive;
 
-  rpm = rpm * 0.99 + speedBasedRPM * 0.01;
+  // 커브 중이면 속도 반영 비율 높이기
+  const steerBlend = Math.abs(steeringValue) * 4.0; // 0~1
+  const engineBlend = Math.max(0.95 - steerBlend * 0.3, 0.7);
+  const speedBlend = 1.0 - engineBlend;
+
+  rpm = rpm * engineBlend + speedBasedRPM * speedBlend;
 
   return Math.max(idleRPM, Math.min(rpm, maxRPM));
 }
