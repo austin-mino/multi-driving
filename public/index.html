@@ -1350,6 +1350,7 @@ for (let i = 0; i < 4; i++) {
 // 충돌 물리 바디 생성
 const otherChassisShape = new CANNON.Box(new CANNON.Vec3(1.5, 0.5, 3));
 const otherChassisBody = new CANNON.Body({ mass: 1200 });
+otherChassisBody.type = CANNON.Body.KINEMATIC;
 otherChassisBody.addShape(otherChassisShape);
 otherChassisBody.position.set(player.position.x, player.position.y, player.position.z);
 otherChassisBody.collisionFilterGroup = 2;
@@ -1456,18 +1457,13 @@ model.quaternion.copy(player.chassisBody.quaternion);
     // 충돌 바디 위치 동기화
     if (player.chassisBody) {
      // 목표 위치까지의 차이
-const diff = new CANNON.Vec3(
-  targetPos.x - player.chassisBody.position.x,
-  targetPos.y - player.chassisBody.position.y,
-  targetPos.z - player.chassisBody.position.z
-);
+// 차량 모델 부드럽게 이동
+model.position.lerp(targetPos, 0.2);
+model.quaternion.slerp(targetQuat, 0.2);
 
-// 부드럽게 따라가기
-player.chassisBody.velocity.set(
-  diff.x * 8,
-  diff.y * 8,
-  diff.z * 8
-);
+// 충돌 바디는 모델 따라가기
+player.chassisBody.position.copy(model.position);
+player.chassisBody.quaternion.copy(model.quaternion);
 
 // 회전 보간
 player.chassisBody.quaternion.slerp(targetQuat, 0.2);
