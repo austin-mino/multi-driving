@@ -1327,6 +1327,12 @@ otherCar.quaternion.set(
 );
 // 바퀴 메시 생성
 const otherWheelHolders = [];
+const wheelPositions = [
+  [-1.2, 0.2, 2.4],
+  [ 1.2, 0.2, 2.4],
+  [-1.2, 0.2,-2.4],
+  [ 1.2, 0.2,-2.4]
+];
 for (let i = 0; i < 4; i++) {
   const holder = new THREE.Group();
   const tireGeo = new THREE.CylinderGeometry(0.65, 0.65, 0.4, 24);
@@ -1334,7 +1340,8 @@ for (let i = 0; i < 4; i++) {
   const tireMesh = new THREE.Mesh(tireGeo, tireMat);
   tireMesh.rotation.z = Math.PI / 2;
   holder.add(tireMesh);
-  scene.add(holder);
+  holder.position.set(...wheelPositions[i]);
+  otherCar.add(holder);
   otherWheelHolders.push(holder);
 }
 
@@ -1357,7 +1364,6 @@ otherPlayers[id] = {
   targetQuaternion: new THREE.Quaternion(
     player.rotation.x, player.rotation.y, player.rotation.z, player.rotation.w
   ),
-  targetWheels: player.wheels || null,
 };
     } else {
       const playerData = otherPlayers[id];
@@ -1365,9 +1371,6 @@ otherPlayers[id] = {
       // 위치/회전 보간용 타겟 업데이트
       playerData.targetPosition.set(player.position.x, player.position.y, player.position.z);
       playerData.targetQuaternion.set(player.rotation.x, player.rotation.y, player.rotation.z, player.rotation.w);
-if (player.wheels) {
-  playerData.targetWheels = player.wheels;
-}
       // 차량 색상 업데이트 (변경 시만 반영)
       playerData.model.traverse(child => {
         if (child.isMesh && child.name === 'MainBody' && child.material && child.material.color) {
@@ -1454,20 +1457,6 @@ setInterval(() => {
       player.chassisBody.quaternion.set(targetQuat.x, targetQuat.y, targetQuat.z, targetQuat.w);
       player.chassisBody.velocity.set(0, 0, 0);
       player.chassisBody.angularVelocity.set(0, 0, 0);
-    }
-
-    // 바퀴 위치 업데이트
-    if (player.wheelHolders && player.targetWheels) {
-      player.targetWheels.forEach((w, i) => {
-        if (player.wheelHolders[i]) {
-          player.wheelHolders[i].position.lerp(
-            new THREE.Vector3(w.position.x, w.position.y, w.position.z), 0.2
-          );
-          player.wheelHolders[i].quaternion.slerp(
-            new THREE.Quaternion(w.quaternion.x, w.quaternion.y, w.quaternion.z, w.quaternion.w), 0.2
-          );
-        }
-      });
     }
   }
 }
