@@ -1334,7 +1334,7 @@ for (let i = 0; i < 4; i++) {
   const tireMesh = new THREE.Mesh(tireGeo, tireMat);
   tireMesh.rotation.z = Math.PI / 2;
   holder.add(tireMesh);
-  otherCar.add(holder);
+  scene.add(holder);
   otherWheelHolders.push(holder);
 }
 
