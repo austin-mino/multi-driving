@@ -1311,8 +1311,20 @@ if (
       nicknameText.position.set(0, 2, 0);
       otherCar.add(nicknameText);
 
-scene.add(otherCar);
+      scene.add(otherCar);
+      
+otherCar.position.set(
+  player.position.x,
+  player.position.y,
+  player.position.z
+);
 
+otherCar.quaternion.set(
+  player.rotation.x,
+  player.rotation.y,
+  player.rotation.z,
+  player.rotation.w
+);
 // 바퀴 메시 생성
 const otherWheelHolders = [];
 for (let i = 0; i < 4; i++) {
@@ -1322,7 +1334,7 @@ for (let i = 0; i < 4; i++) {
   const tireMesh = new THREE.Mesh(tireGeo, tireMat);
   tireMesh.rotation.z = Math.PI / 2;
   holder.add(tireMesh);
-  scene.add(holder);
+  otherCar.add(holder);
   otherWheelHolders.push(holder);
 }
 
