@@ -1035,7 +1035,7 @@ rpm += rpmRiseSpeed * delta * steerFactor * gearRatios[currentGear] * rpmFactor;
   const speedBasedRPM = wheelRPM * gearRatios[currentGear] * finalDrive;
 
   // 핸드브레이크 중이면 속도 반영 완전히 끊음 (드리프트 중 RPM 독립)
-  const blend = input.handbrake ? 0.0 : 0.02;
+  const blend = input.handbrake ? 0.01 : 0.02;
   rpm = rpm * (1 - blend) + speedBasedRPM * blend;
 
   return Math.max(idleRPM, Math.min(rpm, maxRPM));
