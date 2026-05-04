@@ -1293,6 +1293,8 @@ if (
 }
     
     if (!otherPlayers[id]) {
+        // 먼저 빈 객체 등록해서 중복 생성 방지
+      otherPlayers[id] = { loading: true };
       let otherCar;
 
       switch (player.carModel) {
