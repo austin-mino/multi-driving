@@ -1017,7 +1017,10 @@ btnToggleCam.addEventListener('click', () => {
       : Math.max(0.4, 1.0 - Math.abs(steeringValue) * 4.0);
 
     // 저단(1.8)일수록 RPM 빠르게, 고단(1.0)일수록 느리게
-    rpm += rpmRiseSpeed * delta * steerFactor * gearRatios[currentGear];
+// 변경 - 4500 이하는 빠르게, 4500 이상은 천천히
+const rpmThreshold = 2618;
+const rpmFactor = rpm < rpmThreshold ? 1.0 : 0.3; // 4500 넘으면 30% 속도로
+rpm += rpmRiseSpeed * delta * steerFactor * gearRatios[currentGear] * rpmFactor;
   } else {
     // 엑셀 안 밟으면 RPM 하강
     rpm -= 2500 * delta;
