@@ -358,6 +358,13 @@ const buildingGroup = new THREE.Group();
 const parkGroup = new THREE.Group();
 scene.add(roadGroup, buildingGroup, parkGroup);
 
+function seededRandom(seed) {
+  const x = Math.sin(seed) * 10000;
+  return x - Math.floor(x);
+}
+let seedCounter = 0;
+function rng() { return seededRandom(++seedCounter); }
+  
 // 5. 블록 생성
 for (let i = -GRID_COUNT; i <= GRID_COUNT; i++) {
   for (let j = -GRID_COUNT; j <= GRID_COUNT; j++) {
@@ -367,7 +374,7 @@ for (let i = -GRID_COUNT; i <= GRID_COUNT; i++) {
     createRoadBlock(x, z);
     createSidewalk(x, z);
 
-    const isPark = Math.random() < 0.1;
+const isPark = rng() < 0.1;
     if (isPark) createPark(x, z);
     else createBuilding(x, z);
   }
@@ -394,10 +401,10 @@ function createSidewalk(x, z) {
 }
 
 function createBuilding(x, z) {
-  const w = THREE.MathUtils.randFloat(20, BUILDING_AREA);
-  const d = THREE.MathUtils.randFloat(20, BUILDING_AREA);
-  const h = THREE.MathUtils.randFloat(40, 100);
-  const color = COLORS.building[Math.floor(Math.random() * COLORS.building.length)];
+ const w = 20 + rng() * (BUILDING_AREA - 20);
+const d = 20 + rng() * (BUILDING_AREA - 20);
+const h = 40 + rng() * 60;
+const color = COLORS.building[Math.floor(rng() * COLORS.building.length)];
 
   const geo = new THREE.BoxGeometry(w, h, d);
   const mat = new THREE.MeshStandardMaterial({ color });
@@ -457,7 +464,7 @@ function addPropsAroundBuilding(x, z, w, d) {
 
     if (Math.abs(localX) > sidewalkRange || Math.abs(localZ) > sidewalkRange) continue;
 
-    const rand = Math.random();
+const rand = rng();
     if (rand < 0.33) {
       const bench = new THREE.Mesh(benchGeo, benchMat);
       bench.position.set(px, -4.75, pz);
@@ -508,6 +515,8 @@ scene.add(new THREE.AmbientLight(0x404040));
     chassisBody.position.set(-50, -3.0, 0);
     chassisBody.angularDamping = 0.32;
     chassisBody.linearDamping = 0.06;
+    chassisBody.collisionFilterGroup = 1;
+    chassisBody.collisionFilterMask = 1 | 2;
     world.addBody(chassisBody);
   let carModel; // 선언만
 
@@ -1254,19 +1263,20 @@ async function createTextMesh(text) {
 function sendPlayerState() {
   if (!playerId) return;
 
+  const wheels = vehicle.wheelInfos.map((w, i) => {
+    vehicle.updateWheelTransform(i);
+    const t = vehicle.wheelInfos[i].worldTransform;
+    return {
+      position: { x: t.position.x, y: t.position.y, z: t.position.z },
+      quaternion: { x: t.quaternion.x, y: t.quaternion.y, z: t.quaternion.z, w: t.quaternion.w }
+    };
+  });
+
   socket.emit('updatePosition', {
-    position: {
-      x: chassisBody.position.x,
-      y: chassisBody.position.y,
-      z: chassisBody.position.z
-    },
-    rotation: {
-      x: chassisBody.quaternion.x,
-      y: chassisBody.quaternion.y,
-      z: chassisBody.quaternion.z,
-      w: chassisBody.quaternion.w
-    },
-    gear: gearState
+    position: { x: chassisBody.position.x, y: chassisBody.position.y, z: chassisBody.position.z },
+    rotation: { x: chassisBody.quaternion.x, y: chassisBody.quaternion.y, z: chassisBody.quaternion.z, w: chassisBody.quaternion.w },
+    gear: gearState,
+    wheels
   });
 }
 // 예시: 키 입력 처리 후
@@ -1301,22 +1311,51 @@ if (
       nicknameText.position.set(0, 2, 0);
       otherCar.add(nicknameText);
 
-      scene.add(otherCar);
+scene.add(otherCar);
 
-      otherPlayers[id] = {
-        model: otherCar,
-        targetPosition: new THREE.Vector3(player.position.x, player.position.y, player.position.z),
-        targetQuaternion: new THREE.Quaternion(
-          player.rotation.x, player.rotation.y, player.rotation.z, player.rotation.w
-        ),
-      };
+// 바퀴 메시 생성
+const otherWheelHolders = [];
+for (let i = 0; i < 4; i++) {
+  const holder = new THREE.Group();
+  const tireGeo = new THREE.CylinderGeometry(0.65, 0.65, 0.4, 24);
+  const tireMat = new THREE.MeshStandardMaterial({ color: 0x222222, metalness: 0.7, roughness: 0.4 });
+  const tireMesh = new THREE.Mesh(tireGeo, tireMat);
+  tireMesh.rotation.z = Math.PI / 2;
+  holder.add(tireMesh);
+  scene.add(holder);
+  otherWheelHolders.push(holder);
+}
+
+// 충돌 물리 바디 생성
+const otherChassisShape = new CANNON.Box(new CANNON.Vec3(1.5, 0.5, 3));
+const otherChassisBody = new CANNON.Body({ mass: 1200 });
+otherChassisBody.addShape(otherChassisShape);
+otherChassisBody.position.set(player.position.x, player.position.y, player.position.z);
+otherChassisBody.collisionFilterGroup = 2;
+otherChassisBody.collisionFilterMask = 1 | 2;
+otherChassisBody.linearDamping = 0.99;
+otherChassisBody.angularDamping = 0.99;
+world.addBody(otherChassisBody);
+
+otherPlayers[id] = {
+  model: otherCar,
+  chassisBody: otherChassisBody,
+  wheelHolders: otherWheelHolders,
+  targetPosition: new THREE.Vector3(player.position.x, player.position.y, player.position.z),
+  targetQuaternion: new THREE.Quaternion(
+    player.rotation.x, player.rotation.y, player.rotation.z, player.rotation.w
+  ),
+  targetWheels: player.wheels || null,
+};
     } else {
       const playerData = otherPlayers[id];
 
       // 위치/회전 보간용 타겟 업데이트
       playerData.targetPosition.set(player.position.x, player.position.y, player.position.z);
       playerData.targetQuaternion.set(player.rotation.x, player.rotation.y, player.rotation.z, player.rotation.w);
-
+if (player.wheels) {
+  playerData.targetWheels = player.wheels;
+}
       // 차량 색상 업데이트 (변경 시만 반영)
       playerData.model.traverse(child => {
         if (child.isMesh && child.name === 'MainBody' && child.material && child.material.color) {
@@ -1332,12 +1371,16 @@ if (
   }
 
   // 제거된 플레이어 처리
-  for (const id of Object.keys(otherPlayers)) {
-    if (!players[id]) {
-      scene.remove(otherPlayers[id].model);
-      delete otherPlayers[id];
+ for (const id of Object.keys(otherPlayers)) {
+  if (!players[id]) {
+    scene.remove(otherPlayers[id].model);
+    if (otherPlayers[id].chassisBody) world.removeBody(otherPlayers[id].chassisBody);
+    if (otherPlayers[id].wheelHolders) {
+      otherPlayers[id].wheelHolders.forEach(w => scene.remove(w));
     }
+    delete otherPlayers[id];
   }
+}
 });
 
 // 매 프레임 또는 50ms 간격으로 내 위치/상태 서버 전송
@@ -1383,19 +1426,39 @@ setInterval(() => {
 
        // 상대방 차량 위치 보간 처리
   const now = performance.now();
-  for (const id in otherPlayers) {
-    const player = otherPlayers[id];
-    const model = player.model;
-    const targetPos = player.targetPosition;
-    const targetQuat = player.targetQuaternion;
+ for (const id in otherPlayers) {
+  const player = otherPlayers[id];
+  const model = player.model;
+  const targetPos = player.targetPosition;
+  const targetQuat = player.targetQuaternion;
 
-    if (targetPos && targetQuat) {
-      // 위치 보간
-      model.position.lerp(targetPos, 0.2);
+  if (targetPos && targetQuat) {
+    model.position.lerp(targetPos, 0.2);
+    model.quaternion.slerp(targetQuat, 0.1);
 
-      // 회전 보간
-     model.quaternion.slerp(targetQuat, 0.1);}
+    // 충돌 바디 위치 동기화
+    if (player.chassisBody) {
+      player.chassisBody.position.set(targetPos.x, targetPos.y, targetPos.z);
+      player.chassisBody.quaternion.set(targetQuat.x, targetQuat.y, targetQuat.z, targetQuat.w);
+      player.chassisBody.velocity.set(0, 0, 0);
+      player.chassisBody.angularVelocity.set(0, 0, 0);
+    }
+
+    // 바퀴 위치 업데이트
+    if (player.wheelHolders && player.targetWheels) {
+      player.targetWheels.forEach((w, i) => {
+        if (player.wheelHolders[i]) {
+          player.wheelHolders[i].position.lerp(
+            new THREE.Vector3(w.position.x, w.position.y, w.position.z), 0.2
+          );
+          player.wheelHolders[i].quaternion.slerp(
+            new THREE.Quaternion(w.quaternion.x, w.quaternion.y, w.quaternion.z, w.quaternion.w), 0.2
+          );
+        }
+      });
+    }
   }
+}
 
 
     
