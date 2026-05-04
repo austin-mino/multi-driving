@@ -1354,8 +1354,8 @@ otherChassisBody.addShape(otherChassisShape);
 otherChassisBody.position.set(player.position.x, player.position.y, player.position.z);
 otherChassisBody.collisionFilterGroup = 2;
 otherChassisBody.collisionFilterMask = 1 | 2;
-otherChassisBody.linearDamping = 0.99;
-otherChassisBody.angularDamping = 0.99;
+otherChassisBody.linearDamping = 0.2;
+otherChassisBody.angularDamping = 0.4;
 world.addBody(otherChassisBody);
 
 otherPlayers[id] = {
@@ -1450,15 +1450,27 @@ setInterval(() => {
   const targetQuat = player.targetQuaternion;
 
   if (targetPos && targetQuat) {
-    model.position.lerp(targetPos, 0.2);
-    model.quaternion.slerp(targetQuat, 0.1);
+    model.position.copy(player.chassisBody.position);
+model.quaternion.copy(player.chassisBody.quaternion);
 
     // 충돌 바디 위치 동기화
     if (player.chassisBody) {
-      player.chassisBody.position.set(targetPos.x, targetPos.y, targetPos.z);
-      player.chassisBody.quaternion.set(targetQuat.x, targetQuat.y, targetQuat.z, targetQuat.w);
-      player.chassisBody.velocity.set(0, 0, 0);
-      player.chassisBody.angularVelocity.set(0, 0, 0);
+     // 목표 위치까지의 차이
+const diff = new CANNON.Vec3(
+  targetPos.x - player.chassisBody.position.x,
+  targetPos.y - player.chassisBody.position.y,
+  targetPos.z - player.chassisBody.position.z
+);
+
+// 부드럽게 따라가기
+player.chassisBody.velocity.set(
+  diff.x * 8,
+  diff.y * 8,
+  diff.z * 8
+);
+
+// 회전 보간
+player.chassisBody.quaternion.slerp(targetQuat, 0.2);
     }
   }
 }
