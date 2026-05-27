@@ -529,7 +529,7 @@ scene.add(new THREE.AmbientLight(0x404040));
     chassisBody.collisionFilterMask = 1 | 2;
     world.addBody(chassisBody);
   let carModel; // 선언만
-
+  let carVisualOffsetY = -1;
 
     // 자동차 시각 모델
     function createGrandeurIGCarDetailed(color = '#ffffff') {
@@ -660,7 +660,7 @@ function createSportsCar(color = '#ffffff') {
 
         car.scale.set(2.5, 2.5, 2.5);
         car.rotation.y = Math.PI;
-        car.position.y = -1,0;
+        carVisualOffsetY = -1.0;
 
         resolve(car);
       },
@@ -1394,6 +1394,7 @@ setInterval(() => {
 
   // 자동차 모델 위치/회전을 물리 바디에 맞게 업데이트
   carModel.position.copy(chassisBody.position);
+  carModel.position.y += carVisualOffsetY;
   carModel.quaternion.copy(chassisBody.quaternion);
 
       // 휠 mesh 위치/회전 업데이트
