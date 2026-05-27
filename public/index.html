@@ -332,24 +332,24 @@ const contactMaterial = new CANNON.ContactMaterial(groundMaterial, wheelMaterial
 world.addContactMaterial(contactMaterial);
 
 // ─── 안개 ────────────────────────────────────
-scene.fog = new THREE.Fog(0x4a5a6a, 80, 500);
-scene.background = new THREE.Color(0x4a5a6a);
+scene.fog = new THREE.Fog(0x87ceeb, 200, 800);
+scene.background = new THREE.Color(0x87ceeb);
 
 // ─── 조명 ─────────────────────────────────────────────────
-const sun = new THREE.DirectionalLight(0xd0d8e0, 0.6);
+const sun = new THREE.DirectionalLight(0xfff5e0, 1.4);
 sun.position.set(200, 400, 100);
 sun.castShadow = true;
-sun.shadow.mapSize.width = 2048;
-sun.shadow.mapSize.height = 2048;
-sun.shadow.camera.near = 0.5;
-sun.shadow.camera.far = 1500;
-sun.shadow.camera.left = -600;
-sun.shadow.camera.right = 600;
-sun.shadow.camera.top = 600;
-sun.shadow.camera.bottom = -600;
+sun.shadow.mapSize.width = 512;
+sun.shadow.mapSize.height = 512;
+sun.shadow.camera.left = -300;
+sun.shadow.camera.right = 300;
+sun.shadow.camera.top = 300;
+sun.shadow.camera.bottom = -300;
 scene.add(sun);
-scene.add(new THREE.AmbientLight(0x334455, 0.5));
-scene.add(new THREE.HemisphereLight(0x4a5a6a, 0x1a1a1a, 0.3));
+scene.add(new THREE.AmbientLight(0x88aacc, 0.6));
+scene.add(new THREE.HemisphereLight(0x87ceeb, 0x4a7a3a, 0.5));
+
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
 
 // ─── 캔버스 텍스처 생성 함수 ───────────────────────────────
 function makeAsphaltTexture() {
@@ -437,7 +437,7 @@ scene.add(floorMesh);
 // ─── 도시 설정 ─────────────────────────────────────────────
 const BLOCK_SIZE = 100;
 const ROAD_WIDTH = 20;
-const GRID_COUNT = 5;
+const GRID_COUNT = 4;
 
 const roadGroup = new THREE.Group();
 const buildingGroup = new THREE.Group();
@@ -557,7 +557,10 @@ function createBuilding(x, z) {
   const h = 25 + rng() * 130;
   const baseColor = buildingPalette[Math.floor(rng() * buildingPalette.length)];
 
-  const tex = makeBuildingTexture(baseColor, Math.floor(6 + h / 12), 4 + Math.floor(rng() * 3));
+  const buildingTexPool = buildingPalette.map(color =>
+  makeBuildingTexture(color, 10, 5)
+);
+  const tex = buildingTexPool[Math.floor(rng() * buildingTexPool.length)];
   const geo = new THREE.BoxGeometry(w, h, d);
   const mat = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.7, metalness: 0.1 });
   const mesh = new THREE.Mesh(geo, mat);
@@ -731,13 +734,12 @@ function createStreetLight(x, z) {
   bulb.position.set(x + 2.2, 2.35, z);
   scene.add(bulb);
 
-  // 실제 포인트 라이트 (개수 제한)
-  if (streetLightCount < MAX_LIGHTS) {
-    const light = new THREE.PointLight(0xfff5aa, 2.5, 28);
-    light.position.set(x + 2.2, 2.35, z);
-    scene.add(light);
-    streetLightCount++;
-  }
+ const bulbMat = new THREE.MeshStandardMaterial({
+  color: 0xfff5cc,
+  emissive: 0xfff5cc,
+  emissiveIntensity: 3.0, // 더 밝게
+  roughness: 0.2
+});
 }
 
 // ─── 건물 주변 소품 ────────────────────────────────────────
