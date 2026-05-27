@@ -1145,12 +1145,17 @@ if (input.handbrake) {
  
 
     // 카메라 차량 뒤쪽 위치로 고정
-    function updateCamera() {
-  const relativeCameraOffset = new THREE.Vector3(0, 7, 15);
-  const cameraOffset = relativeCameraOffset.applyMatrix4(carModel.matrixWorld);
-  camera.position.lerp(cameraOffset, 0.1);
-  camera.lookAt(carModel.position);
-    }
+   function updateCamera() {
+  const carPos = carModel.position.clone();
+
+  // 회전만 적용 (스케일 제외)
+  const offset = new THREE.Vector3(0, 7, 15);
+  offset.applyQuaternion(carModel.quaternion);
+
+  const targetPos = carPos.clone().add(offset);
+  camera.position.lerp(targetPos, 0.1);
+  camera.lookAt(carPos);
+}
 
     // 타이머 관리
     let startTime = null;
