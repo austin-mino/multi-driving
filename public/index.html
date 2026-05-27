@@ -456,6 +456,12 @@ let seedCounter = 0;
 function rng() { return seededRandom(++seedCounter); }
 
 // ─── 블록 생성 루프 ────────────────────────────────────────
+const buildingPalette = [
+  0x4a6fa5, 0x7a5c58, 0x5a7a54, 0x9a8060, 0x607080,
+  0xb09050, 0x506050, 0x806060, 0x708090, 0x5f6b7a,
+  0x8a7060, 0x3d5c6e, 0x6a6a50, 0x7c5050, 0x607060
+];
+  
 for (let i = -GRID_COUNT; i <= GRID_COUNT; i++) {
   for (let j = -GRID_COUNT; j <= GRID_COUNT; j++) {
     const x = i * BLOCK_SIZE;
@@ -539,11 +545,6 @@ function addCrosswalk(x, z) {
 }
 
 // ─── 건물 생성 ─────────────────────────────────────────────
-const buildingPalette = [
-  0x4a6fa5, 0x7a5c58, 0x5a7a54, 0x9a8060, 0x607080,
-  0xb09050, 0x506050, 0x806060, 0x708090, 0x5f6b7a,
-  0x8a7060, 0x3d5c6e, 0x6a6a50, 0x7c5050, 0x607060
-];
 
 function createBuilding(x, z) {
   const maxArea = BLOCK_SIZE - ROAD_WIDTH - 8;
@@ -772,8 +773,9 @@ function addStreetProps(x, z, w, d) {
     chassisBody.collisionFilterGroup = 1;
     chassisBody.collisionFilterMask = 1 | 2;
     world.addBody(chassisBody);
+  
   let carModel; // 선언만
-  let carVisualOffsetY = -0.6;
+  let carVisualOffsetY = 0;
 
     // 자동차 시각 모델
     function createGrandeurIGCarDetailed(color = '#ffffff') {
@@ -904,7 +906,7 @@ function createSportsCar(color = '#ffffff') {
 
         car.scale.set(2.5, 2.5, 2.5);
         car.rotation.y = Math.PI;
-        carVisualOffsetY = -1.0;
+        carVisualOffsetY = -0.9;
 
         resolve(car);
       },
