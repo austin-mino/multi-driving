@@ -119,15 +119,17 @@
   <script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
 
  <script type="importmap">
-  {
-    "imports": {
-      "three": "https://unpkg.com/three@0.152.2/build/three.module.js",
-      "three/examples/jsm/loaders/FontLoader.js": "https://unpkg.com/three@0.152.2/examples/jsm/loaders/FontLoader.js",
-      "three/examples/jsm/geometries/TextGeometry.js": "https://unpkg.com/three@0.152.2/examples/jsm/geometries/TextGeometry.js",
-      "cannon-es": "https://cdn.jsdelivr.net/npm/cannon-es@0.20.0/dist/cannon-es.js"
-    }
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.152.2/build/three.module.js",
+    "three/examples/jsm/loaders/FontLoader.js": "https://unpkg.com/three@0.152.2/examples/jsm/loaders/FontLoader.js",
+    "three/examples/jsm/geometries/TextGeometry.js": "https://unpkg.com/three@0.152.2/examples/jsm/geometries/TextGeometry.js",
+    "three/examples/jsm/geometries/RoundedBoxGeometry.js": "https://unpkg.com/three@0.152.2/examples/jsm/geometries/RoundedBoxGeometry.js",
+    "three/examples/jsm/loaders/GLTFLoader.js": "https://unpkg.com/three@0.152.2/examples/jsm/loaders/GLTFLoader.js",
+    "cannon-es": "https://cdn.jsdelivr.net/npm/cannon-es@0.20.0/dist/cannon-es.js"
   }
-  </script>
+}
+</script>
   
 </head>
 <body>
@@ -182,7 +184,10 @@ import * as THREE from 'three';
 import { FontLoader } from 'https://cdn.jsdelivr.net/npm/three@0.152.2/examples/jsm/loaders/FontLoader.js';
 import { TextGeometry } from 'https://cdn.jsdelivr.net/npm/three@0.152.2/examples/jsm/geometries/TextGeometry.js';
 import { RoundedBoxGeometry } from 'https://cdn.jsdelivr.net/npm/three@0.152.2/examples/jsm/geometries/RoundedBoxGeometry.js';
+import { GLTFLoader } from 'https://unpkg.com/three@0.152.2/examples/jsm/loaders/GLTFLoader.js';
 import * as CANNON from 'https://cdn.jsdelivr.net/npm/cannon-es@0.20.0/dist/cannon-es.js';
+
+  const gltfLoader = new GLTFLoader();
 
     const socket = io('https://multi-driving.onrender.com'); // 배포 주소
     document.getElementById('startButton').addEventListener('click', () => {
@@ -614,106 +619,53 @@ group.add(tailBar);
 }
 
 function createSportsCar(color = '#ffffff') {
-  const group = new THREE.Group();
+  return new Promise((resolve) => {
+    gltfLoader.load(
+      'https://threejs.org/examples/models/gltf/ferrari.glb',
+      (gltf) => {
+        const car = gltf.scene;
 
-  const bodyMat = new THREE.MeshStandardMaterial({ color: color, metalness: 0.6, roughness: 0.4 });
-  // 메인 차체 높이, 위치
-  const mainBody = new THREE.Mesh(new THREE.BoxGeometry(3, 1.0, 6), bodyMat);
-  mainBody.name = 'MainBody';
-  mainBody.userData.physics = {
-  mass: 1200,
-  shape: new CANNON.Box(new CANNON.Vec3(1.5, 0.6, 3))  // half extents
-};
-  mainBody.position.y = 0.55;
-  group.add(mainBody);
+        car.traverse((child) => {
+          if (!child.isMesh) return;
 
-  const sphereGeom = new THREE.SphereGeometry(0.6, 16, 16);
-  // 구 위치
-  [[-1.2, 0.55, -2.7], [1.2, 0.55, -2.7], [-1.2, 0.55, 2.7], [1.2, 0.55, 2.7]].forEach(([x,y,z])=>{
-    const s = new THREE.Mesh(sphereGeom, bodyMat);
-    s.position.set(x, y, z);
-    group.add(s);
+          if (child.name === 'body') {
+            child.material = new THREE.MeshStandardMaterial({
+              color: color,
+              metalness: 0.8,
+              roughness: 0.2,
+            });
+            child.name = 'MainBody'; // 멀티플레이 색상 동기화용
+          } else if (child.name === 'glass') {
+            child.material = new THREE.MeshStandardMaterial({
+              color: 0x223344,
+              transparent: true,
+              opacity: 0.4,
+              roughness: 0.05,
+            });
+          } else if (child.name.startsWith('rim')) {
+            child.material = new THREE.MeshStandardMaterial({
+              color: 0xcccccc,
+              metalness: 0.9,
+              roughness: 0.1,
+            });
+          }
+          child.castShadow = true;
+          child.receiveShadow = true;
+        });
+
+        car.scale.set(1.35, 1.35, 1.35);
+        car.rotation.y = Math.PI;
+        car.position.y = -0.3;
+
+        resolve(car);
+      },
+      undefined,
+      (err) => {
+        console.error('Ferrari 모델 로드 실패, 기본 차로 대체:', err);
+        resolve(createGrandeurIGCarDetailed(color)); // 실패 시 대체
+      }
+    );
   });
-
-  // 루프 높이, 위치 약간 앞으로 기울임
-  const roof = new THREE.Mesh(
-    new THREE.BoxGeometry(2.5, 0.3, 3),
-    new THREE.MeshStandardMaterial({ color: 0xcccccc, metalness: 0.5, roughness: 0.5 })
-  );
-  roof.position.set(0, 1.1, 0);
-  roof.rotation.x = -Math.PI / 180 * 10;  // -10도 앞쪽으로 기울임
-  group.add(roof);
-
-  // 유리창 재질
-  const windowMat = new THREE.MeshStandardMaterial({ color: 0x446688, transparent: true, opacity: 0.5, roughness: 0.1 });
-
-  // 앞 유리창, 높이, 위치, 앞쪽으로 기울임
-  const frontWin = new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.5, 0.05), windowMat);
-  frontWin.position.set(0, 1.05, -1.5);
-  frontWin.rotation.x = -Math.PI / 9;  // 약 -20도 기울임
-  group.add(frontWin);
-
-  // 뒤 유리창, 위치 뒤쪽으로 약간 젖힘
-  const rearWin = frontWin.clone();
-  rearWin.position.z = 1.5;
-  rearWin.rotation.x = Math.PI / 12;
-  group.add(rearWin);
-
-  // 좌우 유리창 높이
-  const leftWin = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.5, 3), windowMat);
-  leftWin.position.set(-1.25, 1.05, 0);
-  group.add(leftWin);
-
-  const rightWin = leftWin.clone();
-  rightWin.position.x = 1.25;
-  group.add(rightWin);
-
-  // 앞 범퍼 높이, 위치
-  const bumperMat = new THREE.MeshStandardMaterial({ color: 0x888888, metalness: 0.7, roughness: 0.3 });
-  const fBump = new THREE.Mesh(new THREE.BoxGeometry(3, 0.45, 0.5), bumperMat);
-  fBump.position.set(0, 0.4, -3.1);
-  group.add(fBump);
-
-  // 뒤 범퍼
-  const rBump = fBump.clone();
-  rBump.position.z = 3.1;
-  group.add(rBump);
-
-  // 헤드라이트 높이
-  const headMat = new THREE.MeshStandardMaterial({
-    color: 0xffffee,
-    emissive: 0xffffee,
-    emissiveIntensity: 0.7,
-    roughness: 0.3
-  });
-
-  const headLamp = new THREE.Mesh(
-    new THREE.BoxGeometry(0.8, 0.2, 0.1),
-    headMat
-  );
-  headLamp.position.set(-1.1, 0.5, -3.35);
-  group.add(headLamp);
-
-  const headLampR = headLamp.clone();
-  headLampR.position.x = 1.1;
-  group.add(headLampR);
-
-  // 사이드미러 높이
-  const mirrorMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
-  for (let side of [-1, 1]) {
-    const mirror = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.1, 0.5), mirrorMat);
-    mirror.position.set(side * 1.6, 1.0, -1.8);
-    mirror.rotation.y = side * Math.PI / 8;
-    group.add(mirror);
-  }
-
-  // 후미등 높이
-  const tailMat = new THREE.MeshStandardMaterial({ color: 0xff3333, emissive: 0xff3333, emissiveIntensity: 0.6 });
-  const tailBar = new THREE.Mesh(new THREE.BoxGeometry(2.5, 0.15, 0.05), tailMat);
-  tailBar.position.set(0, 0.65, 3.3);
-  group.add(tailBar);
-
-  return group;
 }
 
 function createSUVCar(color = '#ffffff') {
@@ -1297,16 +1249,16 @@ if (
       otherPlayers[id] = { loading: true };
       let otherCar;
 
-      switch (player.carModel) {
-        case 'SportsCar':
-          otherCar = createSportsCar(player.carColor || '#aaaaaa');
-          break;
-        case 'SUV':
-          otherCar = createSUVCar(player.carColor || '#aaaaaa');
-          break;
-        default:
-          otherCar = createGrandeurIGCarDetailed(player.carColor || '#aaaaaa');
-      }
+     switch (player.carModel) {
+  case 'SportsCar':
+    otherCar = await createSportsCar(player.carColor || '#aaaaaa'); // ← await
+    break;
+  case 'SUV':
+    otherCar = createSUVCar(player.carColor || '#aaaaaa');
+    break;
+  default:
+    otherCar = createGrandeurIGCarDetailed(player.carColor || '#aaaaaa');
+}
 
       // 닉네임 표시
       const nicknameText = await createTextMesh(player.nickname);
@@ -1510,21 +1462,22 @@ hud.textContent = `속도: ${getSpeedKmH().toFixed(1)} km/h | RPM: ${Math.floor(
       renderer.render(scene, camera);
     }
       
-  function startGame(modelName = 'GrandeurIG', color = '#ffffff', nickname) {
-    socket.emit('joinGame', {
-  nickname: nickname,
-  carModel: modelName,   // startGame(modelName, color) 안에서 받은 modelName 사용
-  carColor: color
-});
+  async function startGame(modelName = 'GrandeurIG', color = '#ffffff', nickname) {
+  socket.emit('joinGame', {
+    nickname: nickname,
+    carModel: modelName,
+    carColor: color
+  });
+
   switch (modelName) {
     case 'GrandeurIG':
-      carModel = createGrandeurIGCarDetailed(color);
+      carModel = createGrandeurIGCarDetailed(color); // 동기, await 불필요
       break;
     case 'SportsCar':
-      carModel = createSportsCar(color);
+      carModel = await createSportsCar(color); // ← await 필수
       break;
     case 'SUV':
-      carModel = createSUVCar(color);
+      carModel = createSUVCar(color); // 동기, await 불필요
       break;
     default:
       carModel = createGrandeurIGCarDetailed(color);
@@ -1535,8 +1488,8 @@ hud.textContent = `속도: ${getSpeedKmH().toFixed(1)} km/h | RPM: ${Math.floor(
   startTimer();
   updateGearDisplay();
   animate();
-  }
-
+}
+  
 </script>
 </body>
 </html>
