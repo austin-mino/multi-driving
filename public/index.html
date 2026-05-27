@@ -461,6 +461,10 @@ const buildingPalette = [
   0xb09050, 0x506050, 0x806060, 0x708090, 0x5f6b7a,
   0x8a7060, 0x3d5c6e, 0x6a6a50, 0x7c5050, 0x607060
 ];
+
+  const MAX_LIGHTS = 30;
+let streetLightCount = 0;
+
   
 for (let i = -GRID_COUNT; i <= GRID_COUNT; i++) {
   for (let j = -GRID_COUNT; j <= GRID_COUNT; j++) {
@@ -697,9 +701,7 @@ function createTree(x, z) {
 }
 
 // ─── 가로등 (실제 빛 포함) ─────────────────────────────────
-let streetLightCount = 0;
-const MAX_LIGHTS = 30; // 성능 제한
-
+  
 function createStreetLight(x, z) {
   const poleMat = new THREE.MeshStandardMaterial({ color: 0x4a4a4a, metalness: 0.8, roughness: 0.3 });
   const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.14, 7.5, 8), poleMat);
