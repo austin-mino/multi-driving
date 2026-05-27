@@ -725,21 +725,17 @@ function createStreetLight(x, z) {
 
   // 발광 구체
   const bulbMat = new THREE.MeshStandardMaterial({
-    color: 0xfff5cc,
-    emissive: 0xfff5cc,
-    emissiveIntensity: 2.0,
-    roughness: 0.2
-  });
-  const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.2, 8, 8), bulbMat);
-  bulb.position.set(x + 2.2, 2.35, z);
-  scene.add(bulb);
-
- const bulbMat = new THREE.MeshStandardMaterial({
   color: 0xfff5cc,
   emissive: 0xfff5cc,
   emissiveIntensity: 3.0, // 더 밝게
   roughness: 0.2
 });
+  
+  const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.2, 8, 8), bulbMat);
+  bulb.position.set(x + 2.2, 2.35, z);
+  scene.add(bulb);
+
+
 }
 
 // ─── 건물 주변 소품 ────────────────────────────────────────
