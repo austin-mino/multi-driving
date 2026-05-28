@@ -1407,7 +1407,7 @@ if (input.handbrake) {
 
   function updateFirstPersonCamera() {
   // 운전석 위치 (차 중심 기준 앞쪽, 살짝 왼쪽, 위)
-  const offset = new THREE.Vector3(0.3, 2.3, -1.0);
+  const offset = new THREE.Vector3(-0.2, 2.3, -1.0);
   offset.applyQuaternion(carModel.quaternion);
 
   camera.position.copy(carModel.position).add(offset);
