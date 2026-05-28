@@ -1399,16 +1399,17 @@ if (input.handbrake) {
  
 
     // 카메라 차량 뒤쪽 위치로 고정
-   function updateCamera() {
-  const carPos = carModel.position.clone();
-
-  // 회전만 적용 (스케일 제외)
+  function updateCamera() {
   const offset = new THREE.Vector3(0, 7, 15);
-  offset.applyQuaternion(carModel.quaternion);
+  offset.applyQuaternion(smoothCarQuat);
+  const targetPos = smoothCarPos.clone().add(offset);
 
-  const targetPos = carPos.clone().add(offset);
-  camera.position.lerp(targetPos, 0.1);
-  camera.lookAt(carPos);
+  // X, Z는 빠르게 / Y는 느리게 (바운스 억제)
+  camera.position.x += (targetPos.x - camera.position.x) * 0.12;
+  camera.position.y += (targetPos.y - camera.position.y) * 0.04;
+  camera.position.z += (targetPos.z - camera.position.z) * 0.12;
+
+  camera.lookAt(smoothCarPos);
 }
 
   function updateFirstPersonCamera() {
