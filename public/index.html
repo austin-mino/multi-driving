@@ -775,7 +775,9 @@ function addStreetProps(x, z, w, d) {
   
   let carModel; // 선언만
   let carVisualOffsetY = 0;
-
+  let physicsAccumulator = 0;
+  const FIXED_STEP = 1 / 60;
+  
     // 자동차 시각 모델
     function createGrandeurIGCarDetailed(color = '#ffffff') {
   const group = new THREE.Group();
@@ -1653,7 +1655,11 @@ setInterval(() => {
 
      updateVehicleControls(delta);
       
-      world.step(1/60, delta, 5);
+      physicsAccumulator += Math.min(delta, 0.1);
+while (physicsAccumulator >= FIXED_STEP) {
+  world.step(FIXED_STEP);
+  physicsAccumulator -= FIXED_STEP;
+}
 
   // 자동차 모델 위치/회전을 물리 바디에 맞게 업데이트
   carModel.position.copy(chassisBody.position);
