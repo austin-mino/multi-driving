@@ -775,13 +775,7 @@ function addStreetProps(x, z, w, d) {
   
   let carModel; // 선언만
   let carVisualOffsetY = 0;
-  let physicsAccumulator = 0;
-  const FIXED_STEP = 1 / 60;
-  const _prevPos = new CANNON.Vec3();
-  const _prevQuat = new CANNON.Quaternion();
-  const _lerpQuatA = new THREE.Quaternion();
-  const _lerpQuatB = new THREE.Quaternion();
-  
+
     // 자동차 시각 모델
     function createGrandeurIGCarDetailed(color = '#ffffff') {
   const group = new THREE.Group();
@@ -1399,17 +1393,16 @@ if (input.handbrake) {
  
 
     // 카메라 차량 뒤쪽 위치로 고정
-  function updateCamera() {
+   function updateCamera() {
+  const carPos = carModel.position.clone();
+
+  // 회전만 적용 (스케일 제외)
   const offset = new THREE.Vector3(0, 7, 15);
-  offset.applyQuaternion(smoothCarQuat);
-  const targetPos = smoothCarPos.clone().add(offset);
+  offset.applyQuaternion(carModel.quaternion);
 
-  // X, Z는 빠르게 / Y는 느리게 (바운스 억제)
-  camera.position.x += (targetPos.x - camera.position.x) * 0.12;
-  camera.position.y += (targetPos.y - camera.position.y) * 0.04;
-  camera.position.z += (targetPos.z - camera.position.z) * 0.12;
-
-  camera.lookAt(smoothCarPos);
+  const targetPos = carPos.clone().add(offset);
+  camera.position.lerp(targetPos, 0.1);
+  camera.lookAt(carPos);
 }
 
   function updateFirstPersonCamera() {
@@ -1660,32 +1653,12 @@ setInterval(() => {
 
      updateVehicleControls(delta);
       
-     // 이전 상태 저장
-_prevPos.copy(chassisBody.position);
-_prevQuat.copy(chassisBody.quaternion);
+      world.step(1/60, delta, 5);
 
-// 고정 타임스텝 물리
-physicsAccumulator += Math.min(delta, 0.1);
-while (physicsAccumulator >= FIXED_STEP) {
-  world.step(FIXED_STEP);
-  physicsAccumulator -= FIXED_STEP;
-}
-
-// 프레임 사이 보간
-const alpha = physicsAccumulator / FIXED_STEP;
-
-// 위치 보간
-carModel.position.set(
-  _prevPos.x + (chassisBody.position.x - _prevPos.x) * alpha,
-  _prevPos.y + (chassisBody.position.y - _prevPos.y) * alpha + carVisualOffsetY,
-  _prevPos.z + (chassisBody.position.z - _prevPos.z) * alpha
-);
-
-// 회전 보간
-_lerpQuatA.set(_prevQuat.x, _prevQuat.y, _prevQuat.z, _prevQuat.w);
-_lerpQuatB.set(chassisBody.quaternion.x, chassisBody.quaternion.y, chassisBody.quaternion.z, chassisBody.quaternion.w);
-_lerpQuatA.slerp(_lerpQuatB, alpha);
-carModel.quaternion.copy(_lerpQuatA);
+  // 자동차 모델 위치/회전을 물리 바디에 맞게 업데이트
+  carModel.position.copy(chassisBody.position);
+  carModel.position.y += carVisualOffsetY;
+  carModel.quaternion.copy(chassisBody.quaternion);
 
       // 휠 mesh 위치/회전 업데이트
       for (let i = 0; i < vehicle.wheelInfos.length; i++) {
