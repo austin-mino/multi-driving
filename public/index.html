@@ -177,7 +177,7 @@
   </div>
 
     <!-- 카메라 토글 버튼 -->
-<button id="btnToggleCam" class="controlBtn">C: ON</button>
+<button id="btnToggleCam" class="controlBtn">C: 3</button>
 
 <script type="module">
 import * as THREE from 'three';
@@ -250,7 +250,7 @@ let camElevationStart = camElevation;
 
 // 마우스 이벤트 핸들러
 function onPointerDown(event) {
-  if (!cameraFollow) {
+  if (cameraMode === 'free') {
     isDragging = true;
     dragStart.x = event.clientX;
     dragStart.y = event.clientY;
@@ -259,20 +259,19 @@ function onPointerDown(event) {
   }
 }
 function onPointerMove(event) {
-  if (isDragging && !cameraFollow) {
+  if (isDragging && cameraMode === 'free') {
     const deltaX = event.clientX - dragStart.x;
     const deltaY = event.clientY - dragStart.y;
 
-    // 회전 속도 조절
-    const rotationSpeed = 0.05
+    const rotationSpeed = 0.05;
 
     camAzimuth = camAzimuthStart - deltaX * rotationSpeed;
     camElevation = camElevationStart - deltaY * rotationSpeed;
 
-    // camElevation 제한
     camElevation = Math.min(Math.max(camElevation, 0.1), Math.PI - 0.1);
   }
 }
+  
 function onPointerUp(event) {
   isDragging = false;
 }
@@ -1115,15 +1114,18 @@ const shiftDelay = 0.3;
           hud = document.getElementById('hud'),
           timerDisplay = document.getElementById('timerDisplay');
 // 카메라 추적 ON/OFF 상태 변수
-let cameraFollow = true;
-
+let cameraMode = 'third'; // 'third' | 'first' | 'free'
 // 토글 버튼 요소 가져오기
 const btnToggleCam = document.getElementById('btnToggleCam');
 
 // 버튼 클릭 시 토글 및 텍스트 변경
 btnToggleCam.addEventListener('click', () => {
-  cameraFollow = !cameraFollow;
-  btnToggleCam.textContent = `C: ${cameraFollow ? 'ON' : 'OFF'}`;
+  if (cameraMode === 'third') cameraMode = 'first';
+  else if (cameraMode === 'first') cameraMode = 'free';
+  else cameraMode = 'third';
+
+  const labels = { third: '3인칭', first: '1인칭', free: '자유' };
+  btnToggleCam.textContent = `C: ${labels[cameraMode]}`;
 });
     // 초기 기어 상태
     let gearState = 'P';
@@ -1401,6 +1403,21 @@ if (input.handbrake) {
   const targetPos = carPos.clone().add(offset);
   camera.position.lerp(targetPos, 0.1);
   camera.lookAt(carPos);
+}
+
+  function updateFirstPersonCamera() {
+  // 운전석 위치 (차 중심 기준 앞쪽, 살짝 왼쪽, 위)
+  const offset = new THREE.Vector3(-0.4, 1.1, -1.2);
+  offset.applyQuaternion(carModel.quaternion);
+
+  camera.position.copy(carModel.position).add(offset);
+
+  // 차의 전진 방향으로 시선 고정
+  const forward = new THREE.Vector3(0, 0, -1);
+  forward.applyQuaternion(carModel.quaternion);
+
+  const lookAt = camera.position.clone().add(forward.multiplyScalar(20));
+  camera.lookAt(lookAt);
 }
 
     // 타이머 관리
@@ -1685,33 +1702,32 @@ player.chassisBody.quaternion.slerp(targetQuat, 0.2);
     // 속도 + RPM + 기어 UI 표시
 hud.textContent = `속도: ${getSpeedKmH().toFixed(1)} km/h | RPM: ${Math.floor(rpm)} | 기어: ${currentGear}`;
       // 카메라 따라가기
-  if (cameraFollow) {
-    updateCamera();
-  } else {
-    const carPos = carModel.position;
+  // 기존
+if (cameraFollow) {
+  updateCamera();
+} else {
+  // 자유 카메라 코드...
+}
 
-    const desiredX = carPos.x + camDistance * Math.sin(camElevation) * Math.sin(camAzimuth);
-    const desiredY = carPos.y + camDistance * Math.cos(camElevation);
-    const desiredZ = carPos.z + camDistance * Math.sin(camElevation) * Math.cos(camAzimuth);
-
-    // 목표 위치 벡터 생성
-    const desiredPos = new THREE.Vector3(desiredX, desiredY, desiredZ);
-
-    // 현재 카메라 위치에서 목표 위치까지 lerp
-    camera.position.lerp(desiredPos, 0.2);
-
-    // 부드러운 시선 방향 보간
-    const currentLookAt = new THREE.Vector3();
-    camera.getWorldDirection(currentLookAt);
-
-    const desiredLookAt = carPos.clone().sub(camera.position).normalize();
-
-    currentLookAt.lerp(desiredLookAt, 0.2);
-
-    const lookAtTarget = camera.position.clone().add(currentLookAt);
-
-    camera.lookAt(lookAtTarget);
-  }
+// 교체
+if (cameraMode === 'third') {
+  updateCamera();
+} else if (cameraMode === 'first') {
+  updateFirstPersonCamera();
+} else {
+  // 자유 카메라 (기존 코드 그대로)
+  const carPos = carModel.position;
+  const desiredX = carPos.x + camDistance * Math.sin(camElevation) * Math.sin(camAzimuth);
+  const desiredY = carPos.y + camDistance * Math.cos(camElevation);
+  const desiredZ = carPos.z + camDistance * Math.sin(camElevation) * Math.cos(camAzimuth);
+  const desiredPos = new THREE.Vector3(desiredX, desiredY, desiredZ);
+  camera.position.lerp(desiredPos, 0.2);
+  const currentLookAt = new THREE.Vector3();
+  camera.getWorldDirection(currentLookAt);
+  const desiredLookAt = carPos.clone().sub(camera.position).normalize();
+  currentLookAt.lerp(desiredLookAt, 0.2);
+  camera.lookAt(camera.position.clone().add(currentLookAt));
+}
 
       // 타이머 업데이트
       updateTimer();
