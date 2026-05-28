@@ -1702,14 +1702,6 @@ player.chassisBody.quaternion.slerp(targetQuat, 0.2);
     // 속도 + RPM + 기어 UI 표시
 hud.textContent = `속도: ${getSpeedKmH().toFixed(1)} km/h | RPM: ${Math.floor(rpm)} | 기어: ${currentGear}`;
       // 카메라 따라가기
-  // 기존
-if (cameraFollow) {
-  updateCamera();
-} else {
-  // 자유 카메라 코드...
-}
-
-// 교체
 if (cameraMode === 'third') {
   updateCamera();
 } else if (cameraMode === 'first') {
