@@ -775,8 +775,7 @@ function addStreetProps(x, z, w, d) {
   
   let carModel; // 선언만
   let carVisualOffsetY = 0;
-  const smoothCarPos = new THREE.Vector3();
-  const smoothCarQuat = new THREE.Quaternion();
+
     // 자동차 시각 모델
     function createGrandeurIGCarDetailed(color = '#ffffff') {
   const group = new THREE.Group();
@@ -1394,23 +1393,31 @@ if (input.handbrake) {
  
 
     // 카메라 차량 뒤쪽 위치로 고정
- function updateCamera() {
+   function updateCamera() {
+  const carPos = carModel.position.clone();
+
+  // 회전만 적용 (스케일 제외)
   const offset = new THREE.Vector3(0, 7, 15);
-  offset.applyQuaternion(smoothCarQuat);           
-  const targetPos = smoothCarPos.clone().add(offset); 
+  offset.applyQuaternion(carModel.quaternion);
+
+  const targetPos = carPos.clone().add(offset);
   camera.position.lerp(targetPos, 0.1);
-  camera.lookAt(smoothCarPos);                     
+  camera.lookAt(carPos);
 }
 
-function updateFirstPersonCamera() {
-  const offset = new THREE.Vector3(0.4, 2.0, -1.2);
-  offset.applyQuaternion(smoothCarQuat);           
-  const targetPos = smoothCarPos.clone().add(offset); 
-  camera.position.lerp(targetPos, 0.25);           
+  function updateFirstPersonCamera() {
+  // 운전석 위치 (차 중심 기준 앞쪽, 살짝 왼쪽, 위)
+  const offset = new THREE.Vector3(-0.85, 2.5, -0.4);
+  offset.applyQuaternion(carModel.quaternion);
 
+  camera.position.copy(carModel.position).add(offset);
+
+  // 차의 전진 방향으로 시선 고정
   const forward = new THREE.Vector3(0, 0, -1);
-  forward.applyQuaternion(smoothCarQuat);          
-  camera.lookAt(camera.position.clone().add(forward.multiplyScalar(20)));
+  forward.applyQuaternion(carModel.quaternion);
+
+  const lookAt = camera.position.clone().add(forward.multiplyScalar(20));
+  camera.lookAt(lookAt);
 }
 
     // 타이머 관리
@@ -1689,14 +1696,11 @@ player.chassisBody.quaternion.slerp(targetQuat, 0.2);
     }
   }
 }
+
+
     
     // 속도 + RPM + 기어 UI 표시
 hud.textContent = `속도: ${getSpeedKmH().toFixed(1)} km/h | RPM: ${Math.floor(rpm)} | 기어: ${currentGear}`;
-
-      // 차 위치/회전 부드럽게 보간
-smoothCarPos.lerp(carModel.position, 0.15);
-smoothCarQuat.slerp(carModel.quaternion, 0.15);
-
       // 카메라 따라가기
 if (cameraMode === 'third') {
   updateCamera();
