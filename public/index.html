@@ -142,10 +142,12 @@
   <label>차 색상: <input type="color" id="colorInput" value="#ffffff" /></label><br /><br />
     <!-- 자동차 모델 선택 -->
 <label for="modelSelect">자동차 모델 선택:</label>
-<select id="modelSelect">
+<select id="modelSelect"> 
+  <option value="AudiA7">Audi A7</option> 
+  <option value="SportsCar">Ferrari 458 Italia</option>
   <option value="GrandeurIG">그랜저 IG</option>
-  <option value="SportsCar">스포츠카</option>
   <option value="SUV">SUV</option>
+
 </select>
   <button id="startButton" style="padding: 10px 20px; font-size: 16px;">게임 시작</button>
 </div>
@@ -868,6 +870,41 @@ group.add(tailBar);
   return group;
 }
 
+  function createAudiA7(color = '#ffffff') {
+  return new Promise((resolve) => {
+    gltfLoader.load(
+      'https://github.com/austin-mino/multi-driving/releases/download/publish/audi_a7_55_tfsi.glb',
+      (gltf) => {
+        const car = gltf.scene;
+
+        car.traverse((child) => {
+          if (!child.isMesh) return;
+          child.castShadow = true;
+          child.receiveShadow = true;
+
+          if (child.name.toLowerCase().includes('body') ||
+              child.name.toLowerCase().includes('paint')) {
+            child.material = child.material.clone();
+            child.material.color.set(color);
+            child.name = 'MainBody';
+          }
+        });
+
+       car.scale.set(2.5, 2.5, 2.5);
+       car.rotation.y = Math.PI;
+       carVisualOffsetY = -0.8;
+
+        resolve(car);
+      },
+      undefined,
+      (err) => {
+        console.error('Audi A7 로드 실패:', err);
+        resolve(createGrandeurIGCarDetailed(color));
+      }
+    );
+  });
+}
+
 function createSportsCar(color = '#ffffff') {
   return new Promise((resolve) => {
     gltfLoader.load(
@@ -1526,6 +1563,9 @@ if (
   case 'SportsCar':
     otherCar = await createSportsCar(player.carColor || '#aaaaaa'); // ← await
     break;
+  case 'AudiA7':
+    otherCar = await createAudiA7(player.carColor || '#aaaaaa');
+    break;
   case 'SUV':
     otherCar = createSUVCar(player.carColor || '#aaaaaa');
     break;
@@ -1740,6 +1780,9 @@ if (cameraMode === 'third') {
       break;
     case 'SportsCar':
       carModel = await createSportsCar(color); // ← await 필수
+      break;
+    case 'AudiA7':
+      carModel = await createAudiA7(color);
       break;
     case 'SUV':
       carModel = createSUVCar(color); // 동기, await 불필요
