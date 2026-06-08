@@ -929,24 +929,35 @@ function createSUVCar(color = '#ffffff') {
       (gltf) => {
         const car = gltf.scene;
 
-     car.traverse((child) => {
+    car.traverse((child) => {
   if (!child.isMesh) return;
+
   child.castShadow = true;
   child.receiveShadow = true;
 
-  if (child.name.startsWith('Plane009')) {
+  const name = child.name.toLowerCase();
+
+  // 창문 제외
+  const isGlass =
+    name.includes('glass') ||
+    name.includes('window') ||
+    name.includes('windshield');
+
+  if (!isGlass && child.name.startsWith('Plane009')) {
     child.material = new THREE.MeshStandardMaterial({
       color: color,
       metalness: 0.6,
       roughness: 0.4,
     });
+
     child.name = 'MainBody';
   }
 });
-        car.scale.set(2.5, 2.5, 2.5);
-        car.rotation.y = 0;
-        carVisualOffsetY = -0.8;
 
+// 모델 방향 보정
+car.scale.set(2.5, 2.5, 2.5);
+car.rotation.y = -Math.PI / 2; // 또는 Math.PI / 2
+carVisualOffsetY = -0.8;
         resolve(car);
       },
       undefined,
