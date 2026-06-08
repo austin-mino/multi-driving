@@ -929,22 +929,15 @@ function createSUVCar(color = '#ffffff') {
       (gltf) => {
         const car = gltf.scene;
 
-        car.traverse((child) => {
-          if (!child.isMesh) return;
-          child.castShadow = true;
-          child.receiveShadow = true;
-
-          if (child.name.toLowerCase().includes('body') ||
-              child.name.toLowerCase().includes('paint') ||
-              child.name.toLowerCase().includes('car')) {
-            child.material = child.material.clone();
-            child.material.color.set(color);
-            child.name = 'MainBody';
-          }
-        });
+       car.traverse((child) => {
+  if (!child.isMesh) return;
+  child.castShadow = true;
+  child.receiveShadow = true;
+  console.log(child.name); // ← 이름 출력
+});
 
         car.scale.set(2.5, 2.5, 2.5);
-        car.rotation.y = Math.PI * 1.5;
+        car.rotation.y = Math.PI / 2;
         carVisualOffsetY = -0.8;
 
         resolve(car);
