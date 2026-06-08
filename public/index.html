@@ -776,6 +776,8 @@ function addStreetProps(x, z, w, d) {
   
   let carModel; // 선언만
   let carVisualOffsetY = 0;
+  let currentCarModel = 'GrandeurIG'; // 현재 차종 추적
+
 
     // 자동차 시각 모델
     function createGrandeurIGCarDetailed(color = '#ffffff') {
@@ -942,7 +944,7 @@ function createSUVCar(color = '#ffffff') {
         });
 
         car.scale.set(2.5, 2.5, 2.5);
-        car.rotation.y = Math.PI;
+        car.rotation.y = Math.PI * 1.5;
         carVisualOffsetY = -0.8;
 
         resolve(car);
@@ -1328,14 +1330,20 @@ if (input.handbrake) {
   camera.lookAt(carPos);
 }
 
-  function updateFirstPersonCamera() {
-  // 운전석 위치 (차 중심 기준 앞쪽, 살짝 왼쪽, 위)
-  const offset = new THREE.Vector3(-0.85, 2.5, -0.4);
-  offset.applyQuaternion(carModel.quaternion);
+ function updateFirstPersonCamera() {
+  // 차종별 운전석 위치
+  let offset;
+  if (currentCarModel === 'SUV') {
+    offset = new THREE.Vector3(0, 3.5, 4); // Range Rover 운전석
+  } else if (currentCarModel === 'SportsCar') {
+    offset = new THREE.Vector3(-0.85, 2.5, -0.3); // Ferrari
+  } else {
+    offset = new THREE.Vector3(-0.85, 2.5, -0.4); // 그랜저 기본
+  }
 
+  offset.applyQuaternion(carModel.quaternion);
   camera.position.copy(carModel.position).add(offset);
 
-  // 차의 전진 방향으로 시선 고정
   const forward = new THREE.Vector3(0, 0, -1);
   forward.applyQuaternion(carModel.quaternion);
 
@@ -1651,6 +1659,7 @@ if (cameraMode === 'third') {
     }
       
   async function startGame(modelName = 'GrandeurIG', color = '#ffffff', nickname) {
+  currentCarModel = modelName;
   socket.emit('joinGame', {
     nickname: nickname,
     carModel: modelName,
