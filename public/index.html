@@ -143,10 +143,9 @@
     <!-- 자동차 모델 선택 -->
 <label for="modelSelect">자동차 모델 선택:</label>
 <select id="modelSelect"> 
-  <option value="AudiA7">Audi A7</option> 
   <option value="SportsCar">Ferrari 458 Italia</option>
   <option value="GrandeurIG">그랜저 IG</option>
-  <option value="SUV">SUV</option>
+  <option value="SUV">Range Rover Sport</option>
 
 </select>
   <button id="startButton" style="padding: 10px 20px; font-size: 16px;">게임 시작</button>
@@ -870,40 +869,6 @@ group.add(tailBar);
   return group;
 }
 
-  function createAudiA7(color = '#ffffff') {
-  return new Promise((resolve) => {
-   gltfLoader.load(
-  'https://api.allorigins.win/raw?url=https://github.com/austin-mino/multi-driving/releases/download/publish/audi_a7_55_tfsi.glb',
-      (gltf) => {
-        const car = gltf.scene;
-
-        car.traverse((child) => {
-          if (!child.isMesh) return;
-          child.castShadow = true;
-          child.receiveShadow = true;
-
-          if (child.name.toLowerCase().includes('body') ||
-              child.name.toLowerCase().includes('paint')) {
-            child.material = child.material.clone();
-            child.material.color.set(color);
-            child.name = 'MainBody';
-          }
-        });
-
-       car.scale.set(2.5, 2.5, 2.5);
-       car.rotation.y = Math.PI;
-       carVisualOffsetY = -0.8;
-
-        resolve(car);
-      },
-      undefined,
-      (err) => {
-        console.error('Audi A7 로드 실패:', err);
-        resolve(createGrandeurIGCarDetailed(color));
-      }
-    );
-  });
-}
 
 function createSportsCar(color = '#ffffff') {
   return new Promise((resolve) => {
@@ -956,118 +921,39 @@ function createSportsCar(color = '#ffffff') {
 }
 
 function createSUVCar(color = '#ffffff') {
-  const group = new THREE.Group();
+  return new Promise((resolve) => {
+    gltfLoader.load(
+      'https://austin-mino.github.io/저장소이름/Range_Rover_Sports_2018_.GLB', // ← URL 여기
+      (gltf) => {
+        const car = gltf.scene;
 
-  const bodyMat = new THREE.MeshStandardMaterial({ color, metalness: 0.7, roughness: 0.3 });
+        car.traverse((child) => {
+          if (!child.isMesh) return;
+          child.castShadow = true;
+          child.receiveShadow = true;
 
-  // RoundedBoxGeometry: 너비 3.5, 높이 1.6, 깊이 6, 곡률 0.3, 5분할
-  const mainBody = new THREE.Mesh(
-    new RoundedBoxGeometry(3.5, 1.6, 6, 5, 0.3),
-    bodyMat
-  );
-  mainBody.name = 'MainBody';
-  mainBody.userData.physics = {
-  mass: 2000,
-  shape: new CANNON.Box(new CANNON.Vec3(1.5, 0.6, 3))  // half extents
-};
-  mainBody.position.y = 0.8;  // 차체 높이 절반
-  group.add(mainBody);
+          if (child.name.toLowerCase().includes('body') ||
+              child.name.toLowerCase().includes('paint') ||
+              child.name.toLowerCase().includes('car')) {
+            child.material = child.material.clone();
+            child.material.color.set(color);
+            child.name = 'MainBody';
+          }
+        });
 
-  // 루프: 날렵하게 앞쪽으로 낮추고 뒤로 약간 올라감
-  const roofMat = new THREE.MeshStandardMaterial({ color: 0xdddddd, metalness: 0.5, roughness: 0.4 });
-  const roof = new THREE.Mesh(
-    new RoundedBoxGeometry(3.2, 0.4, 4, 4, 0.2),
-    roofMat
-  );
-  roof.position.set(0, 1.3, 0);
-  roof.rotation.x = -Math.PI / 12;  // 약 -15도 기울임
-  group.add(roof);
+        car.scale.set(2.5, 2.5, 2.5);
+        car.rotation.y = Math.PI;
+        carVisualOffsetY = -0.8;
 
-  // 창문 재질과 투명도
-  const windowMat = new THREE.MeshStandardMaterial({ color: 0x335577, transparent: true, opacity: 0.4, roughness: 0.1 });
-
-  // 앞 유리창: 얇고 약간 기울임, 위치 앞쪽
-  const frontWin = new THREE.Mesh(
-    new RoundedBoxGeometry(3, 0.5, 0.1, 3, 0.1),
-    windowMat
-  );
-  frontWin.position.set(0, 1.2, -1.9);
-  frontWin.rotation.x = -Math.PI / 6;  // -30도 기울임
-  group.add(frontWin);
-
-  // 뒤 유리창: 앞쪽보단 살짝 세우고 위치 뒤쪽
-  const rearWin = new THREE.Mesh(
-    new RoundedBoxGeometry(3, 0.5, 0.1, 3, 0.1),
-    windowMat
-  );
-  rearWin.position.set(0, 1.1, 1.7);
-  rearWin.rotation.x = Math.PI / 12;  // 약 15도 뒤로 젖힘
-  group.add(rearWin);
-
-  // 좌우 유리창: 길고 얇게
-  const sideWinLeft = new THREE.Mesh(
-    new RoundedBoxGeometry(0.1, 0.5, 3.6, 3, 0.1),
-    windowMat
-  );
-  sideWinLeft.position.set(-1.7, 1.15, 0);
-  group.add(sideWinLeft);
-
-  const sideWinRight = sideWinLeft.clone();
-  sideWinRight.position.x = 1.7;
-  group.add(sideWinRight);
-
-  // 앞 범퍼: RoundedBoxGeometry, 낮게 붙임
-  const bumperMat = new THREE.MeshStandardMaterial({ color: 0x555555, metalness: 0.8, roughness: 0.25 });
-  const frontBumper = new THREE.Mesh(
-    new RoundedBoxGeometry(3.5, 0.5, 0.6, 3, 0.15),
-    bumperMat
-  );
-  frontBumper.position.set(0, 0.45, -3.3);
-  group.add(frontBumper);
-
-  // 뒤 범퍼도 유사하게
-  const rearBumper = frontBumper.clone();
-  rearBumper.position.z = 3.3;
-  group.add(rearBumper);
-
-  // 헤드라이트: 납작한 박스형태, 위치도 낮고 옆으로 길게
-  const headMat = new THREE.MeshStandardMaterial({
-    color: 0xffffee,
-    emissive: 0xffffee,
-    emissiveIntensity: 0.8,
-    roughness: 0.3
+        resolve(car);
+      },
+      undefined,
+      (err) => {
+        console.error('Range Rover 로드 실패:', err);
+        resolve(new THREE.Group());
+      }
+    );
   });
-
-  const headLampL = new THREE.Mesh(
-    new RoundedBoxGeometry(0.9, 0.25, 0.1, 3, 0.05),
-    headMat
-  );
-  headLampL.position.set(-1.3, 0.55, -3.55);
-  group.add(headLampL);
-
-  const headLampR = headLampL.clone();
-  headLampR.position.x = 1.3;
-  group.add(headLampR);
-
-  // 사이드미러: 각지고 날렵하게
-  const mirrorMat = new THREE.MeshStandardMaterial({ color: 0x111111, metalness: 0.5, roughness: 0.3 });
-  for (let side of [-1, 1]) {
-    const mirror = new THREE.Mesh(new RoundedBoxGeometry(0.45, 0.15, 0.35, 2, 0.05), mirrorMat);
-    mirror.position.set(side * 1.8, 1.3, -1.6);
-    mirror.rotation.y = side * Math.PI / 10;
-    group.add(mirror);
-  }
-
-  // 후미등: 넓고 얇게, 위치 높음
-  const tailMat = new THREE.MeshStandardMaterial({ color: 0xff3300, emissive: 0xff3300, emissiveIntensity: 0.7 });
-  const tailLight = new THREE.Mesh(
-    new RoundedBoxGeometry(2.8, 0.2, 0.07, 3, 0.1),
-    tailMat
-  );
-  tailLight.position.set(0, 1.0, 3.4);
-  group.add(tailLight);
-
-  return group;
 }
       
     // 차량용 RaycastVehicle 설정
@@ -1563,11 +1449,8 @@ if (
   case 'SportsCar':
     otherCar = await createSportsCar(player.carColor || '#aaaaaa'); // ← await
     break;
-  case 'AudiA7':
-    otherCar = await createAudiA7(player.carColor || '#aaaaaa');
-    break;
   case 'SUV':
-    otherCar = createSUVCar(player.carColor || '#aaaaaa');
+    otherCar = await createSUVCar(player.carColor || '#aaaaaa'); // ← await 추가
     break;
   default:
     otherCar = createGrandeurIGCarDetailed(player.carColor || '#aaaaaa');
@@ -1781,11 +1664,8 @@ if (cameraMode === 'third') {
     case 'SportsCar':
       carModel = await createSportsCar(color); // ← await 필수
       break;
-    case 'AudiA7':
-      carModel = await createAudiA7(color);
-      break;
     case 'SUV':
-      carModel = createSUVCar(color); // 동기, await 불필요
+      carModel = createSUVCar(color); // ← await 추가 필요
       break;
     default:
       carModel = createGrandeurIGCarDetailed(color);
