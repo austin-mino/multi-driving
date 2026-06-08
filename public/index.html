@@ -929,23 +929,15 @@ function createSUVCar(color = '#ffffff') {
       (gltf) => {
         const car = gltf.scene;
 
-    car.traverse((child) => {
+   car.traverse((child) => {
   if (!child.isMesh) return;
 
   child.castShadow = true;
   child.receiveShadow = true;
 
-  const name = child.name.toLowerCase();
-
-  // 창문 제외
-  const isGlass =
-    name.includes('glass') ||
-    name.includes('window') ||
-    name.includes('windshield');
-
-  if (!isGlass && child.name.startsWith('Plane009')) {
+  if (child.name === 'Plane009') {
     child.material = new THREE.MeshStandardMaterial({
-      color: color,
+      color,
       metalness: 0.6,
       roughness: 0.4,
     });
