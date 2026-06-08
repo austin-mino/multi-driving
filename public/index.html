@@ -929,21 +929,22 @@ function createSUVCar(color = '#ffffff') {
       (gltf) => {
         const car = gltf.scene;
 
-      car.traverse((child) => {
+     car.traverse((child) => {
   if (!child.isMesh) return;
   child.castShadow = true;
   child.receiveShadow = true;
 
-  // 바퀴 제외한 차체에 색상 적용
   if (child.name.startsWith('Plane009')) {
-    child.material = child.material.clone();
-    child.material.color.set(color);
+    child.material = new THREE.MeshStandardMaterial({
+      color: color,
+      metalness: 0.6,
+      roughness: 0.4,
+    });
     child.name = 'MainBody';
   }
 });
-
         car.scale.set(2.5, 2.5, 2.5);
-        car.rotation.y = -Math.PI / 2;
+        car.rotation.y = 0;
         carVisualOffsetY = -0.8;
 
         resolve(car);
