@@ -935,7 +935,7 @@ function createSUVCar(color = '#ffffff') {
           child.receiveShadow = true;
 
           // Plane009만 색상 변경 (차체 외장만)
-          if (child.name === 'Plane009') {
+          if (child.name === 'Plane021') {
             child.material = child.material.clone();
             child.material.map = null;     
             child.material.color.set(color);
@@ -945,7 +945,7 @@ function createSUVCar(color = '#ffffff') {
 
         // ← 핵심: 회전 오프셋을 innerCar에 적용
         // wrapper가 physics 쿼터니언을 받으므로 innerCar 회전은 유지됨
-        innerCar.position.x = 1.0;
+        innerCar.position.x = 0;
         innerCar.rotation.y = Math.PI / 2;
 
         // wrapper = carModel (physics 쿼터니언 적용 대상)
