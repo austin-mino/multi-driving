@@ -928,17 +928,24 @@ function createSUVCar(color = '#ffffff') {
       'https://raw.githubusercontent.com/austin-mino/multi-driving/main/Range%20Rover%20Sports%202018%20(.GLB).glb',
       (gltf) => {
         const innerCar = gltf.scene;
+        
+    innerCar.traverse((child) => {
+  if (!child.isMesh) return;
 
-     innerCar.traverse((child) => {
-          if (!child.isMesh) return;
+  child.castShadow = true;
+  child.receiveShadow = true;
 
-          console.log(
-            child.name,
-            child.material?.name,
-            child.material?.type,
-            Array.isArray(child.material)
-          );
-        });
+  // 차체 페인트만 변경
+ if (child.material?.name?.trim() === 'Car Paint') {
+    child.material = child.material.clone();
+
+    child.material.color.set(color);
+
+    // 원래 재질 특성 유지
+    child.material.metalness = 0.6;
+    child.material.roughness = 0.4;
+  }
+});
        
         innerCar.position.x = 0.38;
         innerCar.rotation.y = Math.PI / 2;
