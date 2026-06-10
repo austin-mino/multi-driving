@@ -983,34 +983,43 @@ async function createMcLarenP1(color = '#ffffff') {
                 const car = gltf.scene;
 
                 // 크기 조절
-                car.scale.set(0.01, 0.01, 0.01);
+                car.scale.set(0.018, 0.018, 0.018);
 
                 // 그림자 및 색상 설정
-                car.traverse((child) => {
-                    if (child.isMesh) {
-                        child.castShadow = true;
-                        child.receiveShadow = true;
+              
 
-                        // 재질 공유 방지 및 색상 적용 수정
-                        if (child.material) {
-                            child.material = child.material.clone();
+car.traverse((child) => {
+    if (child.isMesh) {
+        child.castShadow = true;
+        child.receiveShadow = true;
 
-                            // [수정 핵심]: 기존 검은색에 곱하지 않고, 받아온 색상을 직접 지정합니다.
-                            if (child.material.color) {
-                                // 휠, 유리창, 전조등 같은 특정 파츠까지 통째로 염색되는 것을 막기 위해 
-                                // 보통 차체 메쉬(주로 이름에 'body'나 'paint'가 들어감) 위주로 적용하는 것이 좋으나,
-                                // 전체 톤을 바꾸기 위해 .set() 또는 .copy()를 사용합니다.
-                                child.material.color.set(color); 
-                            }
+        if (child.material) {
+            child.material = child.material.clone();
 
-                            // [비주얼 보정]: 빛 반사가 일어날 수 있도록 재질 속성을 다듬어 줍니다.
-                            if (child.material.isMeshStandardMaterial) {
-                                child.material.roughness = 0.2; // 낮을수록 매끄러운 슈퍼카 광택이 납니다.
-                                child.material.metalness = 0.5; // 적절한 금속 반사광을 줍니다.
-                            }
-                        }
-                    }
-                });
+            // 부품(Mesh) 이름과 재질(Material) 이름을 소문자로 가져옴
+            const meshName = child.name.toLowerCase();
+            const matName = child.material.name.toLowerCase();
+
+            // 이름에 'body'나 'paint'가 들어간 부품인지 확인
+            const isCarBody = meshName.includes('body') || 
+                              meshName.includes('paint') || 
+                              matName.includes('body') || 
+                              matName.includes('paint');
+
+            // 차체 부품일 경우에만 색상과 광택을 변경
+            if (isCarBody) {
+                if (child.material.color) {
+                    child.material.color.set(color); 
+                }
+
+                if (child.material.isMeshStandardMaterial) {
+                    child.material.roughness = 0.2; 
+                    child.material.metalness = 0.5; 
+                }
+            }
+        }
+    }
+});
 
                 // 차량 중심 보정
                 const box = new THREE.Box3().setFromObject(car);
