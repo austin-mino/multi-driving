@@ -929,21 +929,25 @@ function createSUVCar(color = '#ffffff') {
       (gltf) => {
         const innerCar = gltf.scene;
         
-    innerCar.traverse((child) => {
+   innerCar.traverse((child) => {
   if (!child.isMesh) return;
 
   child.castShadow = true;
   child.receiveShadow = true;
 
-  // 차체 페인트만 변경
- if (child.material?.name?.trim() === 'Car Paint') {
+  const matName = child.material?.name?.trim();
+
+  // 차체 + 본네트(Metalic) 색 변경
+  if (matName === 'Car Paint' || matName === 'Metalic') {
     child.material = child.material.clone();
 
     child.material.color.set(color);
 
-    // 원래 재질 특성 유지
+    // 기존 금속 느낌 유지
     child.material.metalness = 0.6;
     child.material.roughness = 0.4;
+
+    child.material.needsUpdate = true;
   }
 });
        
