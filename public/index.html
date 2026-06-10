@@ -929,17 +929,16 @@ function createSUVCar(color = '#ffffff') {
       (gltf) => {
         const innerCar = gltf.scene;
 
-      car.traverse((child) => {
-  if (!child.isMesh) return;
+     innerCar.traverse((child) => {
+          if (!child.isMesh) return;
 
-  console.log(
-    child.name,
-    child.material?.name,
-    child.material?.type,
-    Array.isArray(child.material)
-  );
-});
-
+          console.log(
+            child.name,
+            child.material?.name,
+            child.material?.type,
+            Array.isArray(child.material)
+          );
+        });
        
         innerCar.position.x = 0.38;
         innerCar.rotation.y = Math.PI / 2;
