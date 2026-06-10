@@ -189,6 +189,7 @@ import { RoundedBoxGeometry } from 'https://cdn.jsdelivr.net/npm/three@0.152.2/e
 import { GLTFLoader } from 'https://unpkg.com/three@0.152.2/examples/jsm/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'https://unpkg.com/three@0.152.2/examples/jsm/loaders/DRACOLoader.js';
 import * as CANNON from 'https://cdn.jsdelivr.net/npm/cannon-es@0.20.0/dist/cannon-es.js';
+import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.152.2/examples/jsm/loaders/GLTFLoader.js';
 
 const dracoLoader = new DRACOLoader();
 dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
@@ -971,7 +972,64 @@ function createSUVCar(color = '#ffffff') {
   });
 }
 
-  
+
+async function createMcLarenP1(color = '#ffffff') {
+    return new Promise((resolve, reject) => {
+
+        const loader = new GLTFLoader();
+
+        loader.load(
+            './models/mclaren/scene.gltf',
+
+            (gltf) => {
+                const car = gltf.scene;
+
+                // 크기 조절
+                car.scale.set(0.35, 0.35, 0.35);
+
+                // 그림자 및 색상 설정
+                car.traverse((child) => {
+                    if (child.isMesh) {
+                        child.castShadow = true;
+                        child.receiveShadow = true;
+
+                        // 재질 공유 방지
+                        if (child.material) {
+                            child.material = child.material.clone();
+
+                            // 차체 색상 변경
+                            if (child.material.color) {
+                                child.material.color.multiply(
+                                    new THREE.Color(color)
+                                );
+                            }
+                        }
+                    }
+                });
+
+                // 차량 중심 보정
+                const box = new THREE.Box3().setFromObject(car);
+                const center = box.getCenter(new THREE.Vector3());
+
+                car.position.x -= center.x;
+                car.position.z -= center.z;
+                car.position.y -= box.min.y;
+
+                // 메인 바디 표시
+                car.name = 'MainBody';
+
+                resolve(car);
+            },
+
+            undefined,
+
+            (error) => {
+                console.error('McLaren P1 로드 실패:', error);
+                reject(error);
+            }
+        );
+    });
+}
       
     // 차량용 RaycastVehicle 설정
     const vehicle = new CANNON.RaycastVehicle({
