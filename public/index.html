@@ -984,7 +984,7 @@ async function createMcLarenP1(color = '#ffffff') {
                 const car = gltf.scene;
 
                 // 크기 조절
-                car.scale.set(0.04, 0.04, 0.04);
+                car.scale.set(0.01, 0.01, 0.01);
 
                 // 그림자 및 색상 설정
                 car.traverse((child) => {
@@ -1013,7 +1013,7 @@ async function createMcLarenP1(color = '#ffffff') {
                 car.position.x -= center.x;
                 car.position.z -= center.z;
                 car.position.y -= box.min.y;
-
+                carVisualOffsetY = 0.8;
                 // 메인 바디 표시
                 car.name = 'MainBody';
 
