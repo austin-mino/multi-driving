@@ -994,33 +994,34 @@ car.traverse((child) => {
         child.receiveShadow = true;
 
         if (child.material) {
-            child.material = child.material.clone();
+            // 1. 이름이 아예 없는 부품도 에러가 나지 않도록 안전하게 소문자로 변환
+            const meshName = child.name ? child.name.toLowerCase() : '';
+            const matName = child.material.name ? child.material.name.toLowerCase() : '';
 
-            // 부품(Mesh) 이름과 재질(Material) 이름을 소문자로 가져옴
-            const meshName = child.name.toLowerCase();
-            const matName = child.material.name.toLowerCase();
+            // 🔍 [필수 확인] F12 콘솔에 부품 이름들 띄워보기
+            console.log('부품 이름:', meshName, '/ 재질 이름:', matName);
 
-            // 이름에 'body'나 'paint'가 들어간 부품인지 확인
+            // 2. 차체 부품인지 확인하는 조건
             const isCarBody = meshName.includes('body') || 
                               meshName.includes('paint') || 
                               matName.includes('body') || 
                               matName.includes('paint');
 
-            // 차체 부품일 경우에만 색상과 광택을 변경
             if (isCarBody) {
-                if (child.material.color) {
-                    child.material.color.set(color); 
-                }
-
-                if (child.material.isMeshStandardMaterial) {
-                    child.material.roughness = 0.2; 
-                    child.material.metalness = 0.5; 
-                }
+                // 3. ★ 핵심: 보라색으로 깨지는 원본 재질을 아예 버리고, 
+                // 새롭고 깨끗한 '광택 페인트 재질'로 완전히 갈아 끼웁니다.
+                child.material = new THREE.MeshStandardMaterial({
+                    color: new THREE.Color(color),
+                    roughness: 0.1, // 낮을수록 거울처럼 반짝거림 (0.1 ~ 0.3 추천)
+                    metalness: 0.6  // 금속성 느낌 부여
+                });
+            } else {
+                // 차체가 아닌 다른 부품(유리창, 타이어 등)은 원본 재질을 그대로 복사해서 씁니다.
+                child.material = child.material.clone();
             }
         }
     }
 });
-
                 // 차량 중심 보정
                 const box = new THREE.Box3().setFromObject(car);
                 const center = box.getCenter(new THREE.Vector3());
