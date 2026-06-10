@@ -6713,7 +6713,7 @@
   ],
   "images": [
     {
-      "uri": "textures/.017_baseColor.jpeg"
+      "uri": ".017_baseColor.jpeg"
     },
     {
       "uri": "Material.005_baseColor.jpeg"
@@ -6722,7 +6722,7 @@
       "uri": "Material.006_baseColor.png"
     },
     {
-      "uri": "textures/.036_baseColor.jpeg"
+      "uri": ".036_baseColor.jpeg"
     }
   ],
   "materials": [
