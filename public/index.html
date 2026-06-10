@@ -925,32 +925,34 @@ function createSportsCar(color = '#ffffff') {
 function createSUVCar(color = '#ffffff') {
   return new Promise((resolve) => {
     gltfLoader.load(
-'https://raw.githubusercontent.com/austin-mino/multi-driving/main/Range%20Rover%20Sports%202018%20(.GLB).glb',
+      'https://raw.githubusercontent.com/austin-mino/multi-driving/main/Range%20Rover%20Sports%202018%20(.GLB).glb',
       (gltf) => {
-        const car = gltf.scene;
+        const innerCar = gltf.scene;
 
-   car.traverse((child) => {
-  if (!child.isMesh) return;
+        innerCar.traverse((child) => {
+          if (!child.isMesh) return;
+          child.castShadow = true;
+          child.receiveShadow = true;
 
-  child.castShadow = true;
-  child.receiveShadow = true;
+          // Plane009만 색상 변경 (차체 외장만)
+          if (child.name === 'Plane009') {
+            child.material = child.material.clone();
+            child.material.color.set(color);
+            child.name = 'MainBody';
+          }
+        });
 
-  if (child.name === 'Plane009') {
-    child.material = new THREE.MeshStandardMaterial({
-      color,
-      metalness: 0.6,
-      roughness: 0.4,
-    });
+        // ← 핵심: 회전 오프셋을 innerCar에 적용
+        // wrapper가 physics 쿼터니언을 받으므로 innerCar 회전은 유지됨
+        innerCar.rotation.y = Math.PI / 2;
 
-    child.name = 'MainBody';
-  }
-});
+        // wrapper = carModel (physics 쿼터니언 적용 대상)
+        const wrapper = new THREE.Group();
+        wrapper.add(innerCar);
+        wrapper.scale.set(2.5, 2.5, 2.5);
 
-// 모델 방향 보정
-car.scale.set(2.5, 2.5, 2.5);
-car.rotation.y = -Math.PI / 2; // 또는 Math.PI / 2
-carVisualOffsetY = -0.8;
-        resolve(car);
+        carVisualOffsetY = -0.8;
+        resolve(wrapper);
       },
       undefined,
       (err) => {
