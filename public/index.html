@@ -144,8 +144,9 @@
 <label for="modelSelect">자동차 모델 선택:</label>
 <select id="modelSelect"> 
   <option value="SportsCar">Ferrari 458 Italia</option>
-  <option value="GrandeurIG">그랜저 IG</option>
   <option value="SUV">Range Rover Sport</option>
+  <option value="McLarenP1">McLaren P1</option>
+  <option value="GrandeurIG">box car</option>
 
 </select>
   <button id="startButton" style="padding: 10px 20px; font-size: 16px;">게임 시작</button>
@@ -969,6 +970,8 @@ function createSUVCar(color = '#ffffff') {
     );
   });
 }
+
+  
       
     // 차량용 RaycastVehicle 설정
     const vehicle = new CANNON.RaycastVehicle({
@@ -1472,6 +1475,9 @@ if (
   case 'SUV':
     otherCar = await createSUVCar(player.carColor || '#aaaaaa'); // ← await 추가
     break;
+   case 'McLarenP1':
+        carModel = await createMcLarenP1(color);
+        break;
   default:
     otherCar = createGrandeurIGCarDetailed(player.carColor || '#aaaaaa');
 }
@@ -1688,6 +1694,9 @@ if (cameraMode === 'third') {
     case 'SUV':
       carModel = await createSUVCar(color); // ← await 추가 필요
       break;
+     case 'McLarenP1':
+        carModel = await createMcLarenP1(color);
+        break;
     default:
       carModel = createGrandeurIGCarDetailed(color);
   }
