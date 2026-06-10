@@ -930,26 +930,25 @@ function createSUVCar(color = '#ffffff') {
         const innerCar = gltf.scene;
         
  innerCar.traverse((child) => {
-  if (!child.isMesh) return;
+          if (!child.isMesh) return;
 
-  child.castShadow = true;
-  child.receiveShadow = true;
+          child.castShadow = true;
+          child.receiveShadow = true;
 
-  // 차체 + 본네트 색 변경
-  if (
-    child.material?.name?.trim() === 'Car Paint' ||
-    child.name === 'Plane009_13'
-  ) {
-    child.material = child.material.clone();
+          // 차체 페인트만 색 변경
+          if (child.material?.name?.trim() === 'Car Paint') {
+            child.material = child.material.clone();
 
-    child.material.color.set(color);
+            child.material.color.set(color);
 
-    child.material.metalness = 0.6;
-    child.material.roughness = 0.4;
+            // 원래 재질 느낌 유지
+            child.material.metalness = 0.6;
+            child.material.roughness = 0.4;
 
-    child.material.needsUpdate = true;
-  }
-});
+            child.material.needsUpdate = true;
+          }
+        });
+ 
        
         innerCar.position.x = 0.38;
         innerCar.rotation.y = Math.PI / 2;
