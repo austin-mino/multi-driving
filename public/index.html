@@ -983,36 +983,41 @@ async function createMcLarenP1(color = '#ffffff') {
                 const car = gltf.scene;
 
                 // 그림자 및 색상 설정
- car.traverse((child) => {
+ console.log("--- McLaren P1 부위 분석 시작 ---");
+
+car.traverse((child) => {
     if (child.isMesh && child.material) {
-        child.castShadow = true;
-        child.receiveShadow = true;
-
-        // 기존 재질의 디테일을 유지하기 위해 복제해서 사용
-        child.material = child.material.clone();
         const m = child.material;
-        const matName = (m.name || "").toLowerCase();
+        const matName = (m.name || "이름 없음").toLowerCase();
+        const meshName = (child.name || "메시 이름 없음").toLowerCase();
 
-        // 1. 제외할 부분: 유리(Glass), 타이어(Tire/Rubber), 휠(Rim)
+        // 분류 로직
         const isGlass = matName.includes('glass') || m.transparent || m.opacity < 0.9;
         const isTire = matName.includes('tire') || matName.includes('rubber');
         const isRim = matName.includes('rim') || matName.includes('wheel');
 
-        // 2. 유리, 타이어, 휠이 아닌 모든 부분(차체+포인트)에 색상 적용
-        if (!isGlass && !isTire && !isRim) {
-            m.color.set(color); // 사용자가 선택한 색으로 도색
-            
-            // 보라색 형광(Emissive) 효과 제거
-            if (m.emissive) {
-                m.emissive.set(0x000000);
-            }
+        let category = "차체(도색 대상)";
+        if (isGlass) category = "유리(제외)";
+        if (isTire) category = "타이어(제외)";
+        if (isRim) category = "휠(제외)";
 
-            // 스포츠카 질감 설정 (찰흙처럼 보이지 않게)
-            m.roughness = 0.2; // 약간의 매끈함
-            m.metalness = 0.6; // 적당한 금속 광택
+        // 콘솔에 로그 출력
+        console.log(`[${category}] 메시: ${meshName} / 재질: ${matName}`);
+
+        // 실제 적용 코드
+        child.castShadow = true;
+        child.receiveShadow = true;
+        child.material = m.clone();
+        
+        if (!isGlass && !isTire && !isRim) {
+            child.material.color.set(color);
+            if (child.material.emissive) child.material.emissive.set(0x000000);
         }
     }
 });
+
+console.log("--- 분석 완료 ---");
+
 
               // 크기 조절
                 car.scale.set(0.016, 0.016, 0.016);
