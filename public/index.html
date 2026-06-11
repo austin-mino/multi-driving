@@ -983,7 +983,7 @@ async function createMcLarenP1(color = '#ffffff') {
                 const car = gltf.scene;
 
                 // 그림자 및 색상 설정
-             car.traverse((child) => {
+  car.traverse((child) => {
     if (child.isMesh && child.material) {
         child.castShadow = true;
         child.receiveShadow = true;
@@ -991,28 +991,36 @@ async function createMcLarenP1(color = '#ffffff') {
         const m = child.material;
         const matName = (m.name || "").toLowerCase();
 
-        // 1. 제외할 부위 (유리, 타이어, 검은색 플라스틱 등)
-        // 투명하거나(유리), 이름에 타이어/휠이 포함되거나, 아주 어두운 검은색인 경우 제외
-        const isGlass = m.transparent || m.opacity < 0.9 || matName.includes('glass') || matName.includes('window');
+        // 1. 확실히 제외할 부위 (유리, 타이어, 내부 부품)
+        const isGlass = matName.includes('glass') || matName.includes('window') || m.transparent;
         const isTire = matName.includes('tire') || matName.includes('rubber') || matName.includes('wheel') || matName.includes('rim');
-        const isBlackPart = (m.color && m.color.r < 0.05 && m.color.g < 0.05 && m.color.b < 0.05) && !matName.includes('paint');
+        const isInterior = matName.includes('interior') || matName.includes('seat');
 
-        if (isGlass || isTire || isBlackPart) {
-            // 유리나 타이어는 원래 재질 유지 (공유 방지를 위해 복제만)
+        // 2. 유리/타이어/내부가 아니라면 '모두' 차체로 간주하고 색상 변경
+        if (!isGlass && !isTire && !isInterior) {
             child.material = m.clone();
-        } else {
-            // 2. 차체 부위 색상 변경
-            child.material = m.clone(); // 기존 재질의 질감(광택 등)을 그대로 유지
-            child.material.color.set(color); // 사용자 선택 색상으로 변경
+            child.material.color.set(color); // 선택한 색상 적용
             
-            // 3. 보라색 형광 효과(Emissive) 제거
-            // 이 부분이 있어야 사진에 있던 보라색 라인이 사라집니다.
+            // 보라색 형광(Emissive) 완전 제거
             if (child.material.emissive) {
                 child.material.emissive.set(0x000000);
             }
+
+            // 슈퍼카 느낌의 광택 추가
+            child.material.roughness = 0.15;
+            child.material.metalness = 0.8;
+        } else if (isGlass) {
+            // 3. 유리창이 너무 검게 보인다면 약간의 투명도 부여 (선택 사항)
+            child.material = m.clone();
+            child.material.transparent = true;
+            child.material.opacity = 0.5;
+            child.material.color.set(0x222222);
+        } else {
+            child.material = m.clone();
         }
     }
 });
+
 
               // 크기 조절
                 car.scale.set(0.016, 0.016, 0.016);
@@ -1025,7 +1033,7 @@ async function createMcLarenP1(color = '#ffffff') {
                 car.position.x -= center.x;
                 car.position.z -= center.z;
                 car.position.y -= box.min.y;
-                carVisualOffsetY = 0.8;
+                carVisualOffsetY = -0.7;
                 
                 // 메인 바디 표시
                 car.name = 'MainBody';
