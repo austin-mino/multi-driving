@@ -972,7 +972,7 @@ function createSUVCar(color = '#ffffff') {
 }
 
 async function createMcLarenP1(color = '#ffffff') {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
 
         const loader = new GLTFLoader();
 
@@ -987,8 +987,7 @@ async function createMcLarenP1(color = '#ffffff') {
                 car.rotation.y = Math.PI;
                 // 그림자 및 색상 설정
               
-
-car.traverse((child) => {
+              car.traverse((child) => {
     if (child.isMesh) {
         child.castShadow = true;
         child.receiveShadow = true;
@@ -996,26 +995,26 @@ car.traverse((child) => {
         if (child.material) {
             const matName = child.material.name ? child.material.name.toLowerCase() : '';
 
-            // ★ 핵심: 콘솔에서 확인된, 차체 페인트일 확률이 99%인 재질 이름들만 배열로 묶어서 찾습니다.
-            // (만약 바퀴나 다른 곳까지 색이 바뀐다면 배열에서 이름을 하나씩 빼보시면 됩니다)
-            const targetMaterials = ['.017', 'material.005', '.036'];
-            const isCarBody = targetMaterials.some(target => matName.includes(target));
+            // 제외할 부위들 (유리, 타이어, 라이트 등)
+            const isGlass = matName.includes('glass') || matName.includes('window') || matName.includes('transparent');
+            const isTire = matName.includes('tire') || matName.includes('wheel') || matName.includes('rubber') || matName.includes('rim');
+            const isLight = matName.includes('light') || matName.includes('lamp') || matName.includes('emissive');
 
-            if (isCarBody) {
-                // 차체(메인 페인트)일 경우: 새 광택 재질로 갈아 끼워서 형광 보라색 원천 차단
+            // 유리, 타이어, 라이트가 아니라면 모두 차체 색상을 적용
+            if (!isGlass && !isTire && !isLight) {
                 child.material = new THREE.MeshStandardMaterial({
                     color: new THREE.Color(color),
-                    roughness: 0.1, 
-                    metalness: 0.6  
+                    roughness: 0.2, 
+                    metalness: 0.8  // 스포츠카 특유의 광택을 위해 금속성 상향
                 });
             } else {
-                // 유리창, 라이트, 타이어 등 다른 부품은 원래 재질 유지
+                // 나머지는 원래 재질을 복제해서 사용 (공유 방지)
                 child.material = child.material.clone();
             }
         }
     }
 });
-              
+
               
               
               // 차량 중심 보정
@@ -1037,7 +1036,7 @@ car.traverse((child) => {
 
             (error) => {
                 console.error('McLaren P1 로드 실패:', error);
-                reject(error);
+                resolve(createGrandeurIGCarDetailed(color)); // 기본 모델
             }
         );
     });
@@ -1546,8 +1545,8 @@ if (
     otherCar = await createSUVCar(player.carColor || '#aaaaaa'); // ← await 추가
     break;
    case 'McLarenP1':
-        carModel = await createMcLarenP1(color);
-        break;
+    otherCar = await createMcLarenP1(player.carColor || '#aaaaaa');
+    break;
   default:
     otherCar = createGrandeurIGCarDetailed(player.carColor || '#aaaaaa');
 }
