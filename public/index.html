@@ -983,44 +983,36 @@ async function createMcLarenP1(color = '#ffffff') {
                 const car = gltf.scene;
 
                 // 그림자 및 색상 설정
-  car.traverse((child) => {
+ car.traverse((child) => {
     if (child.isMesh && child.material) {
         child.castShadow = true;
         child.receiveShadow = true;
 
+        // 기존 재질의 디테일을 유지하기 위해 복제해서 사용
+        child.material = child.material.clone();
         const m = child.material;
         const matName = (m.name || "").toLowerCase();
 
-        // 1. 확실히 제외할 부위 (유리, 타이어, 내부 부품)
-        const isGlass = matName.includes('glass') || matName.includes('window') || m.transparent;
-        const isTire = matName.includes('tire') || matName.includes('rubber') || matName.includes('wheel') || matName.includes('rim');
-        const isInterior = matName.includes('interior') || matName.includes('seat');
+        // 1. 제외할 부분: 유리(Glass), 타이어(Tire/Rubber), 휠(Rim)
+        const isGlass = matName.includes('glass') || m.transparent || m.opacity < 0.9;
+        const isTire = matName.includes('tire') || matName.includes('rubber');
+        const isRim = matName.includes('rim') || matName.includes('wheel');
 
-        // 2. 유리/타이어/내부가 아니라면 '모두' 차체로 간주하고 색상 변경
-        if (!isGlass && !isTire && !isInterior) {
-            child.material = m.clone();
-            child.material.color.set(color); // 선택한 색상 적용
+        // 2. 유리, 타이어, 휠이 아닌 모든 부분(차체+포인트)에 색상 적용
+        if (!isGlass && !isTire && !isRim) {
+            m.color.set(color); // 사용자가 선택한 색으로 도색
             
-            // 보라색 형광(Emissive) 완전 제거
-            if (child.material.emissive) {
-                child.material.emissive.set(0x000000);
+            // 보라색 형광(Emissive) 효과 제거
+            if (m.emissive) {
+                m.emissive.set(0x000000);
             }
 
-            // 슈퍼카 느낌의 광택 추가
-            child.material.roughness = 0.15;
-            child.material.metalness = 0.8;
-        } else if (isGlass) {
-            // 3. 유리창이 너무 검게 보인다면 약간의 투명도 부여 (선택 사항)
-            child.material = m.clone();
-            child.material.transparent = true;
-            child.material.opacity = 0.5;
-            child.material.color.set(0x222222);
-        } else {
-            child.material = m.clone();
+            // 스포츠카 질감 설정 (찰흙처럼 보이지 않게)
+            m.roughness = 0.2; // 약간의 매끈함
+            m.metalness = 0.6; // 적당한 금속 광택
         }
     }
 });
-
 
               // 크기 조절
                 car.scale.set(0.016, 0.016, 0.016);
@@ -1033,7 +1025,7 @@ async function createMcLarenP1(color = '#ffffff') {
                 car.position.x -= center.x;
                 car.position.z -= center.z;
                 car.position.y -= box.min.y;
-                carVisualOffsetY = -0.7;
+                carVisualOffsetY = 1.1;
                 
                 // 메인 바디 표시
                 car.name = 'MainBody';
