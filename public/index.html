@@ -988,38 +988,46 @@ car.traverse((child) => {
         child.castShadow = true;
         child.receiveShadow = true;
 
-        // 재질 복제
         child.material = child.material.clone();
         const m = child.material;
         const matName = (m.name || "").toLowerCase();
+        
+        // --- [1. 제외 대상 키워드 확장] ---
+        const excludeKeywords = [
+            'glass', 'window', 'transparent', // 유리
+            'tire', 'rubber', 'wheel', 'rim', 'bolt', 'nut', // 타이어/휠
+            'light', 'lamp', 'emissive', 'led', // 전조등/후미등
+            'brake', 'caliper', 'disc', // 브레이크
+            'interior', 'seat', 'dash', 'steering', // 내부
+            'carbon', 'fiber', 'plastic', 'grille', 'mesh', // 카본/그릴/윙
+            'mirror', 'engine' // 기타 부품
+        ];
+        const hasExcludeKeyword = excludeKeywords.some(kw => matName.includes(kw));
 
-        // 1. 확실한 제외 대상 (유리, 타이어)
-        // 투명도가 있거나 이름에 유리/타이어 관련 단어가 있으면 제외
-        const isGlass = m.transparent || m.opacity < 0.9 || matName.includes('glass') || matName.includes('window');
-        const isTire = matName.includes('tire') || matName.includes('rubber') || matName.includes('wheel') || matName.includes('rim');
+        // --- [2. 물리적 속성 기반 판정] ---
+        // 유리: 투명하거나 불투명도가 낮음
+        const isGlass = m.transparent || m.opacity < 0.9;
+        // 라이트: 스스로 빛나는 속성이 있음
+        const isLight = (m.emissive && (m.emissive.r > 0 || m.emissive.g > 0 || m.emissive.b > 0));
+        // 검은색 부품(윙, 타이어 안쪽 등): 색상이 아주 어둡고 광택이 없는(Roughness가 높은) 경우
+        const isDarkMatte = (m.color.r < 0.15 && m.color.g < 0.15 && m.color.b < 0.15) && m.roughness > 0.4;
 
-        // 2. 위 조건에 해당하지 않으면 무조건 차체로 간주하고 도색
-        if (!isGlass && !isTire) {
-            m.color.set(color); // 사용자 선택 색상 적용
-            
-            // 보라색 형광(Emissive) 효과가 있다면 제거
-            if (m.emissive) {
-                m.emissive.set(0x000000);
-            }
-
-            // 스포츠카 도색 질감 설정
+        // --- [3. 최종 도색 판정] ---
+        // 1순위: 이름에 'paint'나 'body'가 들어가거나, 아까 확인한 '.036'이면 무조건 도색
+        const isExplicitBody = matName.includes('paint') || matName.includes('body') || matName.includes('.036');
+        
+        // 2순위: 제외 대상이 아니면서, 너무 어두운 부품도 아닐 때만 도색
+        if (isExplicitBody || (!hasExcludeKeyword && !isGlass && !isLight && !isDarkMatte)) {
+            m.color.set(color);
+            if (m.emissive) m.emissive.set(0x000000);
             m.roughness = 0.2;
             m.metalness = 0.6;
-            
-            // 어떤 재질이 칠해졌는지 로그 출력
-            console.log(`[PAINTED] Material: ${matName}`);
+            console.log(`%c[PAINTED] ${matName}`, "color: #00ff00; font-weight: bold");
         } else {
-            console.log(`[SKIPPED] Material: ${matName} (${isGlass ? 'Glass' : 'Wheel'})`);
+            console.log(`%c[SKIPPED] ${matName}`, "color: #ff9900");
         }
     }
 });
-
-
 
               // 크기 조절
                 car.scale.set(0.016, 0.016, 0.016);
