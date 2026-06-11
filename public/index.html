@@ -982,40 +982,41 @@ async function createMcLarenP1(color = '#ffffff') {
             (gltf) => {
                 const car = gltf.scene;
 
-                // 크기 조절
-                car.scale.set(0.018, 0.018, 0.018);
-                car.rotation.y = Math.PI;
                 // 그림자 및 색상 설정
-              
-              car.traverse((child) => {
-    if (child.isMesh) {
+             car.traverse((child) => {
+    if (child.isMesh && child.material) {
         child.castShadow = true;
         child.receiveShadow = true;
 
-        if (child.material) {
-            const matName = child.material.name ? child.material.name.toLowerCase() : '';
+        const m = child.material;
+        const matName = (m.name || "").toLowerCase();
 
-            // 제외할 부위들 (유리, 타이어, 라이트 등)
-            const isGlass = matName.includes('glass') || matName.includes('window') || matName.includes('transparent');
-            const isTire = matName.includes('tire') || matName.includes('wheel') || matName.includes('rubber') || matName.includes('rim');
-            const isLight = matName.includes('light') || matName.includes('lamp') || matName.includes('emissive');
+        // 1. 제외할 부위 (유리, 타이어, 검은색 플라스틱 등)
+        // 투명하거나(유리), 이름에 타이어/휠이 포함되거나, 아주 어두운 검은색인 경우 제외
+        const isGlass = m.transparent || m.opacity < 0.9 || matName.includes('glass') || matName.includes('window');
+        const isTire = matName.includes('tire') || matName.includes('rubber') || matName.includes('wheel') || matName.includes('rim');
+        const isBlackPart = (m.color && m.color.r < 0.05 && m.color.g < 0.05 && m.color.b < 0.05) && !matName.includes('paint');
 
-            // 유리, 타이어, 라이트가 아니라면 모두 차체 색상을 적용
-            if (!isGlass && !isTire && !isLight) {
-                child.material = new THREE.MeshStandardMaterial({
-                    color: new THREE.Color(color),
-                    roughness: 0.2, 
-                    metalness: 0.8  // 스포츠카 특유의 광택을 위해 금속성 상향
-                });
-            } else {
-                // 나머지는 원래 재질을 복제해서 사용 (공유 방지)
-                child.material = child.material.clone();
+        if (isGlass || isTire || isBlackPart) {
+            // 유리나 타이어는 원래 재질 유지 (공유 방지를 위해 복제만)
+            child.material = m.clone();
+        } else {
+            // 2. 차체 부위 색상 변경
+            child.material = m.clone(); // 기존 재질의 질감(광택 등)을 그대로 유지
+            child.material.color.set(color); // 사용자 선택 색상으로 변경
+            
+            // 3. 보라색 형광 효과(Emissive) 제거
+            // 이 부분이 있어야 사진에 있던 보라색 라인이 사라집니다.
+            if (child.material.emissive) {
+                child.material.emissive.set(0x000000);
             }
         }
     }
 });
 
-              
+              // 크기 조절
+                car.scale.set(0.016, 0.016, 0.016);
+                car.rotation.y = Math.PI; 
               
               // 차량 중심 보정
                 const box = new THREE.Box3().setFromObject(car);
