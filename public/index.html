@@ -983,47 +983,42 @@ async function createMcLarenP1(color = '#ffffff') {
                 const car = gltf.scene;
 
                 // 그림자 및 색상 설정
- console.log("--- McLaren P1 Part Analysis Start ---");
+car.traverse((child) => {
+    if (child.isMesh && child.material) {
+        child.castShadow = true;
+        child.receiveShadow = true;
 
-                car.traverse((child) => {
-                    if (child.isMesh && child.material) {
-                        child.castShadow = true;
-                        child.receiveShadow = true;
+        // 재질 복제
+        child.material = child.material.clone();
+        const m = child.material;
+        const matName = (m.name || "").toLowerCase();
 
-                        // Clone material to avoid sharing
-                        child.material = child.material.clone();
-                        const m = child.material;
-                        const matName = (m.name || "").toLowerCase();
-                        const meshName = (child.name || "").toLowerCase();
+        // 1. 확실한 제외 대상 (유리, 타이어)
+        // 투명도가 있거나 이름에 유리/타이어 관련 단어가 있으면 제외
+        const isGlass = m.transparent || m.opacity < 0.9 || matName.includes('glass') || matName.includes('window');
+        const isTire = matName.includes('tire') || matName.includes('rubber') || matName.includes('wheel') || matName.includes('rim');
 
-                        // 2. Classification Logic
-                        const isGlass = matName.includes('glass') || m.transparent || m.opacity < 0.9;
-                        const isTire = matName.includes('tire') || matName.includes('rubber') || matName.includes('wheel') || matName.includes('rim');
-                        
-                        let category = "BODY (Paint)";
-                        if (isGlass) category = "GLASS (Skip)";
-                        if (isTire) category = "TIRE/WHEEL (Skip)";
+        // 2. 위 조건에 해당하지 않으면 무조건 차체로 간주하고 도색
+        if (!isGlass && !isTire) {
+            m.color.set(color); // 사용자 선택 색상 적용
+            
+            // 보라색 형광(Emissive) 효과가 있다면 제거
+            if (m.emissive) {
+                m.emissive.set(0x000000);
+            }
 
-                        // Log each part to console
-                        console.log(`[${category}] Mesh: ${meshName} / Material: ${matName}`);
+            // 스포츠카 도색 질감 설정
+            m.roughness = 0.2;
+            m.metalness = 0.6;
+            
+            // 어떤 재질이 칠해졌는지 로그 출력
+            console.log(`[PAINTED] Material: ${matName}`);
+        } else {
+            console.log(`[SKIPPED] Material: ${matName} (${isGlass ? 'Glass' : 'Wheel'})`);
+        }
+    }
+});
 
-                        // 3. Apply Color to Body Parts
-                        if (!isGlass && !isTire) {
-                            m.color.set(color);
-                            
-                            // Remove purple emissive effects
-                            if (m.emissive) {
-                                m.emissive.set(0x000000);
-                            }
-
-                            // Professional car paint finish
-                            m.roughness = 0.2;
-                            m.metalness = 0.6;
-                        }
-                    }
-                });
-
-                console.log("--- Analysis Complete ---");
 
 
               // 크기 조절
