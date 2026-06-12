@@ -995,7 +995,7 @@ car.traverse((child) => {
         // --- [1. 제외 대상 키워드 확장] ---
         const excludeKeywords = [
             '.007', '.004', 'material.012', 'material.013', 'material.014','.028', '.026', '.034', '.032', '.033', '.027',
-            'glass', 'window', 'transparent','.019', '.021', '.022', // 유리
+            'glass', 'window', 'transparent', // 유리
             'tire', 'rubber', 'wheel', 'rim', 'bolt', 'nut', // 타이어/휠
             'light', 'lamp', 'emissive', 'led', // 전조등/후미등
             'brake', 'caliper', 'disc', // 브레이크
@@ -1017,15 +1017,22 @@ car.traverse((child) => {
         const isExplicitBody = matName.includes('paint') || matName.includes('body') || matName.includes('.036');
         
         // 2순위: 제외 대상이 아니면서, 너무 어두운 부품도 아닐 때만 도색
-    if (isExplicitBody || (!hasExcludeKeyword && !isGlass && !isLight && !isDarkMatte)) {            
-            m.color.set(color);
-            if (m.emissive) m.emissive.set(0x000000);
-            m.roughness = 0.2;
-            m.metalness = 0.6;
-            console.log(`%c[PAINTED] ${matName}`, "color: #00ff00; font-weight: bold");
-        } else {
-            console.log(`%c[SKIPPED] ${matName}`, "color: #ff9900");
-        }
+    // --- [3. 최종 도색 판정 수정] ---
+
+// 1. 유리는 어떤 조건에서도 칠해지지 않게 '최우선' 제외
+if (isGlass || hasExcludeKeyword) {
+    
+    // 유리가 너무 검게 보인다면 투명도 강제 부여 (선택사항)
+    if (isGlass) { m.transparent = true; m.opacity = 0.4; }
+} 
+// 2. 그 다음, 차체인 경우에만 도색
+else if (isExplicitBody || (!isLight && !isDarkMatte)) {
+    m.color.set(color);
+    if (m.emissive) m.emissive.set(0x000000);
+    m.roughness = 0.2;
+    m.metalness = 0.6;
+}
+
     }
 });
 
