@@ -994,7 +994,7 @@ car.traverse((child) => {
         
         // --- [1. 제외 대상 키워드 확장] ---
         const excludeKeywords = [
-            '.007', '.004',
+            '.007', '.004', 'material',
             'glass', 'window', 'transparent', // 유리
             'tire', 'rubber', 'wheel', 'rim', 'bolt', 'nut', // 타이어/휠
             'light', 'lamp', 'emissive', 'led', // 전조등/후미등
@@ -1007,7 +1007,7 @@ car.traverse((child) => {
 
         // --- [2. 물리적 속성 기반 판정] ---
         // 유리: 투명하거나 불투명도가 낮음
-        const isGlass = m.transparent || m.opacity < 0.9;
+        const isGlass = m.transparent || m.opacity < 1.0 || m.transmission > 0;
         // 라이트: 스스로 빛나는 속성이 있음
         const isLight = (m.emissive && (m.emissive.r > 0 || m.emissive.g > 0 || m.emissive.b > 0));
         // 검은색 부품(윙, 타이어 안쪽 등): 색상이 아주 어둡고 광택이 없는(Roughness가 높은) 경우
@@ -1031,7 +1031,7 @@ car.traverse((child) => {
 
               // 크기 조절
                 car.scale.set(0.016, 0.016, 0.016);
-                car.rotation.y = Math.PI * 2; 
+                car.rotation.y = Math.PI; 
 
               
               // 차량 중심 보정
