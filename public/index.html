@@ -1017,16 +1017,15 @@ car.traverse((child) => {
         const isExplicitBody = matName.includes('paint') || matName.includes('body') || matName.includes('.036');
         
       // 2순위: 제외 대상이 아니면서, 너무 어두운 부품도 아닐 때만 도색
+    // 2순위: 제외 대상이 아니면서, 너무 어두운 부품도 아닐 때만 도색
     if (isExplicitBody || (!hasExcludeKeyword && !isGlass && !isLight && !isDarkMatte)) {            
             m.color.set(color);
             if (m.emissive) m.emissive.set(0x000000);
             m.roughness = 0.2;
             m.metalness = 0.6;
-        }
+           
+        } 
     }
-});
-
-    });
 });
 
               // 크기 조절
