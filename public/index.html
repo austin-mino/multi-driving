@@ -1016,22 +1016,27 @@ car.traverse((child) => {
         // 1순위: 이름에 'paint'나 'body'가 들어가거나, 아까 확인한 '.036'이면 무조건 도색
         const isExplicitBody = matName.includes('paint') || matName.includes('body') || matName.includes('.036');
         
-        // 2순위: 제외 대상이 아니면서, 너무 어두운 부품도 아닐 때만 도색
-    // --- [3. 최종 도색 판정 수정] ---
-
-// 1. 유리는 어떤 조건에서도 칠해지지 않게 '최우선' 제외
-if (isGlass || hasExcludeKeyword) {
-    
-    // 유리가 너무 검게 보인다면 투명도 강제 부여 (선택사항)
-    if (isGlass) { m.transparent = true; m.opacity = 0.4; }
-} 
-// 2. 그 다음, 차체인 경우에만 도색
-else if (isExplicitBody || (!isLight && !isDarkMatte)) {
-    m.color.set(color);
-    if (m.emissive) m.emissive.set(0x000000);
-    m.roughness = 0.2;
-    m.metalness = 0.6;
-}
+       // [2. 최종 도색 판정]
+        if (isFakeBox) {
+            // 가짜 막(박스)은 아예 안 보이게 숨깁니다.
+            child.visible = false;
+        } 
+        else if (isRealGlass) {
+            // 진짜 유리는 도색하지 않고 투명하게 유지합니다.
+            m.transparent = true;
+            m.opacity = 0.3;
+            console.log(`%c[GLASS PROTECTED] ${matName}`, "color: #00ccff");
+        } 
+        else if (!isOtherExclude) {
+            // 유리도 아니고 제외 대상도 아닌 경우에만 도색 (차체)
+            m.color.set(color);
+            if (m.emissive) m.emissive.set(0x000000);
+            m.roughness = 0.2;
+            m.metalness = 0.6;
+            console.log(`%c[PAINTED] ${matName}`, "color: #00ff00; font-weight: bold");
+        } else {
+            console.log(`%c[SKIPPED] ${matName}`, "color: #ff9900");
+        }
 
     }
 });
