@@ -1005,6 +1005,17 @@ car.traverse((child) => {
         ];
         const hasExcludeKeyword = excludeKeywords.some(kw => matName.includes(kw));
 
+       // --- [2. 유리창 특수 처리 추가] ---
+        // 맥라렌 모델의 'material' 재질(유리창)을 강제로 투명하게 설정합니다.
+        if (matName === 'material' || matName.startsWith('material_')) {
+            m.transparent = true;
+            m.opacity = 0.2;       // 투명도 (0에 가까울수록 투명)
+            m.color.set(0xeeeeee); // 유리 색상
+            m.metalness = 1.0;     // 반사광
+            m.roughness = 0.0;     // 매끄러움
+            return;                // 유리창은 여기서 설정 끝 (도색 로직 방지)
+        }
+      
         // --- [2. 물리적 속성 기반 판정] ---
         // 유리: 투명하거나 불투명도가 낮음
         const isGlass = m.transparent || m.opacity < 1.0 || m.transmission > 0;
@@ -1018,12 +1029,16 @@ car.traverse((child) => {
         
       // 2순위: 제외 대상이 아니면서, 너무 어두운 부품도 아닐 때만 도색
     // 2순위: 제외 대상이 아니면서, 너무 어두운 부품도 아닐 때만 도색
-    if (isExplicitBody || (!hasExcludeKeyword && !isGlass && !isLight && !isDarkMatte)) {            
+   if (isExplicitBody || (!hasExcludeKeyword && !isGlass && !isLight && !isDarkMatte)) {            
             m.color.set(color);
             if (m.emissive) m.emissive.set(0x000000);
-            m.roughness = 0.2;
-            m.metalness = 0.6;
-           
+            
+            // 질감 보존: 확실한 차체(Body)일 때만 매끄러운 광택을 부여하고, 
+            // 그 외 부품은 모델이 원래 가진 roughness와 metalness를 유지
+            if (isExplicitBody) {
+                m.roughness = 0.15;
+                m.metalness = 0.85;
+            }
         } 
     }
 });
