@@ -1033,6 +1033,8 @@ car.traverse((child) => {
         } 
     }
 });
+                const box = new THREE.Box3().setFromObject(car);
+                const center = box.getCenter(new THREE.Vector3());
 
               // 1.크기 조절
                 car.scale.set(0.016, 0.016, 0.016);
