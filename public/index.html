@@ -1037,27 +1037,25 @@ car.traverse((child) => {
               // 1.크기 조절
                 car.scale.set(0.016, 0.016, 0.016);
               //방향 조절
-                // 2. 차량 중심 보정
-                const box = new THREE.Box3().setFromObject(car);
-                const center = box.getCenter(new THREE.Vector3());
-
-                // 모델을 원점으로 이동
+               // 모델을 원점으로 이동
                 car.position.x -= center.x;
                 car.position.z -= center.z;
                 car.position.y -= box.min.y;
 
-                // 3. [핵심] 회전용 컨테이너 생성
-                // car 자체를 회전시키면 중심 보정 로직과 충돌할 수 있으므로 
-                // 새로운 Group에 담아서 회전
+                // car 자체를 180
+                car.rotation.y = Math.PI; 
+
+                // 3. 회전용 컨테이너 생성
                 const carGroup = new THREE.Group();
                 carGroup.add(car);
 
-                // 여기서 회전값을 조절
-                carGroup.rotation.y = Math.PI;
-                carVisualOffsetY = -0.4;
+                // 그룹의 초기 회전은 0
+                carGroup.rotation.y = 0;
+
+                carVisualOffsetY = -1.6;
                 carGroup.name = 'MainBody';
 
-                resolve(carGroup); // 이제 car 대신 carGroup을 반환
+                resolve(carGroup); // carGroup 반환
 
               
               // 차량 중심 보정
