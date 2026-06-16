@@ -1053,8 +1053,8 @@ car.traverse((child) => {
                 carGroup.add(car);
 
                 // 여기서 회전값을 조절
-                carGroup.rotation.y = 0;
-                carVisualOffsetY = 1.1;
+                carGroup.rotation.y = Math.PI;
+                carVisualOffsetY = -0.4;
                 carGroup.name = 'MainBody';
 
                 resolve(carGroup); // 이제 car 대신 carGroup을 반환
