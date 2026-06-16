@@ -1061,7 +1061,6 @@ car.traverse((child) => {
 
               
               // 차량 중심 보정
-                const box = new THREE.Box3().setFromObject(car);
                 const center = box.getCenter(new THREE.Vector3());
 
                 car.position.x -= center.x;
