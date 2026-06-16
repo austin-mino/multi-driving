@@ -1058,19 +1058,6 @@ car.traverse((child) => {
                 carGroup.name = 'MainBody';
 
                 resolve(carGroup); // carGroup 반환
-
-              
-              // 차량 중심 보정
-
-                car.position.x -= center.x;
-                car.position.z -= center.z;
-                car.position.y -= box.min.y;
-                carVisualOffsetY = 1.1;
-                
-                // 메인 바디 표시
-                car.name = 'MainBody';
-
-                resolve(car);
             },
 
             undefined,
