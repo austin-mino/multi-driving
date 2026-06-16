@@ -1048,7 +1048,7 @@ car.traverse((child) => {
                 car.position.y = 0;
                 car.rotation.y = Math.PI; 
                 car.position.x -= 0.25;   // 왼쪽으로
-                car.position.z -= -0.4;   // 앞으로
+                car.position.z -= 1;   // 앞으로
                 // 3. 회전용 컨테이너 생성
                 const carGroup = new THREE.Group();
                 carGroup.add(car);
