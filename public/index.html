@@ -1045,7 +1045,7 @@ car.traverse((child) => {
                 car.position.y -= box.min.y;
 
                 // car 자체를 180
-                car.position.y -= 5;
+                car.position.y = 0;
                 car.rotation.y = Math.PI; 
 
                 // 3. 회전용 컨테이너 생성
@@ -1055,7 +1055,7 @@ car.traverse((child) => {
                 // 그룹의 초기 회전은 0
                 carGroup.rotation.y = 0;
 
-                carVisualOffsetY = -1.6;
+                carVisualOffsetY = -2.6;
                 carGroup.name = 'MainBody';
 
                 resolve(carGroup); // carGroup 반환
