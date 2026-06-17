@@ -1643,6 +1643,7 @@ otherPlayers[id] = {
   targetQuaternion: new THREE.Quaternion(
     player.rotation.x, player.rotation.y, player.rotation.z, player.rotation.w
   ),
+   wheels: player.wheels || []
 };
     } else {
       const playerData = otherPlayers[id];
@@ -1650,6 +1651,7 @@ otherPlayers[id] = {
       // 위치/회전 보간용 타겟 업데이트
       playerData.targetPosition.set(player.position.x, player.position.y, player.position.z);
       playerData.targetQuaternion.set(player.rotation.x, player.rotation.y, player.rotation.z, player.rotation.w);
+      playerData.wheels = player.wheels || [];
       // 차량 색상 업데이트 (변경 시만 반영)
       playerData.model.traverse(child => {
         if (child.isMesh && child.name === 'MainBody' && child.material && child.material.color) {
@@ -1720,8 +1722,11 @@ setInterval(() => {
       }
 
        // 상대방 차량 위치 보간 처리
-
-if (player.wheels && playerData.wheelHolders) {
+      
+  const now = performance.now();
+ for (const id in otherPlayers) {
+  const player = otherPlayers[id];
+  if (player.wheels && playerData.wheelHolders) {
     for (let i = 0; i < 4; i++) {
         const wheel = player.wheels[i];
 
@@ -1739,10 +1744,6 @@ if (player.wheels && playerData.wheelHolders) {
         );
     }
 }
-      
-  const now = performance.now();
- for (const id in otherPlayers) {
-  const player = otherPlayers[id];
   const model = player.model;
   const targetPos = player.targetPosition;
   const targetQuat = player.targetQuaternion;
