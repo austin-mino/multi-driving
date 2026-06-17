@@ -1720,6 +1720,26 @@ setInterval(() => {
       }
 
        // 상대방 차량 위치 보간 처리
+
+if (player.wheels && playerData.wheelHolders) {
+    for (let i = 0; i < 4; i++) {
+        const wheel = player.wheels[i];
+
+        playerData.wheelHolders[i].position.set(
+            wheel.position.x,
+            wheel.position.y,
+            wheel.position.z
+        );
+
+        playerData.wheelHolders[i].quaternion.set(
+            wheel.quaternion.x,
+            wheel.quaternion.y,
+            wheel.quaternion.z,
+            wheel.quaternion.w
+        );
+    }
+}
+      
   const now = performance.now();
  for (const id in otherPlayers) {
   const player = otherPlayers[id];
