@@ -1731,13 +1731,13 @@ setInterval(() => {
     for (let i = 0; i < 4; i++) {
         const wheel = player.wheels[i];
 
-        playerData.wheelHolders[i].position.set(
+        player.wheelHolders[i].position.set(
             wheel.position.x,
             wheel.position.y,
             wheel.position.z
         );
 
-        playerData.wheelHolders[i].quaternion.set(
+        player.wheelHolders[i].quaternion.set(
             wheel.quaternion.x,
             wheel.quaternion.y,
             wheel.quaternion.z,
