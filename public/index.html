@@ -1725,49 +1725,27 @@ setInterval(() => {
        // 상대방 차량 위치 보간 처리
       
   const now = performance.now();
- for (const id in otherPlayers) {
-  const player = otherPlayers[id];
-  if (player.wheels && player.wheelHolders) {
-    for (let i = 0; i < 4; i++) {
-        const wheel = player.wheels[i];
+for (const id in otherPlayers) {
+    const playerData = otherPlayers[id];
 
-        player.wheelHolders[i].position.set(
-            wheel.position.x,
-            wheel.position.y,
-            wheel.position.z
-        );
+    if (playerData.wheels && playerData.wheelHolders) {
+        for (let i = 0; i < playerData.wheels.length; i++) {
+            const wheel = playerData.wheels[i];
 
-        player.wheelHolders[i].quaternion.set(
-            wheel.quaternion.x,
-            wheel.quaternion.y,
-            wheel.quaternion.z,
-            wheel.quaternion.w
-        );
+            playerData.wheelHolders[i].position.set(
+                wheel.position.x,
+                wheel.position.y,
+                wheel.position.z
+            );
+
+            playerData.wheelHolders[i].quaternion.set(
+                wheel.quaternion.x,
+                wheel.quaternion.y,
+                wheel.quaternion.z,
+                wheel.quaternion.w
+            );
+        }
     }
-}
-  const model = player.model;
-  const targetPos = player.targetPosition;
-  const targetQuat = player.targetQuaternion;
-
-  if (targetPos && targetQuat) {
-    model.position.copy(player.chassisBody.position);
-model.quaternion.copy(player.chassisBody.quaternion);
-
-    // 충돌 바디 위치 동기화
-    if (player.chassisBody) {
-     // 목표 위치까지의 차이
-// 차량 모델 부드럽게 이동
-model.position.lerp(targetPos, 0.2);
-model.quaternion.slerp(targetQuat, 0.2);
-
-// 충돌 바디는 모델 따라가기
-player.chassisBody.position.copy(model.position);
-player.chassisBody.quaternion.copy(model.quaternion);
-
-// 회전 보간
-player.chassisBody.quaternion.slerp(targetQuat, 0.2);
-    }
-  }
 }
 
 
