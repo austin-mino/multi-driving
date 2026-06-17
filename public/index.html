@@ -1565,9 +1565,10 @@ if (
   continue; // 잘못된 플레이어 데이터 → 무시
 }
     
-    if (!otherPlayers[id]) {
-        // 먼저 빈 객체 등록해서 중복 생성 방지
-      otherPlayers[id] = { loading: true };
+if (!otherPlayers[id] || otherPlayers[id].loading) {        // 먼저 빈 객체 등록해서 중복 생성 방지
+      otherPlayers[id] = { 
+        loading: true 
+      };
       let otherCar;
 
      switch (player.carModel) {
@@ -1726,7 +1727,7 @@ setInterval(() => {
   const now = performance.now();
  for (const id in otherPlayers) {
   const player = otherPlayers[id];
-  if (player.wheels && playerData.wheelHolders) {
+  if (player.wheels && player.wheelHolders) {
     for (let i = 0; i < 4; i++) {
         const wheel = player.wheels[i];
 
