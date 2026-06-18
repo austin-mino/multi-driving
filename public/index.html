@@ -1725,30 +1725,30 @@ setInterval(() => {
        // 상대방 차량 위치 보간 처리
       
   const now = performance.now();
+// 상대방 차량 위치 보간 처리
 for (const id in otherPlayers) {
     const playerData = otherPlayers[id];
+    if (playerData.loading || !playerData.model) continue;
 
-    if (playerData.wheels && playerData.wheelHolders) {
+    // [추가] 모델 위치 및 회전 업데이트 (부드럽게 이동)
+    playerData.model.position.lerp(playerData.targetPosition, 0.2);
+    playerData.model.quaternion.slerp(playerData.targetQuaternion, 0.2);
+
+    // 물리 바디도 모델 따라가기
+    playerData.chassisBody.position.copy(playerData.model.position);
+    playerData.chassisBody.quaternion.copy(playerData.model.quaternion);
+
+    // 바퀴 업데이트 (기존 코드)
+    if (playerData.wheels && playerData.wheelHolders.length > 0) {
         for (let i = 0; i < playerData.wheels.length; i++) {
             const wheel = playerData.wheels[i];
-
-            playerData.wheelHolders[i].position.set(
-                wheel.position.x,
-                wheel.position.y,
-                wheel.position.z
-            );
-
-            playerData.wheelHolders[i].quaternion.set(
-                wheel.quaternion.x,
-                wheel.quaternion.y,
-                wheel.quaternion.z,
-                wheel.quaternion.w
-            );
+            if (playerData.wheelHolders[i]) {
+                playerData.wheelHolders[i].position.copy(wheel.position);
+                playerData.wheelHolders[i].quaternion.copy(wheel.quaternion);
+            }
         }
     }
 }
-
-
     
     // 속도 + RPM + 기어 UI 표시
 hud.textContent = `속도: ${getSpeedKmH().toFixed(1)} km/h | RPM: ${Math.floor(rpm)} | 기어: ${currentGear}`;
