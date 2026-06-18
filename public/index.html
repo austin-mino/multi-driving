@@ -1635,9 +1635,19 @@ socket.on('updatePlayers', async (players) => {
       for (let i = 0; i < 4; i++) {
         const holder = new THREE.Group();
         const tireGeo = new THREE.CylinderGeometry(0.65, 0.65, 0.4, 24);
-        const tireMat = new THREE.MeshStandardMaterial({ color: 0x222222, metalness: 0.7, roughness: 0.4 });
+        
+        // 방법 1: 투명하게 만들기 (Material 속성 변경)
+        const tireMat = new THREE.MeshStandardMaterial({ 
+          color: 0x222222, metalness: 0.7, roughness: 0.4,
+          transparent: true,
+          opacity: 0 // 투명도 0으로 설정
+        });
         const tireMesh = new THREE.Mesh(tireGeo, tireMat);
         tireMesh.rotation.z = Math.PI / 2;
+        
+        // 방법 2: 렌더링에서 제외하기 (이 방법을 더 추천합니다)
+        tireMesh.visible = false; 
+
         holder.add(tireMesh);
         holder.position.set(...wheelPositions[i]);
         otherCar.add(holder);
