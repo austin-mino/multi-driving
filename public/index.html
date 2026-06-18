@@ -1554,131 +1554,126 @@ function sendPlayerState() {
 // 예시: 키 입력 처리 후
   const targetQuaternion = new THREE.Quaternion(); // 회전 보간용
 socket.on('updatePlayers', async (players) => {
-    if (!playerId) return;
+  if (!playerId) return;
+
   for (const [id, player] of Object.entries(players)) {
     if (id === playerId) continue;
 
-if (
-  !player?.position || typeof player.position.x !== 'number' ||
-  !player?.rotation || typeof player.rotation.w !== 'number'
-) {
-  continue; // 잘못된 플레이어 데이터 → 무시
-}
-    
-if (!otherPlayers[id] || otherPlayers[id].loading) {        // 먼저 빈 객체 등록해서 중복 생성 방지
-      otherPlayers[id] = { 
-        loading: true 
-      };
-      let otherCar;
+    // 잘못된 데이터 검증
+    if (!player?.position || typeof player.position.x !== 'number' ||
+        !player?.rotation || typeof player.rotation.w !== 'number') {
+      continue;
+    }
 
-     switch (player.carModel) {
-  case 'SportsCar':
-    otherCar = await createSportsCar(player.carColor || '#aaaaaa'); // ← await
-    break;
-  case 'SUV':
-    otherCar = await createSUVCar(player.carColor || '#aaaaaa'); // ← await 추가
-    break;
-   case 'McLarenP1':
-    otherCar = await createMcLarenP1(player.carColor || '#aaaaaa');
-    break;
-  default:
-    otherCar = createGrandeurIGCarDetailed(player.carColor || '#aaaaaa');
-}
-
-      // 닉네임 표시
-      const nicknameText = await createTextMesh(player.nickname);
-      nicknameText.position.set(0, 2, 0);
-      otherCar.add(nicknameText);
-
-      scene.add(otherCar);
+    // [중요] 이미 존재하는 플레이어 처리
+    if (otherPlayers[id]) {
+      const pData = otherPlayers[id];
       
-otherCar.position.set(
-  player.position.x,
-  player.position.y,
-  player.position.z
-);
+      // 로딩 중이라면 데이터를 업데이트하지 않고 다음 플레이어로 넘어감 (중복 생성 차단)
+      if (pData.loading) continue;
 
-otherCar.quaternion.set(
-  player.rotation.x,
-  player.rotation.y,
-  player.rotation.z,
-  player.rotation.w
-);
-// 바퀴 메시 생성
-const otherWheelHolders = [];
-const wheelPositions = [
-  [-1.2, 0.2, 2.4],
-  [ 1.2, 0.2, 2.4],
-  [-1.2, 0.2,-2.4],
-  [ 1.2, 0.2,-2.4]
-];
-for (let i = 0; i < 4; i++) {
-  const holder = new THREE.Group();
-  const tireGeo = new THREE.CylinderGeometry(0.65, 0.65, 0.4, 24);
-  const tireMat = new THREE.MeshStandardMaterial({ color: 0x222222, metalness: 0.7, roughness: 0.4 });
-  const tireMesh = new THREE.Mesh(tireGeo, tireMat);
-  tireMesh.rotation.z = Math.PI / 2;
-  holder.add(tireMesh);
-  holder.position.set(...wheelPositions[i]);
-  otherCar.add(holder);
-  otherWheelHolders.push(holder);
-}
-
-// 충돌 물리 바디 생성
-const otherChassisShape = new CANNON.Box(new CANNON.Vec3(1.5, 0.5, 3));
-const otherChassisBody = new CANNON.Body({ mass: 1200 });
-otherChassisBody.type = CANNON.Body.KINEMATIC;
-otherChassisBody.addShape(otherChassisShape);
-otherChassisBody.position.set(player.position.x, player.position.y, player.position.z);
-otherChassisBody.collisionFilterGroup = 2;
-otherChassisBody.collisionFilterMask = 1 | 2;
-otherChassisBody.linearDamping = 0.2;
-otherChassisBody.angularDamping = 0.4;
-world.addBody(otherChassisBody);
-
-otherPlayers[id] = {
-  model: otherCar,
-  chassisBody: otherChassisBody,
-  wheelHolders: otherWheelHolders,
-  targetPosition: new THREE.Vector3(player.position.x, player.position.y, player.position.z),
-  targetQuaternion: new THREE.Quaternion(
-    player.rotation.x, player.rotation.y, player.rotation.z, player.rotation.w
-  ),
-   wheels: player.wheels || []
-};
-    } else {
-      const playerData = otherPlayers[id];
-
-      // 위치/회전 보간용 타겟 업데이트
-      playerData.targetPosition.set(player.position.x, player.position.y, player.position.z);
-      playerData.targetQuaternion.set(player.rotation.x, player.rotation.y, player.rotation.z, player.rotation.w);
-      playerData.wheels = player.wheels || [];
-      // 차량 색상 업데이트 (변경 시만 반영)
-      playerData.model.traverse(child => {
-        if (child.isMesh && child.name === 'MainBody' && child.material && child.material.color) {
-          const newColor = new THREE.Color(player.carColor || '#888888');
-
-          if (!child.material.color.equals(newColor)) {
-            child.material = child.material.clone(); // 공유 방지
-            child.material.color.copy(newColor);
-          }
+      // 로딩이 완료된 경우에만 위치/회전 타겟 업데이트
+      if (pData.targetPosition && pData.targetQuaternion) {
+        pData.targetPosition.set(player.position.x, player.position.y, player.position.z);
+        pData.targetQuaternion.set(player.rotation.x, player.rotation.y, player.rotation.z, player.rotation.w);
+        pData.wheels = player.wheels || [];
+        
+        // 차량 색상 실시간 업데이트 (필요시)
+        if (pData.model) {
+          pData.model.traverse(child => {
+            if (child.isMesh && child.name === 'MainBody' && child.material && child.material.color) {
+              const newColor = new THREE.Color(player.carColor || '#888888');
+              if (!child.material.color.equals(newColor)) {
+                child.material = child.material.clone();
+                child.material.color.copy(newColor);
+              }
+            }
+          });
         }
-      });
+      }
+      continue; // 이미 있는 플레이어는 여기서 끝내야 중복 생성이 안 됨
+    }
+
+    // --- 새로운 플레이어 생성 시작 ---
+    // 로딩 상태를 즉시 true로 설정하여 다음 패킷이 들어와도 중복 생성을 막음
+    otherPlayers[id] = { loading: true };
+    console.log("새 플레이어 접속:", player.nickname);
+
+    try {
+      let otherCar;
+      // 모델 생성
+      switch (player.carModel) {
+        case 'SportsCar':
+          otherCar = await createSportsCar(player.carColor || '#aaaaaa');
+          break;
+        case 'SUV':
+          otherCar = await createSUVCar(player.carColor || '#aaaaaa');
+          break;
+        case 'McLarenP1':
+          otherCar = await createMcLarenP1(player.carColor || '#aaaaaa');
+          break;
+        default:
+          otherCar = createGrandeurIGCarDetailed(player.carColor || '#aaaaaa');
+      }
+
+      // 닉네임 텍스트 생성 및 추가
+      const nicknameText = await createTextMesh(player.nickname);
+      nicknameText.position.set(0, 2.5, 0); // 차 지붕 위에 표시
+      otherCar.add(nicknameText);
+      scene.add(otherCar);
+
+      // 바퀴 메시 생성 (기본 휠)
+      const otherWheelHolders = [];
+      const wheelPositions = [
+        [-1.2, 0.2, 2.4], [1.2, 0.2, 2.4],
+        [-1.2, 0.2, -2.4], [1.2, 0.2, -2.4]
+      ];
+      for (let i = 0; i < 4; i++) {
+        const holder = new THREE.Group();
+        const tireGeo = new THREE.CylinderGeometry(0.65, 0.65, 0.4, 24);
+        const tireMat = new THREE.MeshStandardMaterial({ color: 0x222222, metalness: 0.7, roughness: 0.4 });
+        const tireMesh = new THREE.Mesh(tireGeo, tireMat);
+        tireMesh.rotation.z = Math.PI / 2;
+        holder.add(tireMesh);
+        holder.position.set(...wheelPositions[i]);
+        otherCar.add(holder);
+        otherWheelHolders.push(holder);
+      }
+
+      // 충돌 물리 바디 생성 (킨메틱 타입으로 설정하여 부드럽게 동기화)
+      const otherChassisShape = new CANNON.Box(new CANNON.Vec3(1.5, 0.5, 3));
+      const otherChassisBody = new CANNON.Body({ mass: 1200 });
+      otherChassisBody.type = CANNON.Body.KINEMATIC;
+      otherChassisBody.addShape(otherChassisShape);
+      otherChassisBody.position.set(player.position.x, player.position.y, player.position.z);
+      world.addBody(otherChassisBody);
+
+      // 데이터 최종 저장 (로딩 완료)
+      otherPlayers[id] = {
+        loading: false,
+        model: otherCar,
+        chassisBody: otherChassisBody,
+        wheelHolders: otherWheelHolders,
+        targetPosition: new THREE.Vector3(player.position.x, player.position.y, player.position.z),
+        targetQuaternion: new THREE.Quaternion(player.rotation.x, player.rotation.y, player.rotation.z, player.rotation.w),
+        wheels: player.wheels || []
+      };
+    } catch (err) {
+      console.error("플레이어 로딩 중 에러 발생:", err);
+      delete otherPlayers[id]; // 에러 시 다시 시도할 수 있도록 삭제
     }
   }
 
   // 제거된 플레이어 처리
- for (const id of Object.keys(otherPlayers)) {
-  if (!players[id]) {
-    scene.remove(otherPlayers[id].model);
-    if (otherPlayers[id].chassisBody) world.removeBody(otherPlayers[id].chassisBody);
-    if (otherPlayers[id].wheelHolders) {
-      otherPlayers[id].wheelHolders.forEach(w => scene.remove(w));
+  for (const id of Object.keys(otherPlayers)) {
+    if (!players[id]) {
+      if (otherPlayers[id].model) scene.remove(otherPlayers[id].model);
+      if (otherPlayers[id].chassisBody) world.removeBody(otherPlayers[id].chassisBody);
+      delete otherPlayers[id];
     }
-    delete otherPlayers[id];
   }
-}
 });
+
 
 // 매 프레임 또는 50ms 간격으로 내 위치/상태 서버 전송
   setInterval(() => {
@@ -1726,25 +1721,29 @@ setInterval(() => {
       
   const now = performance.now();
 // 상대방 차량 위치 보간 처리
+// 상대방 차량 위치 및 회전 업데이트 (부드러운 보간)
 for (const id in otherPlayers) {
-    const playerData = otherPlayers[id];
-    if (playerData.loading || !playerData.model) continue;
+    const pData = otherPlayers[id];
+    
+    // 로딩 중이거나 모델이 아직 없는 경우 건너뜀
+    if (pData.loading || !pData.model) continue;
 
-    // [추가] 모델 위치 및 회전 업데이트 (부드럽게 이동)
-    playerData.model.position.lerp(playerData.targetPosition, 0.2);
-    playerData.model.quaternion.slerp(playerData.targetQuaternion, 0.2);
+    // 1. 차체 위치/회전 보간 (lerp/slerp를 사용하여 뚝뚝 끊김 방지)
+    pData.model.position.lerp(pData.targetPosition, 0.15);
+    pData.model.quaternion.slerp(pData.targetQuaternion, 0.15);
 
-    // 물리 바디도 모델 따라가기
-    playerData.chassisBody.position.copy(playerData.model.position);
-    playerData.chassisBody.quaternion.copy(playerData.model.quaternion);
+    // 2. 물리 바디 위치도 모델에 맞춰 업데이트 (충돌 판정용)
+    pData.chassisBody.position.copy(pData.model.position);
+    pData.chassisBody.quaternion.copy(pData.model.quaternion);
 
-    // 바퀴 업데이트 (기존 코드)
-    if (playerData.wheels && playerData.wheelHolders.length > 0) {
-        for (let i = 0; i < playerData.wheels.length; i++) {
-            const wheel = playerData.wheels[i];
-            if (playerData.wheelHolders[i]) {
-                playerData.wheelHolders[i].position.copy(wheel.position);
-                playerData.wheelHolders[i].quaternion.copy(wheel.quaternion);
+    // 3. 바퀴 위치/회전 업데이트
+    if (pData.wheels && pData.wheelHolders && pData.wheels.length > 0) {
+        for (let i = 0; i < pData.wheels.length; i++) {
+            const wheelData = pData.wheels[i];
+            const wheelMesh = pData.wheelHolders[i];
+            if (wheelMesh && wheelData) {
+                wheelMesh.position.set(wheelData.position.x, wheelData.position.y, wheelData.position.z);
+                wheelMesh.quaternion.set(wheelData.quaternion.x, wheelData.quaternion.y, wheelData.quaternion.z, wheelData.quaternion.w);
             }
         }
     }
