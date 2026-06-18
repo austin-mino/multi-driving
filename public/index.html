@@ -1615,6 +1615,9 @@ socket.on('updatePlayers', async (players) => {
           break;
         case 'McLarenP1':
           otherCar = await createMcLarenP1(player.carColor || '#aaaaaa');
+          otherCar.children.forEach(child => {
+              child.position.y += 0.16; 
+          });
           break;
         default:
           otherCar = createGrandeurIGCarDetailed(player.carColor || '#aaaaaa');
