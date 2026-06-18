@@ -1120,7 +1120,11 @@ car.traverse((child) => {
       wheelHolders.push(holder);
 
       const tireGeo = new THREE.CylinderGeometry(wheel.radius, wheel.radius, 0.4, 24);
-      const tireMat = new THREE.MeshStandardMaterial({ color: 0x222222, metalness: 0.7, roughness: 0.4 });
+const tireMat = new THREE.MeshStandardMaterial({ 
+    transparent: true, // 투명
+    opacity: 0,        // 불투명도를 0으로 설정
+    visible: false     // 아예 렌더링에서 제외
+});      
       const tireMesh = new THREE.Mesh(tireGeo, tireMat);
       tireMesh.rotation.z = Math.PI / 2; // 눕히기
       holder.add(tireMesh);
