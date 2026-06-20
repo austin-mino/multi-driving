@@ -1010,17 +1010,15 @@ function createSUVCar(color = '#ffffff') {
 
         // ─── Range Rover 바퀴 노드 추출 ───────────────────────────
         // 모델 내 바퀴 노드: 'FL Wheel', 'FR Wheel', 'BL Wheel', 'BR Wheel'
-        // innerCar의 rotation.y = PI/2 상태에서:
-        //   FL(Front Left) = CANNON 0(FL), FR(Front Right) = CANNON 1(FR)
-        //   BL(Back Left)  = CANNON 2(RL), BR(Back Right)  = CANNON 3(RR)
         carWheelNodes = [null, null, null, null];
         innerCar.traverse((child) => {
           const n = child.name;
-          if (n === 'FL Wheel') carWheelNodes[0] = child;
-          else if (n === 'FR Wheel') carWheelNodes[1] = child;
-          else if (n === 'BL Wheel') carWheelNodes[2] = child;
-          else if (n === 'BR Wheel') carWheelNodes[3] = child;
+          if (n.includes('FL Wheel')) carWheelNodes[0] = child;
+          else if (n.includes('FR Wheel')) carWheelNodes[1] = child;
+          else if (n.includes('BL Wheel')) carWheelNodes[2] = child;
+          else if (n.includes('BR Wheel')) carWheelNodes[3] = child;
         });
+        console.log('Range Rover 바퀴 노드 추출 결과:', carWheelNodes.map(n => n ? n.name : 'null'));
         carWheelNodes.forEach((node) => {
           if (node) node.userData.baseQuaternion = node.quaternion.clone();
         });
@@ -1125,15 +1123,15 @@ car.traverse((child) => {
                 // ─── McLaren P1 바퀴 노드 추출 ───────────────────────────
                 // 모델 내 바퀴 부모 노드: 'WHEELS_11.001'(FL), 'WHEELS_11.003'(FR)
                 //                          'WHEELS_11.004'(RL), 'WHEELS_11.005'(RR)
-                // car.rotation.y = Math.PI 상태에서 매핑
                 carWheelNodes = [null, null, null, null];
                 car.traverse((child) => {
                   const n = child.name;
-                  if (n === 'WHEELS_11.001') carWheelNodes[0] = child; // FL
-                  else if (n === 'WHEELS_11.003') carWheelNodes[1] = child; // FR
-                  else if (n === 'WHEELS_11.004') carWheelNodes[2] = child; // RL
-                  else if (n === 'WHEELS_11.005') carWheelNodes[3] = child; // RR
+                  if (n.includes('WHEELS_11.001')) carWheelNodes[0] = child; // FL
+                  else if (n.includes('WHEELS_11.003')) carWheelNodes[1] = child; // FR
+                  else if (n.includes('WHEELS_11.004')) carWheelNodes[2] = child; // RL
+                  else if (n.includes('WHEELS_11.005')) carWheelNodes[3] = child; // RR
                 });
+                console.log('McLaren 바퀴 노드 추출 결과:', carWheelNodes.map(n => n ? n.name : 'null'));
                 carWheelNodes.forEach((node) => {
                   if (node) node.userData.baseQuaternion = node.quaternion.clone();
                 });
@@ -1819,7 +1817,7 @@ setInterval(() => {
       // carWheelNodes[i]는 모델 내부 바퀴 부모 노드를 가리킨다.
       // CANNON의 worldTransform.quaternion에서 차체 회전을 제거하여
       // 로컬 공간의 바퀴 회전을 추출한 뒤 모델 노드에 적용한다.
-      if (carWheelNodes.some(n => n !== null)) {
+      if (carModel && carWheelNodes.some(n => n !== null)) {
         const carInvQuat = carModel.quaternion.clone().invert();
 
         for (let i = 0; i < 4; i++) {
@@ -1835,31 +1833,20 @@ setInterval(() => {
           );
 
           // ─── 사용자 요청: 앞뒤 굴러감 및 좌우 조향 반전 처리 ─────────────
-          // 로컬 쿼터니언을 오일러 각도로 변환하여 각 축의 회전값을 반전시킨다.
           const euler = new THREE.Euler().setFromQuaternion(localQuat, 'YXZ');
-          
-          // 1. 앞뒤 구름 반전 (X축 회전)
-          euler.x = -euler.x; 
-          
-          // 2. 좌우 조향 반전 (Y축 회전)
-          euler.y = -euler.y;
-          
-          // 다시 쿼터니언으로 변환
+          euler.x = -euler.x; // 앞뒤 반전
+          euler.y = -euler.y; // 좌우 반전
           const invertedLocalQuat = new THREE.Quaternion().setFromEuler(euler);
 
-          // 모델별 추가 보정 회전 (GLTF 모델이 다른 축 기준을 가지므로)
+          // 모델별 추가 보정 회전
           let correctionQuat = new THREE.Quaternion();
-          if (currentCarModel === 'SportsCar') {
-            // Ferrari: 모델 기본 회전 -90도(X축) 유지
+          if (currentCarModel.includes('SportsCar')) {
             correctionQuat.setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0));
-          } else if (currentCarModel === 'SUV') {
-            // Range Rover: 모델 기본 회전 90도(Y축) 유지
+          } else if (currentCarModel.includes('SUV')) {
             correctionQuat.setFromEuler(new THREE.Euler(0, Math.PI / 2, 0));
-          } else if (currentCarModel === 'McLarenP1') {
-            // McLaren: 보정 없음
+          } else if (currentCarModel.includes('McLarenP1')) {
             correctionQuat.identity();
           } else {
-            // GrandeurIG: 바퀴 그룹 자체 좌표계 사용
             correctionQuat.identity();
           }
 
