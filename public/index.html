@@ -1320,7 +1320,7 @@ btnToggleCam.addEventListener('click', () => {
     // 기어 상태와 UI 업데이트 함수
     const maxEngineForce = 6000;
     const maxBrakeForce = 400;
-    const maxSteerVal = Math.PI / 16;
+    const maxSteerVal = Math.PI / 6;
     let engineForce = 0;
     let steeringValue = 0;
 
@@ -1794,7 +1794,33 @@ setInterval(() => {
 
 // ------------------------------------------------------------
 
-    
+    // ─── 휠 노드의 "스폰 시점 기준 회전값"을 잡아두는 함수 ───────
+    // (모델이 원래 가지고 있던 baseQuaternion은 그대로 보존하고,
+    //  여기서부터의 변화량(delta)만 매 프레임 더해서 적용한다)
+    function initWheelBaseRotations() {
+      if (!carModel || !carWheelNodes.some(n => n !== null)) return;
+
+      for (let i = 0; i < vehicle.wheelInfos.length; i++) {
+        vehicle.updateWheelTransform(i);
+      }
+
+      const carInvQuat = carModel.quaternion.clone().invert();
+
+      carWheelNodes.forEach((node, i) => {
+        if (!node) return;
+
+        if (!node.userData.baseQuaternion) {
+          node.userData.baseQuaternion = node.quaternion.clone();
+        }
+
+        const wt = vehicle.wheelInfos[i].worldTransform;
+        const worldQuat = new THREE.Quaternion(
+          wt.quaternion.x, wt.quaternion.y, wt.quaternion.z, wt.quaternion.w
+        );
+        node.userData.initLocalQuat = carInvQuat.clone().multiply(worldQuat);
+      });
+    }
+
     function animate() {
        requestAnimationFrame(animate);
 
@@ -1820,58 +1846,27 @@ setInterval(() => {
 
       // ─── GLTF/GLB 모델 바퀴 노드 회전 업데이트 ───────────────────────────
       // carWheelNodes[i]는 모델 내부 바퀴 부모 노드를 가리킨다.
-      // CANNON의 worldTransform.quaternion에서 차체 회전을 제거하여
-      // 로컬 공간의 바퀴 회전을 추출한 뒤 모델 노드에 적용한다.
+      // 모델이 원래 가지고 있던 baseQuaternion 위에,
+      // 스폰 시점 대비 CANNON 휠의 회전 변화량(delta)만 곱해서 적용한다.
+      // (모델별 Euler 보정 분기 없이 모든 차종에 공통으로 동작)
       if (carModel && carWheelNodes.some(n => n !== null)) {
         const carInvQuat = carModel.quaternion.clone().invert();
 
         for (let i = 0; i < 4; i++) {
           const node = carWheelNodes[i];
-          if (!node) continue;
+          if (!node || !node.userData.initLocalQuat) continue;
 
           vehicle.updateWheelTransform(i);
           const wt = vehicle.wheelInfos[i].worldTransform;
-
-          // 세계 쿼터니언에서 차체 회전 제거 -> 로컬 회전
-          const localQuat = carInvQuat.clone().multiply(
+          const currentLocalQuat = carInvQuat.clone().multiply(
             new THREE.Quaternion(wt.quaternion.x, wt.quaternion.y, wt.quaternion.z, wt.quaternion.w)
           );
 
-          // ─── 모델별 맞춤형 회전 적용 ─────────────────────────────
-          if (currentCarModel.includes('SportsCar')) {
-            // Ferrari: 이미 잘 작동하는 로직 유지
-            const correctionQuat = new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0));
-            const finalQuat = localQuat.clone().multiply(correctionQuat);
-            const euler = new THREE.Euler().setFromQuaternion(finalQuat, 'YXZ');
-            euler.x = -euler.x; 
-            euler.y = -euler.y;
-            node.quaternion.setFromEuler(euler);
-          } 
-          else if (currentCarModel.includes('SUV')) {
-            // Range Rover: 모델 축 보정
-            const correctionQuat = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, Math.PI / 2, 0));
-            const finalQuat = localQuat.clone().multiply(correctionQuat);
-            const euler = new THREE.Euler().setFromQuaternion(finalQuat, 'YXZ');
-            euler.x = -euler.x; 
-            euler.y = -euler.y;
-            node.quaternion.setFromEuler(euler);
-          } 
-          else if (currentCarModel.includes('McLarenP1')) {
-            // McLaren
-            const euler = new THREE.Euler().setFromQuaternion(localQuat, 'YXZ');
-            euler.x = -euler.x;
-            euler.y = -euler.y;
-            node.quaternion.setFromEuler(euler);
-          } 
-          else {
-            // 기본 박스카
-            const euler = new THREE.Euler().setFromQuaternion(localQuat, 'YXZ');
-            euler.x = -euler.x;
-            euler.y = -euler.y;
-            node.quaternion.setFromEuler(euler);
-          }
-          
-          // 강제 행렬 업데이트 (일부 모델에서 필요)
+          // 스폰 시점 대비 "변화량(delta)"만 추출
+          const deltaQuat = node.userData.initLocalQuat.clone().invert().multiply(currentLocalQuat);
+
+          // 모델이 원래 갖고 있던 베이스 회전 위에 delta를 얹는다
+          node.quaternion.copy(node.userData.baseQuaternion).multiply(deltaQuat);
           node.updateMatrix();
         }
       }
@@ -1963,6 +1958,7 @@ if (cameraMode === 'third') {
 
   scene.add(carModel);
   wheelHolders.forEach(h => scene.add(h));
+  initWheelBaseRotations();
   startTimer();
   updateGearDisplay();
   animate();
