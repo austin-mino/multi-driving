@@ -1834,6 +1834,19 @@ setInterval(() => {
             new THREE.Quaternion(wt.quaternion.x, wt.quaternion.y, wt.quaternion.z, wt.quaternion.w)
           );
 
+          // ─── 사용자 요청: 앞뒤 굴러감 및 좌우 조향 반전 처리 ─────────────
+          // 로컬 쿼터니언을 오일러 각도로 변환하여 각 축의 회전값을 반전시킨다.
+          const euler = new THREE.Euler().setFromQuaternion(localQuat, 'YXZ');
+          
+          // 1. 앞뒤 구름 반전 (X축 회전)
+          euler.x = -euler.x; 
+          
+          // 2. 좌우 조향 반전 (Y축 회전)
+          euler.y = -euler.y;
+          
+          // 다시 쿼터니언으로 변환
+          const invertedLocalQuat = new THREE.Quaternion().setFromEuler(euler);
+
           // 모델별 추가 보정 회전 (GLTF 모델이 다른 축 기준을 가지므로)
           let correctionQuat = new THREE.Quaternion();
           if (currentCarModel === 'SportsCar') {
@@ -1850,7 +1863,7 @@ setInterval(() => {
             correctionQuat.identity();
           }
 
-          node.quaternion.copy(localQuat.multiply(correctionQuat));
+          node.quaternion.copy(invertedLocalQuat.multiply(correctionQuat));
         }
       }
 
