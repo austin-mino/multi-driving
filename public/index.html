@@ -1832,29 +1832,37 @@ setInterval(() => {
             new THREE.Quaternion(wt.quaternion.x, wt.quaternion.y, wt.quaternion.z, wt.quaternion.w)
           );
 
-          // 모델별 추가 보정 회전
-          let correctionQuat = new THREE.Quaternion();
+          // ─── 모델별 맞춤형 회전 적용 ─────────────────────────────
           if (currentCarModel.includes('SportsCar')) {
-            correctionQuat.setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0));
-          } else if (currentCarModel.includes('SUV')) {
-            correctionQuat.setFromEuler(new THREE.Euler(0, Math.PI / 2, 0));
-          } else if (currentCarModel.includes('McLarenP1')) {
-            // McLaren은 조향 축 보정이 필요할 수 있음
-            correctionQuat.identity();
-          } else {
-            correctionQuat.identity();
+            // Ferrari: 이미 잘 작동하는 로직 유지
+            const correctionQuat = new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0));
+            const finalQuat = localQuat.clone().multiply(correctionQuat);
+            const euler = new THREE.Euler().setFromQuaternion(finalQuat, 'YXZ');
+            euler.x = -euler.x; 
+            euler.y = -euler.y;
+            node.quaternion.setFromEuler(euler);
+          } 
+          else if (currentCarModel.includes('SUV')) {
+            // Range Rover: 모델이 Y축 기준 90도 회전되어 있으므로 축 보정 방식 변경
+            const euler = new THREE.Euler().setFromQuaternion(localQuat, 'YXZ');
+            // SUV 특유의 축 반전 (테스트 필요)
+            node.rotation.x = -euler.z; // 구름 (SUV 모델 축 기준)
+            node.rotation.y = -euler.y; // 조향
+          } 
+          else if (currentCarModel.includes('McLarenP1')) {
+            // McLaren: 계층 구조가 깊으므로 worldQuaternion을 직접 계산 후 역변환
+            const euler = new THREE.Euler().setFromQuaternion(localQuat, 'YXZ');
+            euler.x = -euler.x;
+            euler.y = -euler.y;
+            node.quaternion.setFromEuler(euler);
+          } 
+          else {
+            // 기본 박스카
+            const euler = new THREE.Euler().setFromQuaternion(localQuat, 'YXZ');
+            euler.x = -euler.x;
+            euler.y = -euler.y;
+            node.quaternion.setFromEuler(euler);
           }
-
-          // ─── 사용자 요청: 앞뒤 굴러감 및 좌우 조향 반전 처리 ─────────────
-          const finalQuat = localQuat.clone().multiply(correctionQuat);
-          const euler = new THREE.Euler().setFromQuaternion(finalQuat, 'YXZ');
-          
-          // 페라리(SportsCar)는 이미 잘 된다고 하셨으므로, 
-          // 다른 모델들에서 문제가 있다면 축 기준이 다를 수 있습니다.
-          euler.x = -euler.x; // 앞뒤 반전
-          euler.y = -euler.y; // 좌우 반전
-          
-          node.quaternion.setFromEuler(euler);
         }
       }
 
