@@ -1843,9 +1843,10 @@ setInterval(() => {
             const correctionQuat = new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0));
             const finalQuat = localQuat.clone().multiply(correctionQuat);
             const euler = new THREE.Euler().setFromQuaternion(finalQuat, 'YXZ');
+            const steeringSensitivity = 1.6; 
+            euler.y = euler.y * steeringSensitivity;
             euler.x = -euler.x; 
             euler.y = -euler.y;
-            euler.y += 1.6;
             node.quaternion.setFromEuler(euler);
           } 
           else if (currentCarModel.includes('SUV')) {
