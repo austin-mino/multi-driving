@@ -1009,18 +1009,22 @@ function createSUVCar(color = '#ffffff') {
         wrapper.scale.set(2.5, 2.5, 2.5);
 
         // ─── Range Rover 바퀴 노드 추출 ───────────────────────────
-        // 모델 내 바퀴 노드: 'FL Wheel', 'FR Wheel', 'BL Wheel', 'BR Wheel'
         carWheelNodes = [null, null, null, null];
         innerCar.traverse((child) => {
           const n = child.name.toUpperCase();
-          if (n.includes('FL WHEEL')) carWheelNodes[0] = child;
-          else if (n.includes('FR WHEEL')) carWheelNodes[1] = child;
-          else if (n.includes('BL WHEEL')) carWheelNodes[2] = child;
-          else if (n.includes('BR WHEEL')) carWheelNodes[3] = child;
+          // 메시가 아닌 그룹 노드를 먼저 찾고, 없으면 메시를 찾는다.
+          if (n.includes('FL WHEEL') || n.includes('WHEEL_FL')) carWheelNodes[0] = child;
+          else if (n.includes('FR WHEEL') || n.includes('WHEEL_FR')) carWheelNodes[1] = child;
+          else if (n.includes('BL WHEEL') || n.includes('WHEEL_RL')) carWheelNodes[2] = child;
+          else if (n.includes('BR WHEEL') || n.includes('WHEEL_RR')) carWheelNodes[3] = child;
         });
-        console.log('Range Rover 바퀴 노드 추출 결과:', carWheelNodes.map(n => n ? n.name : 'null'));
+        console.log('Range Rover 추출 노드:', carWheelNodes.map(n => n ? `${n.name} (${n.type})` : 'null'));
         carWheelNodes.forEach((node) => {
-          if (node) node.userData.baseQuaternion = node.quaternion.clone();
+          if (node) {
+              node.userData.baseQuaternion = node.quaternion.clone();
+              // 애니메이션 간섭 방지
+              node.matrixAutoUpdate = true;
+          }
         });
 
         carVisualOffsetY = -0.8;
@@ -1121,8 +1125,6 @@ car.traverse((child) => {
                 carGroup.rotation.y = 0;
 
                 // ─── McLaren P1 바퀴 노드 추출 ───────────────────────────
-                // 모델 내 바퀴 부모 노드: 'WHEELS_11.001'(FL), 'WHEELS_11.003'(FR)
-                //                          'WHEELS_11.004'(RL), 'WHEELS_11.005'(RR)
                 carWheelNodes = [null, null, null, null];
                 car.traverse((child) => {
                   const n = child.name.toUpperCase();
@@ -1131,9 +1133,12 @@ car.traverse((child) => {
                   else if (n.includes('WHEELS_11.004')) carWheelNodes[2] = child; // RL
                   else if (n.includes('WHEELS_11.005')) carWheelNodes[3] = child; // RR
                 });
-                console.log('McLaren 바퀴 노드 추출 결과:', carWheelNodes.map(n => n ? n.name : 'null'));
+                console.log('McLaren 추출 노드:', carWheelNodes.map(n => n ? `${n.name} (${n.type})` : 'null'));
                 carWheelNodes.forEach((node) => {
-                  if (node) node.userData.baseQuaternion = node.quaternion.clone();
+                  if (node) {
+                      node.userData.baseQuaternion = node.quaternion.clone();
+                      node.matrixAutoUpdate = true;
+                  }
                 });
 
                 carVisualOffsetY = 1.1;
@@ -1843,14 +1848,16 @@ setInterval(() => {
             node.quaternion.setFromEuler(euler);
           } 
           else if (currentCarModel.includes('SUV')) {
-            // Range Rover: 모델이 Y축 기준 90도 회전되어 있으므로 축 보정 방식 변경
-            const euler = new THREE.Euler().setFromQuaternion(localQuat, 'YXZ');
-            // SUV 특유의 축 반전 (테스트 필요)
-            node.rotation.x = -euler.z; // 구름 (SUV 모델 축 기준)
-            node.rotation.y = -euler.y; // 조향
+            // Range Rover: 모델 축 보정
+            const correctionQuat = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, Math.PI / 2, 0));
+            const finalQuat = localQuat.clone().multiply(correctionQuat);
+            const euler = new THREE.Euler().setFromQuaternion(finalQuat, 'YXZ');
+            euler.x = -euler.x; 
+            euler.y = -euler.y;
+            node.quaternion.setFromEuler(euler);
           } 
           else if (currentCarModel.includes('McLarenP1')) {
-            // McLaren: 계층 구조가 깊으므로 worldQuaternion을 직접 계산 후 역변환
+            // McLaren
             const euler = new THREE.Euler().setFromQuaternion(localQuat, 'YXZ');
             euler.x = -euler.x;
             euler.y = -euler.y;
@@ -1863,6 +1870,9 @@ setInterval(() => {
             euler.y = -euler.y;
             node.quaternion.setFromEuler(euler);
           }
+          
+          // 강제 행렬 업데이트 (일부 모델에서 필요)
+          node.updateMatrix();
         }
       }
 
