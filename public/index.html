@@ -1012,11 +1012,11 @@ function createSUVCar(color = '#ffffff') {
         // 모델 내 바퀴 노드: 'FL Wheel', 'FR Wheel', 'BL Wheel', 'BR Wheel'
         carWheelNodes = [null, null, null, null];
         innerCar.traverse((child) => {
-          const n = child.name;
-          if (n.includes('FL Wheel')) carWheelNodes[0] = child;
-          else if (n.includes('FR Wheel')) carWheelNodes[1] = child;
-          else if (n.includes('BL Wheel')) carWheelNodes[2] = child;
-          else if (n.includes('BR Wheel')) carWheelNodes[3] = child;
+          const n = child.name.toUpperCase();
+          if (n.includes('FL WHEEL')) carWheelNodes[0] = child;
+          else if (n.includes('FR WHEEL')) carWheelNodes[1] = child;
+          else if (n.includes('BL WHEEL')) carWheelNodes[2] = child;
+          else if (n.includes('BR WHEEL')) carWheelNodes[3] = child;
         });
         console.log('Range Rover 바퀴 노드 추출 결과:', carWheelNodes.map(n => n ? n.name : 'null'));
         carWheelNodes.forEach((node) => {
@@ -1125,7 +1125,7 @@ car.traverse((child) => {
                 //                          'WHEELS_11.004'(RL), 'WHEELS_11.005'(RR)
                 carWheelNodes = [null, null, null, null];
                 car.traverse((child) => {
-                  const n = child.name;
+                  const n = child.name.toUpperCase();
                   if (n.includes('WHEELS_11.001')) carWheelNodes[0] = child; // FL
                   else if (n.includes('WHEELS_11.003')) carWheelNodes[1] = child; // FR
                   else if (n.includes('WHEELS_11.004')) carWheelNodes[2] = child; // RL
@@ -1832,12 +1832,6 @@ setInterval(() => {
             new THREE.Quaternion(wt.quaternion.x, wt.quaternion.y, wt.quaternion.z, wt.quaternion.w)
           );
 
-          // ─── 사용자 요청: 앞뒤 굴러감 및 좌우 조향 반전 처리 ─────────────
-          const euler = new THREE.Euler().setFromQuaternion(localQuat, 'YXZ');
-          euler.x = -euler.x; // 앞뒤 반전
-          euler.y = -euler.y; // 좌우 반전
-          const invertedLocalQuat = new THREE.Quaternion().setFromEuler(euler);
-
           // 모델별 추가 보정 회전
           let correctionQuat = new THREE.Quaternion();
           if (currentCarModel.includes('SportsCar')) {
@@ -1845,12 +1839,22 @@ setInterval(() => {
           } else if (currentCarModel.includes('SUV')) {
             correctionQuat.setFromEuler(new THREE.Euler(0, Math.PI / 2, 0));
           } else if (currentCarModel.includes('McLarenP1')) {
+            // McLaren은 조향 축 보정이 필요할 수 있음
             correctionQuat.identity();
           } else {
             correctionQuat.identity();
           }
 
-          node.quaternion.copy(invertedLocalQuat.multiply(correctionQuat));
+          // ─── 사용자 요청: 앞뒤 굴러감 및 좌우 조향 반전 처리 ─────────────
+          const finalQuat = localQuat.clone().multiply(correctionQuat);
+          const euler = new THREE.Euler().setFromQuaternion(finalQuat, 'YXZ');
+          
+          // 페라리(SportsCar)는 이미 잘 된다고 하셨으므로, 
+          // 다른 모델들에서 문제가 있다면 축 기준이 다를 수 있습니다.
+          euler.x = -euler.x; // 앞뒤 반전
+          euler.y = -euler.y; // 좌우 반전
+          
+          node.quaternion.setFromEuler(euler);
         }
       }
 
