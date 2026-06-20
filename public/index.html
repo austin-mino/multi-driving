@@ -1818,10 +1818,7 @@ setInterval(() => {
         wheelHolders[i].quaternion.copy(t.quaternion);
       }
 
-      // ─── GLTF/GLB 모델 바퀴 노드 회전 업데이트 ───────────────────────────
-      // carWheelNodes[i]는 모델 내부 바퀴 부모 노드를 가리킨다.
-      // CANNON의 worldTransform.quaternion에서 차체 회전을 제거하여
-      // 로컬 공간의 바퀴 회전을 추출한 뒤 모델 노드에 적용한다.
+      // ─── GLTF/GLB 모델 바퀴 회전 업데이트
       if (carModel && carWheelNodes.some(n => n !== null)) {
         const carInvQuat = carModel.quaternion.clone().invert();
 
@@ -1843,10 +1840,8 @@ setInterval(() => {
             const correctionQuat = new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0));
             const finalQuat = localQuat.clone().multiply(correctionQuat);
             const euler = new THREE.Euler().setFromQuaternion(finalQuat, 'YXZ');
-            const steeringSensitivity = 1.6; 
-            euler.y = euler.y * steeringSensitivity;
             euler.x = -euler.x; 
-            euler.y = -euler.y;
+            euler.y = -euler.y * 1.6;
             node.quaternion.setFromEuler(euler);
           } 
           else if (currentCarModel.includes('SUV')) {
