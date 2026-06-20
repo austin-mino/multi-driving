@@ -1845,6 +1845,7 @@ setInterval(() => {
             const euler = new THREE.Euler().setFromQuaternion(finalQuat, 'YXZ');
             euler.x = -euler.x; 
             euler.y = -euler.y;
+            euler.y += 1.6;
             node.quaternion.setFromEuler(euler);
           } 
           else if (currentCarModel.includes('SUV')) {
