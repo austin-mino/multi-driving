@@ -1840,6 +1840,12 @@ setInterval(() => {
             new THREE.Quaternion(wt.quaternion.x, wt.quaternion.y, wt.quaternion.z, wt.quaternion.w)
           );
 
+          if (currentCarModel.includes('SUV')) {
+          const localEuler = new THREE.Euler().setFromQuaternion(localQuat, 'YXZ');
+          localEuler.y = -localEuler.y; // 차체 기준 Y축(조향축) 회전만 쏙 골라서 반전시킵니다.
+          localQuat.setFromEuler(localEuler);
+          }
+
           // ─── 모델별 맞춤형 회전 적용 ─────────────────────────────
           let correctionQuat = new THREE.Quaternion();
           if (currentCarModel.includes('SportsCar')) {
