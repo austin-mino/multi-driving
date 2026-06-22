@@ -1873,10 +1873,6 @@ setInterval(() => {
           // 6. 새로운 조향값과 아까 추출해 둔 '순수 구름 회전(Roll)'을 결합하여 localQuat를 최종 업데이트
           localQuat.copy(visualSteeringQuat.multiply(rollingQuat));
           
-          // ─────────────────────────────────────────────────────────────────
-
-          // ─── 모델별 맞춤형 회전 적용 (이하 기존 코드 그대로 유지) ─────────────────────────────
-          let correctionQuat = new THREE.Quaternion();
           // ─── 모델별 맞춤형 회전 적용 ─────────────────────────────
           let correctionQuat = new THREE.Quaternion();
           if (currentCarModel.includes('SportsCar')) {
