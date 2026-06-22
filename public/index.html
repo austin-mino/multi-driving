@@ -1021,6 +1021,9 @@ function createSUVCar(color = '#ffffff') {
         console.log('Range Rover 바퀴 노드:', carWheelNodes.map(n => n ? n.name : 'null'));
         carWheelNodes.forEach((node) => {
           if (node) {
+              // SUV 바퀴 축 보정
+              node.rotateZ(Math.PI / 2);
+              // 데이터
               node.userData.baseQuaternion = node.quaternion.clone();
               // 애니메이션 간섭 방지
               node.matrixAutoUpdate = true;
@@ -1889,9 +1892,6 @@ for (const id in otherPlayers) {
             if (wheelMesh && wheelData) {
                 wheelMesh.position.set(wheelData.position.x, wheelData.position.y, wheelData.position.z);
                 wheelMesh.quaternion.set(wheelData.quaternion.x, wheelData.quaternion.y, wheelData.quaternion.z, wheelData.quaternion.w);
-             if (currentCarModel.includes('SUV')) {
-    wheelMesh.rotateZ(-Math.PI / 2);
-}
             }
         }
     }
