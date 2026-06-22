@@ -1856,7 +1856,7 @@ setInterval(() => {
 if (currentCarModel.includes('SUV')) {
     const axisFix = new THREE.Quaternion();
     axisFix.setFromEuler(
-        new THREE.Euler(0, Math.PI / 2,0)
+        new THREE.Euler(Math.PI / 2, 0, 0)
     );
 
     finalQuat.multiply(axisFix);
@@ -1869,7 +1869,13 @@ const euler = new THREE.Euler().setFromQuaternion(finalQuat, 'YXZ');
           euler.x = -euler.x; 
           euler.y = -euler.y;
           
-          node.quaternion.setFromEuler(euler);
+          if (currentCarModel.includes('SUV')) {
+    node.quaternion.copy(
+        finalQuat.clone().multiply(node.userData.baseQuaternion)
+    );
+} else {
+    node.quaternion.setFromEuler(euler);
+}
           
           // 강제 행렬 업데이트 (일부 모델에서 필요)
           node.updateMatrix();
