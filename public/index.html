@@ -1529,13 +1529,38 @@ if (input.handbrake) {
     // 카메라 차량 뒤쪽 위치로 고정
    function updateCamera() {
   const carPos = interpolatedCarPosition.clone();
+  
+  // 1. 기본 오프셋 설정 (차량 뒤쪽 위)
+  const offset = new THREE.Vector3(0, 6, 14);
+  
+  // 2. 조향에 따른 카메라 쏠림 효과 (원심력 표현)
+  // steeringValue가 왼쪽(-)이면 카메라는 오른쪽(+)으로 살짝 이동
+  const steeringLean = -steeringValue * 5; 
+  offset.x += steeringLean;
+  
+  // 3. 속도에 따른 거리 조절 (속도가 빠르면 카메라가 더 멀어짐)
+  const speed = getSpeedKmH();
+  const speedFactor = Math.min(speed / 200, 1);
+  offset.z += speedFactor * 4;
+  offset.y += speedFactor * 1.5;
 
-  // 회전만 적용 (스케일 제외)
-  const offset = new THREE.Vector3(0, 7, 15);
   offset.applyQuaternion(interpolatedCarQuaternion);
+  const targetPos = carPos.clone().add(offset);
 
-  camera.position.copy(carPos).add(offset);
-  camera.lookAt(carPos);
+  // 4. 부드러운 위치 보간 (너무 딱딱하지 않게)
+  camera.position.lerp(targetPos, 0.15);
+  
+  // 5. 시선 보간 (차량의 약간 앞쪽을 바라보게 하여 더 역동적으로)
+  const lookAtOffset = new THREE.Vector3(0, 1, -5);
+  lookAtOffset.applyQuaternion(interpolatedCarQuaternion);
+  const lookAtTarget = carPos.clone().add(lookAtOffset);
+  
+  // 현재 카메라가 보고 있는 방향에서 목표 방향으로 부드럽게 회전
+  const currentLookAt = new THREE.Vector3();
+  camera.getWorldDirection(currentLookAt);
+  const targetLookAt = lookAtTarget.clone().sub(camera.position).normalize();
+  
+  camera.lookAt(lookAtTarget);
 }
 
    function updateFirstPersonCamera() {
@@ -1551,11 +1576,23 @@ if (input.handbrake) {
     offset = new THREE.Vector3(-0.85, 2.5, -0.4); // 그랜저 기본
   }
 
+  // 1인칭 흔들림 효과 (G-Force 표현)
+  const speed = getSpeedKmH();
+  const speedFactor = speed / 100;
+  const shake = Math.sin(Date.now() * 0.01) * 0.02 * speedFactor;
+  offset.y += shake;
+  offset.x += -steeringValue * 0.5; // 조향 시 몸이 쏠리는 효과
+
   offset.applyQuaternion(interpolatedCarQuaternion);
   camera.position.copy(interpolatedCarPosition).add(offset);
 
   const forward = new THREE.Vector3(0, 0, -1);
-  forward.applyQuaternion(interpolatedCarQuaternion);
+  // 시선도 조향 방향으로 살짝 미리 보게 함
+  const lookRotation = interpolatedCarQuaternion.clone();
+  const steeringQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), -steeringValue * 0.3);
+  lookRotation.multiply(steeringQuat);
+  
+  forward.applyQuaternion(lookRotation);
 
   const lookAt = camera.position.clone().add(forward.multiplyScalar(20));
   camera.lookAt(lookAt);
