@@ -1863,8 +1863,8 @@ setInterval(() => {
                 }
           
           if (currentCarModel.includes('SUV')) {
-   node.quaternion.copy(
-    node.userData.baseQuaternion.clone().multiply(finalQuat)
+  node.quaternion.copy(
+    finalQuat.clone().multiply(node.userData.baseQuaternion)
 );
 } else {
     node.quaternion.setFromEuler(euler);
