@@ -1857,7 +1857,9 @@ setInterval(() => {
           
           // 공통 반전 처리
           euler.x = -euler.x; 
+          if (!currentCarModel.includes('SUV')) {
           euler.y = -euler.y;
+          }
           
           if (currentCarModel.includes('SUV')) {
    node.quaternion.copy(
