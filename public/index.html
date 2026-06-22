@@ -1567,35 +1567,46 @@ if (input.handbrake) {
   // 차종별 운전석 위치
   let offset;
   if (currentCarModel === 'SUV') {
-    offset = new THREE.Vector3(0, 3.5, 4); // Range Rover 운전석
+    offset = new THREE.Vector3(0, 3.5, 4); 
   } else if (currentCarModel === 'SportsCar') {
-    offset = new THREE.Vector3(-0.85, 2.5, -0.25); // Ferrari
+    offset = new THREE.Vector3(-0.85, 2.5, -0.25); 
   } else if (currentCarModel === 'McLarenP1') {
-    offset = new THREE.Vector3(-0.85, 2.5, -0.25); // mclaren
+    offset = new THREE.Vector3(-0.85, 2.5, -0.25); 
   } else {
-    offset = new THREE.Vector3(-0.85, 2.5, -0.4); // 그랜저 기본
+    offset = new THREE.Vector3(-0.85, 2.5, -0.4); 
   }
 
-  // 1인칭 흔들림 효과 (G-Force 표현)
+  // 1. 차량의 회전값에서 Y축(좌우 회전)만 추출하여 카메라 위치 계산
+  // 이렇게 하면 차량이 앞뒤로 꿀렁거려도(Pitch) 카메라는 수평을 유지합니다.
+  const euler = new THREE.Euler().setFromQuaternion(interpolatedCarQuaternion, 'YXZ');
+  const yRotationOnly = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, euler.y, 0));
+
+  // 2. 조향 시 몸이 살짝 쏠리는 효과 (X축 이동만 미세하게 적용)
+  offset.x += -steeringValue * 0.3; 
+
+  // 3. 미세한 고속 진동 (꿀렁임이 아닌 엔진 진동 느낌)
   const speed = getSpeedKmH();
-  const speedFactor = speed / 100;
-  const shake = Math.sin(Date.now() * 0.01) * 0.02 * speedFactor;
-  offset.y += shake;
-  offset.x += -steeringValue * 0.5; // 조향 시 몸이 쏠리는 효과
+  const engineVibration = Math.sin(Date.now() * 0.05) * (speed / 1000) * 0.1;
+  offset.y += engineVibration;
 
-  offset.applyQuaternion(interpolatedCarQuaternion);
-  camera.position.copy(interpolatedCarPosition).add(offset);
+  offset.applyQuaternion(yRotationOnly);
+  const targetCameraPos = interpolatedCarPosition.clone().add(offset);
+  
+  // 카메라 위치를 부드럽게 보간하여 급격한 상하 이동 억제
+  camera.position.lerp(targetCameraPos, 0.2);
 
+  // 4. 시선 처리: 차량의 회전(Y축) + 조향 보정
   const forward = new THREE.Vector3(0, 0, -1);
-  // 시선도 조향 방향으로 살짝 미리 보게 함
-  const lookRotation = interpolatedCarQuaternion.clone();
-  const steeringQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), -steeringValue * 0.3);
-  lookRotation.multiply(steeringQuat);
+  const lookRotation = yRotationOnly.clone();
+  
+  // 조향 시 코너 안쪽을 바라보는 효과
+  const steeringLook = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), -steeringValue * 0.4);
+  lookRotation.multiply(steeringLook);
   
   forward.applyQuaternion(lookRotation);
 
-  const lookAt = camera.position.clone().add(forward.multiplyScalar(20));
-  camera.lookAt(lookAt);
+  const lookAtTarget = camera.position.clone().add(forward.multiplyScalar(20));
+  camera.lookAt(lookAtTarget);
 }
 
     // 타이머 관리
