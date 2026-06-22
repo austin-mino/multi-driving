@@ -1967,7 +1967,7 @@ setInterval(() => {
           } else{euler.y = -euler.y;
                 }
           
-          if (currentCarModel.includes('SUV')) {
+if (currentCarModel.includes('SUV') || currentCarModel.includes('McLarenP1')) {  
   node.quaternion.copy(
     node.userData.baseQuaternion.clone().multiply(finalQuat));
 } else {
