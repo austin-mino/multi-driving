@@ -1022,7 +1022,7 @@ function createSUVCar(color = '#ffffff') {
         carWheelNodes.forEach((node) => {
           if (node) {
               // SUV 바퀴 축 보정
-              node.rotateZ(Math.PI / 2);
+              node.rotateX(Math.PI / 2);
               // 데이터
               node.userData.baseQuaternion = node.quaternion.clone();
               // 애니메이션 간섭 방지
