@@ -1890,7 +1890,7 @@ for (const id in otherPlayers) {
                 wheelMesh.position.set(wheelData.position.x, wheelData.position.y, wheelData.position.z);
                 wheelMesh.quaternion.set(wheelData.quaternion.x, wheelData.quaternion.y, wheelData.quaternion.z, wheelData.quaternion.w);
              if (currentCarModel.includes('SUV')) {
-    wheelMesh.rotateX(Math.PI / 2);
+    wheelMesh.rotateZ(-Math.PI / 2);
 }
             }
         }
