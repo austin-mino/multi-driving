@@ -1532,7 +1532,7 @@ if (input.handbrake) {
   offset.applyQuaternion(carModel.quaternion);
 
   const targetPos = carPos.clone().add(offset);
-  camera.position.lerp(targetPos, 0.1);
+  camera.position.lerp(targetPos, 0.3);
   camera.lookAt(carPos);
 }
 
