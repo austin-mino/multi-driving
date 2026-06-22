@@ -1843,7 +1843,7 @@ setInterval(() => {
             correctionQuat.setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0));
           } else if (currentCarModel.includes('SUV')) {
             // Range Rover는 모델 자체가 90도 회전되어 있을 수 있음
-            correctionQuat.setFromEuler(new THREE.Euler(Math.PI / 2, 0));
+            correctionQuat.setFromEuler(new THREE.Euler(0, -Math.PI / 2, 0));
           } else if (currentCarModel.includes('McLarenP1')) {
             correctionQuat.identity();
           }
