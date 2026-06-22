@@ -1863,7 +1863,7 @@ setInterval(() => {
    node.quaternion.copy(
     node.userData.baseQuaternion.clone().multiply(finalQuat)
 );
-            node.rotateX(Math.PI / 2);
+            node.rotateZ(Math.PI / 2);
 } else {
     node.quaternion.setFromEuler(euler);
 }
