@@ -1541,7 +1541,7 @@ if (input.handbrake) {
   // 3. 속도에 따른 거리 조절 (속도가 빠르면 카메라가 더 멀어짐)
   const speed = getSpeedKmH();
   const speedFactor = Math.min(speed / 200, 1);
-  offset.z += speedFactor * 4;
+  offset.z += speedFactor * 1.618;
   offset.y += speedFactor * 1.5;
 
   offset.applyQuaternion(interpolatedCarQuaternion);
@@ -1586,7 +1586,7 @@ if (input.handbrake) {
 
   // 3. 미세한 고속 진동 (꿀렁임이 아닌 엔진 진동 느낌)
   const speed = getSpeedKmH();
-  const engineVibration = Math.sin(Date.now() * 0.05) * (speed / 1000) * 0.1;
+  const engineVibration = Math.sin(Date.now() * 0.05) * (speed / 1000) * 0.01618;
   offset.y += engineVibration;
 
   offset.applyQuaternion(yRotationOnly);
