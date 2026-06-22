@@ -1808,11 +1808,11 @@ setInterval(() => {
 
       // 물리 바디의 이전 위치와 회전 저장 (보간을 위해)
       if (!chassisBody.previousPosition) {
-        chassisBody.previousPosition = new THREE.Vector3().copy(chassisBody.position);
-        chassisBody.previousQuaternion = new THREE.Quaternion().copy(chassisBody.quaternion);
+        chassisBody.previousPosition = new THREE.Vector3(chassisBody.position.x, chassisBody.position.y, chassisBody.position.z);
+        chassisBody.previousQuaternion = new THREE.Quaternion(chassisBody.quaternion.x, chassisBody.quaternion.y, chassisBody.quaternion.z, chassisBody.quaternion.w);
       } else {
-        chassisBody.previousPosition.copy(chassisBody.position);
-        chassisBody.previousQuaternion.copy(chassisBody.quaternion);
+        chassisBody.previousPosition.set(chassisBody.position.x, chassisBody.position.y, chassisBody.position.z);
+        chassisBody.previousQuaternion.set(chassisBody.quaternion.x, chassisBody.quaternion.y, chassisBody.quaternion.z, chassisBody.quaternion.w);
       }
 
   // 물리 시뮬레이션 스텝
@@ -1835,14 +1835,14 @@ setInterval(() => {
       const alpha = accumulator / fixedTimeStep;
 
   // 자동차 모델 위치/회전을 물리 바디에 맞게 업데이트
-  // 물리 바디의 현재 위치와 이전 위치를 사용하여 보간
-  const chassisBodyPosition = chassisBody.position;
-  const chassisBodyQuaternion = chassisBody.quaternion;
+  // 물리 바디의 위치를 Three.js Vector3로 변환
+  const currentPos = new THREE.Vector3(chassisBody.position.x, chassisBody.position.y, chassisBody.position.z);
+  const currentQuat = new THREE.Quaternion(chassisBody.quaternion.x, chassisBody.quaternion.y, chassisBody.quaternion.z, chassisBody.quaternion.w);
 
-  // 이전 프레임의 위치와 현재 프레임의 위치를 보간하여 시각적 끊김 감소
-  carModel.position.lerpVectors(chassisBody.previousPosition, chassisBodyPosition, alpha);
+  // 시각적 끊김 감소를 위한 보간 적용
+  carModel.position.lerpVectors(chassisBody.previousPosition, currentPos, alpha);
   carModel.position.y += carVisualOffsetY;
-  carModel.quaternion.slerpQuaternions(chassisBody.previousQuaternion, chassisBodyQuaternion, alpha);
+  carModel.quaternion.slerpQuaternions(chassisBody.previousQuaternion, currentQuat, alpha);
 
   // 카메라 위치 업데이트 시에도 보간된 차량 위치 사용
   interpolatedCarPosition.copy(carModel.position);
@@ -2028,8 +2028,8 @@ if (cameraMode === 'third') {
   wheelHolders.forEach(h => scene.add(h));
 
   // 물리 바디 보간용 초기값 설정
-  chassisBody.previousPosition = chassisBody.position.clone();
-  chassisBody.previousQuaternion = chassisBody.quaternion.clone();
+  chassisBody.previousPosition = new THREE.Vector3(chassisBody.position.x, chassisBody.position.y, chassisBody.position.z);
+  chassisBody.previousQuaternion = new THREE.Quaternion(chassisBody.quaternion.x, chassisBody.quaternion.y, chassisBody.quaternion.z, chassisBody.quaternion.w);
 
   startTimer();
   updateGearDisplay();
