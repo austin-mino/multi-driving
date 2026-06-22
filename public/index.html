@@ -213,6 +213,10 @@ document.getElementById('startMenu').style.display = 'none';
 
 let font;
 const fontLoader = new FontLoader();
+
+// 보간된 차량 위치 및 회전 변수 (카메라 업데이트용)
+let interpolatedCarPosition = new THREE.Vector3();
+let interpolatedCarQuaternion = new THREE.Quaternion();
 fontLoader.load('https://cdn.jsdelivr.net/npm/three@0.152.2/examples/fonts/helvetiker_regular.typeface.json', loadedFont => {
   font = loadedFont;
 });
@@ -1840,8 +1844,8 @@ setInterval(() => {
   carModel.quaternion.slerpQuaternions(chassisBody.previousQuaternion, chassisBodyQuaternion, alpha);
 
   // 카메라 위치 업데이트 시에도 보간된 차량 위치 사용
-  const interpolatedCarPosition = carModel.position;
-  const interpolatedCarQuaternion = carModel.quaternion;
+  interpolatedCarPosition.copy(carModel.position);
+  interpolatedCarQuaternion.copy(carModel.quaternion);
 
       // 휠 mesh 위치/회전 업데이트
       for (let i = 0; i < vehicle.wheelInfos.length; i++) {
