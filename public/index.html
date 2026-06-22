@@ -1840,12 +1840,24 @@ setInterval(() => {
             new THREE.Quaternion(wt.quaternion.x, wt.quaternion.y, wt.quaternion.z, wt.quaternion.w)
           );
 
-          if (currentCarModel.includes('SUV')) {
           const localEuler = new THREE.Euler().setFromQuaternion(localQuat, 'YXZ');
-          localEuler.y = -localEuler.y; // 차체 기준 Y축(조향축) 회전만 쏙 골라서 반전시킵니다.
-          localQuat.setFromEuler(localEuler);
-          }
+          const exaggerationFactor = 2.0;
 
+          if (i === 0 || i === 1) {
+            // 앞바퀴(0, 1번)인 경우: 시각적 조향각 증폭
+            if (currentCarModel.includes('SUV')) {
+              localEuler.y = -localEuler.y * exaggerationFactor; // 레인지로버는 반전 + 증폭
+            } else {
+              localEuler.y = localEuler.y * exaggerationFactor;  // 다른 차들은 증폭만
+            }
+          } else {
+            // 뒷바퀴(2, 3번)인 경우: 조향이 없으므로 회전 증폭 안 함
+            if (currentCarModel.includes('SUV')) {
+              localEuler.y = -localEuler.y; // 레인지로버 반전만 유지
+            }
+          }
+          
+          localQuat.setFromEuler(localEuler);
           // ─── 모델별 맞춤형 회전 적용 ─────────────────────────────
           let correctionQuat = new THREE.Quaternion();
           if (currentCarModel.includes('SportsCar')) {
