@@ -1130,22 +1130,26 @@ car.traverse((child) => {
                 // 그룹의 초기 회전은 0
                 carGroup.rotation.y = 0;
 
-                // ─── McLaren P1 바퀴 노드 추출 ───────────────────────────
-                carWheelNodes = [null, null, null, null];
-                car.traverse((child) => {
-                  const n = child.name.toUpperCase();
-                  if (n.includes('WHEELS_11.001') || (n.includes('WHEEL') && n.includes('FL'))) carWheelNodes[0] = child;
-                  else if (n.includes('WHEELS_11.003') || (n.includes('WHEEL') && n.includes('FR'))) carWheelNodes[1] = child;
-                  else if (n.includes('WHEELS_11.004') || (n.includes('WHEEL') && n.includes('RL')) || n.includes('WHEELS_11.004')) carWheelNodes[2] = child;
-                  else if (n.includes('WHEELS_11.005') || (n.includes('WHEEL') && n.includes('RR')) || n.includes('WHEELS_11.005')) carWheelNodes[3] = child;
-                });
-                console.log('McLaren 바퀴 노드:', carWheelNodes.map(n => n ? n.name : 'null'));
-                carWheelNodes.forEach((node) => {
-                  if (node) {
-                      node.userData.baseQuaternion = node.quaternion.clone();
-                      node.matrixAutoUpdate = true;
-                  }
-                });
+               // ─── McLaren P1 바퀴 노드 추출 ───────────────────────────
+carWheelNodes = [null, null, null, null];
+let wheelCount = 0;
+
+car.traverse((child) => {
+  if (child.isMesh) {
+    // 1. F12 콘솔창에 모든 부품의 이름을 강제로 출력합니다.
+    console.log("McLaren 부품 이름:", child.name);
+  }
+
+  const n = child.name;
+  
+  // 2. 바퀴 이름 조건을 수정
+  if (n.includes('.001') || n.includes('여기에_깨진_이름2')) {
+    if (wheelCount < 4) {
+      carWheelNodes[wheelCount] = child;
+      wheelCount++;
+    }
+  }
+});
 
                 carVisualOffsetY = 1.1;
                 carGroup.name = 'MainBody';
