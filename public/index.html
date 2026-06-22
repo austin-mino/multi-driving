@@ -1525,18 +1525,17 @@ if (input.handbrake) {
 
     // 카메라 차량 뒤쪽 위치로 고정
    function updateCamera() {
-  const carPos = carModel.position.clone();
+  const carPos = interpolatedCarPosition.clone();
 
   // 회전만 적용 (스케일 제외)
   const offset = new THREE.Vector3(0, 7, 15);
-  offset.applyQuaternion(carModel.quaternion);
+  offset.applyQuaternion(interpolatedCarQuaternion);
 
-  const targetPos = carPos.clone().add(offset);
-  camera.position.lerp(targetPos, 0.3);
+  camera.position.copy(carPos).add(offset);
   camera.lookAt(carPos);
 }
 
- function updateFirstPersonCamera() {
+   function updateFirstPersonCamera() {
   // 차종별 운전석 위치
   let offset;
   if (currentCarModel === 'SUV') {
@@ -1549,11 +1548,11 @@ if (input.handbrake) {
     offset = new THREE.Vector3(-0.85, 2.5, -0.4); // 그랜저 기본
   }
 
-  offset.applyQuaternion(carModel.quaternion);
-  camera.position.copy(carModel.position).add(offset);
+  offset.applyQuaternion(interpolatedCarQuaternion);
+  camera.position.copy(interpolatedCarPosition).add(offset);
 
   const forward = new THREE.Vector3(0, 0, -1);
-  forward.applyQuaternion(carModel.quaternion);
+  forward.applyQuaternion(interpolatedCarQuaternion);
 
   const lookAt = camera.position.clone().add(forward.multiplyScalar(20));
   camera.lookAt(lookAt);
@@ -1575,6 +1574,9 @@ if (input.handbrake) {
 
     // 애니메이션 및 물리 루프
     const clock = new THREE.Clock();
+const fixedTimeStep = 1 / 60; // 60fps
+let lastCallTime = performance.now();
+let accumulator = 0;
 
 // ----------------- 멀티플레이 관련 추가 코드 -----------------
 
@@ -1799,19 +1801,47 @@ setInterval(() => {
 
     
     function animate() {
+      // 물리 바디의 이전 위치와 회전 저장 (보간을 위해)
+      if (!chassisBody.previousPosition) {
+        chassisBody.previousPosition = new THREE.Vector3();
+        chassisBody.previousQuaternion = new THREE.Quaternion();
+      }
+      chassisBody.previousPosition.copy(chassisBody.position);
+      chassisBody.previousQuaternion.copy(chassisBody.quaternion);
        requestAnimationFrame(animate);
 
   // 물리 시뮬레이션 스텝
-       const delta = clock.getDelta();
+      const currentTime = performance.now();
+      let deltaTime = (currentTime - lastCallTime) / 1000;
+      lastCallTime = currentTime;
 
-     updateVehicleControls(delta);
-      
-      world.step(1/60, delta, 5);
+      // 최대 deltaTime 제한 (탭 이동 시 멈춤 방지)
+      deltaTime = Math.min(deltaTime, 0.1);
+
+      accumulator += deltaTime;
+
+      while (accumulator >= fixedTimeStep) {
+        updateVehicleControls(fixedTimeStep);
+        world.step(fixedTimeStep);
+        accumulator -= fixedTimeStep;
+      }
+
+      // 물리 업데이트 후 보간을 위해 남은 시간 비율 계산
+      const alpha = accumulator / fixedTimeStep;
 
   // 자동차 모델 위치/회전을 물리 바디에 맞게 업데이트
-  carModel.position.copy(chassisBody.position);
+  // 물리 바디의 현재 위치와 이전 위치를 사용하여 보간
+  const chassisBodyPosition = chassisBody.position;
+  const chassisBodyQuaternion = chassisBody.quaternion;
+
+  // 이전 프레임의 위치와 현재 프레임의 위치를 보간하여 시각적 끊김 감소
+  carModel.position.lerpVectors(chassisBody.previousPosition, chassisBodyPosition, alpha);
   carModel.position.y += carVisualOffsetY;
-  carModel.quaternion.copy(chassisBody.quaternion);
+  carModel.quaternion.slerpQuaternions(chassisBody.previousQuaternion, chassisBodyQuaternion, alpha);
+
+  // 카메라 위치 업데이트 시에도 보간된 차량 위치 사용
+  const interpolatedCarPosition = carModel.position;
+  const interpolatedCarQuaternion = carModel.quaternion;
 
       // 휠 mesh 위치/회전 업데이트
       for (let i = 0; i < vehicle.wheelInfos.length; i++) {
