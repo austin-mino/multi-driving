@@ -1541,7 +1541,7 @@ if (input.handbrake) {
   // 3. 속도에 따른 거리 조절 (속도가 빠르면 카메라가 더 멀어짐)
   const speed = getSpeedKmH();
   const speedFactor = Math.min(speed / 200, 1);
-  offset.z += speedFactor * 0.21618;
+  offset.z += speedFactor * 0.01618;
   offset.y += speedFactor * 1.5;
 
   offset.applyQuaternion(interpolatedCarQuaternion);
@@ -1934,7 +1934,7 @@ setInterval(() => {
 
           // 4. 우리가 원하는 시각적 조향각 계산 (SUV 반전 및 앞바퀴 2배 증폭)
           let visualSteering = physicsSteering;
-          const exaggerationFactor = 2.0; // ⭐ 원하는 꺾임 배율 (1.5 ~ 2.5 사이 추천)
+          const exaggerationFactor = 2.6;
 
           if (currentCarModel.includes('SUV')) {
             // 레인지로버(SUV)는 조향 축 방향이 반대이므로 마이너스(-) 처리
