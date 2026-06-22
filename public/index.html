@@ -1851,18 +1851,8 @@ setInterval(() => {
             correctionQuat.identity();
           }
 
-          let finalQuat = localQuat.clone().multiply(correctionQuat);
-
-if (currentCarModel.includes('SUV')) {
-    const axisFix = new THREE.Quaternion();
-    axisFix.setFromEuler(
-        new THREE.Euler(Math.PI / 2, 0, 0)
-    );
-
-    finalQuat.multiply(axisFix);
-}
-
-const euler = new THREE.Euler().setFromQuaternion(finalQuat, 'YXZ');
+          const finalQuat = localQuat.clone().multiply(correctionQuat);
+          const euler = new THREE.Euler().setFromQuaternion(finalQuat, 'YXZ');
 
           
           // 공통 반전 처리
@@ -1870,9 +1860,9 @@ const euler = new THREE.Euler().setFromQuaternion(finalQuat, 'YXZ');
           euler.y = -euler.y;
           
           if (currentCarModel.includes('SUV')) {
-    node.quaternion.copy(
-        finalQuat.clone().multiply(node.userData.baseQuaternion)
-    );
+   node.quaternion.copy(
+    node.userData.baseQuaternion.clone().multiply(finalQuat)
+);
 } else {
     node.quaternion.setFromEuler(euler);
 }
