@@ -1843,7 +1843,7 @@ setInterval(() => {
             correctionQuat.setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0));
           } else if (currentCarModel.includes('SUV')) {
             // Range Rover는 모델 자체가 90도 회전되어 있을 수 있음
-            correctionQuat.identity();
+            correctionQuat.setFromEuler(new THREE.Euler(0, Math.PI / 2, 0));
           } else if (currentCarModel.includes('McLarenP1')) {
             correctionQuat.identity();
           }
@@ -1889,6 +1889,9 @@ for (const id in otherPlayers) {
             if (wheelMesh && wheelData) {
                 wheelMesh.position.set(wheelData.position.x, wheelData.position.y, wheelData.position.z);
                 wheelMesh.quaternion.set(wheelData.quaternion.x, wheelData.quaternion.y, wheelData.quaternion.z, wheelData.quaternion.w);
+             if (currentCarModel.includes('SUV')) {
+    wheelMesh.rotateZ(Math.PI / 2);
+}
             }
         }
     }
