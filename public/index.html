@@ -1947,24 +1947,13 @@ if (cameraMode === 'third') {
 } else if (cameraMode === 'first') {
   updateFirstPersonCamera();
 } else {
-  // 자유 카메라 (기존 코드 그대로)
   const desiredX = carPos.x + camDistance * Math.sin(camElevation) * Math.sin(camAzimuth);
   const desiredY = carPos.y + camDistance * Math.cos(camElevation);
   const desiredZ = carPos.z + camDistance * Math.sin(camElevation) * Math.cos(camAzimuth);
-  const desiredPos = new THREE.Vector3(desiredX, desiredY, desiredZ);
-
-  // 1. 카메라 추적 속도를 낮춰 부드러운 쿠션감
-  camera.position.lerp(desiredPos, 0.03);
-
-  // 2. 카메라가 바라보는 타겟(초점)을 생성하고 부드럽게 차량을 쫓아감
-  if (!window.cameraTargetPos) {
-    window.cameraTargetPos = carPos.clone();
-  }
-  window.cameraTargetPos.lerp(carPos, 0.05);
   
-  // 3. 흔들림이 잡힌 최종 초점 지점을 바라봅니다.
-  camera.lookAt(window.cameraTargetPos);
-}
+  // 쿠션감(lerp) 제거 -> 위치 및 시선 즉시 100% 동기화 (두두둑 거림 원천 차단)
+  camera.position.set(desiredX, desiredY, desiredZ);
+  camera.lookAt(carPos);
 
       // 타이머 업데이트
       updateTimer();
