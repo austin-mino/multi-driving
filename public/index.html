@@ -1953,14 +1953,14 @@ if (cameraMode === 'third') {
   const desiredZ = carPos.z + camDistance * Math.sin(camElevation) * Math.cos(camAzimuth);
   const desiredPos = new THREE.Vector3(desiredX, desiredY, desiredZ);
 
-  // 1. 카메라 추적 속도를 낮춰(0.2 -> 0.06) 부드러운 쿠션감을 줍니다.
-  camera.position.lerp(desiredPos, 0.06);
+  // 1. 카메라 추적 속도를 낮춰 부드러운 쿠션감
+  camera.position.lerp(desiredPos, 0.03);
 
-  // 2. 카메라가 바라보는 타겟(초점)을 생성하고 부드럽게 차량을 쫓아가게 만듭니다.
+  // 2. 카메라가 바라보는 타겟(초점)을 생성하고 부드럽게 차량을 쫓아감
   if (!window.cameraTargetPos) {
     window.cameraTargetPos = carPos.clone();
   }
-  window.cameraTargetPos.lerp(carPos, 0.1);
+  window.cameraTargetPos.lerp(carPos, 0.05);
   
   // 3. 흔들림이 잡힌 최종 초점 지점을 바라봅니다.
   camera.lookAt(window.cameraTargetPos);
