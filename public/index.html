@@ -1130,70 +1130,40 @@ car.traverse((child) => {
                 // 그룹의 초기 회전은 0
                 carGroup.rotation.y = 0;
 
-               // ─── McLaren P1 바퀴 노드 추출 ───────────────────────────
-// 기존 바퀴 추출 코드를 지우고 아래 내용을 붙여넣으세요.
-carWheelNodes = [new THREE.Group(), new THREE.Group(), new THREE.Group(), new THREE.Group()];
+             // ─── McLaren P1 바퀴 노드 추출 ───────────────────────────
+carWheelNodes = [null, null, null, null];
 
-// 타이어(35 시리즈)와 휠(37 시리즈) 부품 세트를 인덱스에 맞게 매핑할 임시 객체
-const wheelPartsMap = {
-    0: { tire: null, rim: null, side: 'L', namePattern: '0' },     // 앞 왼쪽 (인덱스 0)
-    1: { tire: null, rim: null, side: 'R', namePattern: '001' },   // 앞 오른쪽 (인덱스 1)
-    2: { tire: null, rim: null, side: 'L', namePattern: '002' },   // 뒤 왼쪽 (인덱스 2)
-    3: { tire: null, rim: null, side: 'R', namePattern: '003' }    // 뒤 오른쪽 (인덱스 3)
-};
-
-// 모델을 순회하며 부품을 찾습니다.
 car.traverse((child) => {
-    if (child.isMesh) {
-        const n = child.name;
+  // 실제 형태가 있는 부품(Mesh)인 경우에만 검사
+  if (child.isMesh) {
+    const n = child.name;
 
-        // 패턴 매칭 (정확한 매핑을 위해 'Object_' 뒤 숫자로 식별)
-        Object.keys(wheelPartsMap).forEach(key => {
-            const p = wheelPartsMap[key];
-            
-            // 패턴에 맞는 타이어(Object_35 시리즈) 찾기
-            // 예: Object_35001 mesh 자체를 찾는 것
-            if (p.namePattern === '0') {
-                if (n === 'Object_35') p.tire = child;
-                if (n === 'Object_37') p.rim = child;
-            } else {
-                if (n === `Object_35${p.namePattern}`) p.tire = child;
-                if (n === `Object_37${p.namePattern}`) p.rim = child;
-            }
-        });
+    // 알려주신 숫자 패턴을 찾아 인덱스에 할당합니다.
+    if (n.includes('11001')) {
+      carWheelNodes[0] = child;       // 인덱스 0: 앞바퀴 1
+      child.userData.side = 'L';      // 일단 왼쪽으로 설정
+    } else if (n.includes('11005')) {
+      carWheelNodes[1] = child;       // 인덱스 1: 앞바퀴 2
+      child.userData.side = 'R';      // 일단 오른쪽으로 설정
+    } else if (n.includes('11003')) {
+      carWheelNodes[2] = child;       // 인덱스 2: 뒷바퀴 1
+      child.userData.side = 'L';      // 일단 왼쪽으로 설정
+    } else if (n.includes('004')) {   // 글자가 깨진 마지막 뒷바퀴 ('004' 패턴)
+      carWheelNodes[3] = child;       // 인덱스 3: 뒷바퀴 2
+      child.userData.side = 'R';      // 일단 오른쪽으로 설정
     }
+  }
 });
 
-// 찾은 부품들을 새로운 바퀴 그룹에 넣고 초기 배치
-Object.keys(wheelPartsMap).forEach(key => {
-    const p = wheelPartsMap[key];
-    const wheelGroup = carWheelNodes[key];
-    const index = parseInt(key);
-
-    if (p.tire && p.rim) {
-        // [시각적 문제 1 해결: 타이어+휠 함께 회전]
-        // 두 부품을 감싸는 새로운 그룹(wheelGroup)을 만들어서 그룹 자체를 돌립니다.
-
-        // 타이어와 휠의 중간 위치를 계산해서 그룹의 중심으로 삼습니다. (상대 좌표 기준)
-        const tirePos = p.tire.position.clone();
-        const rimPos = p.rim.position.clone();
-        const centerPos = tirePos.lerp(rimPos, 0.5); // 평균 위치
-
-        // 그룹을 계산된 중간 위치에 배치
-        wheelGroup.position.copy(centerPos);
-        car.add(wheelGroup); // 조각들이 원래 있던 차체에 그룹 추가
-
-        // 부품들을 그룹에 넣고, 그룹 내 상대 위치를 0으로 초기화
-        wheelGroup.add(p.tire);
-        wheelGroup.add(p.rim);
-        
-        // 그룹에 추가된 부품들의 로컬 위치를 그룹 중심으로 상대 변환 (기존 부모로부터 detach/attach 효과)
-        p.tire.position.sub(centerPos);
-        p.rim.position.sub(centerPos);
-
-        // [시각적 문제 2 해결 대비] 업데이트 루프에서 활용할 L/R 구분 태그
-        wheelGroup.userData.side = p.side;
-    }
+// 축 불일치를 방지하기 위해 바퀴 자체의 중심점을 다시 잡아줍니다.
+carWheelNodes.forEach((node) => {
+  if (node && node.isMesh) {
+    node.geometry.computeBoundingBox();
+    const center = new THREE.Vector3();
+    node.geometry.boundingBox.getCenter(center);
+    node.geometry.translate(-center.x, -center.y, -center.z);
+    node.position.copy(center);
+  }
 });
 
                 carVisualOffsetY = 1.1;
