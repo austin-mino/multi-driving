@@ -786,6 +786,7 @@ function addStreetProps(x, z, w, d) {
   // 바퀴 노드 배열: [FL, FR, RL, RR] 순서 (앞왼쪽, 앞오른쪽, 뒤왼쪽, 뒤오른쪽)
   // CANNON vehicle 인덱스: 0=FL, 1=FR, 2=RL, 3=RR
   let carWheelNodes = [null, null, null, null];
+  let steeringWheelNode = null; // ferrari 헨들 노드
 
 
     // 자동차 시각 모델
@@ -916,10 +917,15 @@ function createSportsCar(color = '#ffffff') {
       'https://threejs.org/examples/models/gltf/ferrari.glb',
       (gltf) => {
         const car = gltf.scene;
+        steeringWheelNode = null; // 헨들 조정 초기화
 
         car.traverse((child) => {
           if (!child.isMesh) return;
-
+          
+          if (child.name === 'steering_wheel') {
+            steeringWheelNode = child;
+          }
+          
           if (child.name === 'body') {
             child.material = new THREE.MeshStandardMaterial({
               color: color,
@@ -1950,6 +1956,12 @@ setInterval(() => {
         wheelHolders[i].quaternion.copy(t.quaternion);
       }
 
+      //  페라리 전용 실제 핸들 회전 시스템
+if (cameraMode === 'first' && currentCarModel === 'SportsCar' && steeringWheelNode) {
+  // steeringValue에 증폭 값(예: 8~10배)을 곱함
+  const steeringWheelRotation = steeringValue * 9.0; 
+  steeringWheelNode.rotation.z = steeringWheelRotation;
+}
       // ─── GLTF/GLB 모델 바퀴 노드 회전 업데이트 ───────────────────────────
       // carWheelNodes[i]는 모델 내부 바퀴 부모 노드를 가리킨다.
       // CANNON의 worldTransform.quaternion에서 차체 회전을 제거하여
