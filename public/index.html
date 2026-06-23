@@ -420,6 +420,64 @@ const grassTexShared = (() => {
 const asphaltTex = makeAsphaltTexture();
 const sidewalkTex = makeSidewalkTexture();
 
+  function makeBuildingTexture(hexColor, floors = 8, cols = 4) {
+  const w = 256;
+  const h = 512;
+  const c = document.createElement('canvas');
+  c.width = w;
+  c.height = h;
+
+  const ctx = c.getContext('2d');
+  const r = (hexColor >> 16) & 255;
+  const g = (hexColor >> 8) & 255;
+  const b = hexColor & 255;
+
+  ctx.fillStyle = `rgb(${r},${g},${b})`;
+  ctx.fillRect(0, 0, w, h);
+
+  const floorH = h / floors;
+  const colW = w / cols;
+
+  for (let y = 0; y < floors; y++) {
+    for (let x = 0; x < cols; x++) {
+      const lit = Math.random() > 0.35;
+      ctx.fillStyle = lit ? '#ffe8a3' : '#233044';
+      ctx.fillRect(
+        x * colW + colW * 0.22,
+        y * floorH + floorH * 0.22,
+        colW * 0.48,
+        floorH * 0.42
+      );
+    }
+  }
+
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = THREE.RepeatWrapping;
+  t.wrapT = THREE.RepeatWrapping;
+  t.repeat.set(1, 1);
+  return t;
+}
+
+const buildingPalette = [
+  0x777f89,
+  0x9a8f80,
+  0x66727f,
+  0x8a8a8a,
+  0x6e7f73,
+  0x927f6c
+];
+
+const buildingTexPoolGlobal = buildingPalette.map(color =>
+  makeBuildingTexture(color, 8, 4)
+);
+
+const buildingMatPoolGlobal = buildingTexPoolGlobal.map(tex =>
+  new THREE.MeshStandardMaterial({
+    map: tex,
+    roughness: 0.72,
+    metalness: 0.08
+  })
+);
 
 // 성능 설정
 const TERRAIN_SEGS = 72;      // 64~80 추천. 낮을수록 렉 감소
