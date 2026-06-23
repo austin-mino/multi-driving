@@ -1960,7 +1960,7 @@ setInterval(() => {
 
       // 실제 핸들 회전 시스템 (1인칭 시점에서만 업데이트하여 최적화)
     // 매 프레임마다 시각값이 물리값을 느리게 추적
-visualSteeringLag += (steeringValue - visualSteeringLag) * 0.07;
+visualSteeringLag += (steeringValue - visualSteeringLag) * 0.09;
 
 if (steeringWheelNode && cameraMode === 'first') {
   steeringWheelNode.rotation.y = visualSteeringLag * 15.0;
