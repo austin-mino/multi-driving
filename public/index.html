@@ -1130,63 +1130,67 @@ car.traverse((child) => {
                 // 그룹의 초기 회전은 0
                 carGroup.rotation.y = 0;
 
-       // ─── McLaren P1 바퀴 노드 추출 (타이어 고무 + 015 휠 그룹화) ──────────────────
+     // ─── McLaren P1 바퀴 노드 추출 (타이어 고무 + 015 휠 그룹화) ──────────────────
 carWheelNodes = [new THREE.Group(), new THREE.Group(), new THREE.Group(), new THREE.Group()];
-
-// traverse 순회 중 에러 방지용 장바구니
 const tempParts = [[], [], [], []];
 
 car.traverse((child) => {
   if (child.isMesh) {
     const n = child.name;
-
-    // 타이어(35 시리즈)와 휠(015)을 4개의 바퀴 세트로 묶어서 담습니다.
     if (n.includes('Object_35_') || n.includes('Object_37_') || (n.includes('015') && !n.includes('002') && !n.includes('004') && !n.includes('006'))) {
       tempParts[0].push(child);
-    } 
-    else if (n.includes('35001') || n.includes('37001') || (n.includes('015') && n.includes('002'))) {
+    } else if (n.includes('35001') || n.includes('37001') || (n.includes('015') && n.includes('002'))) {
       tempParts[1].push(child);
-    } 
-    else if (n.includes('35002') || n.includes('37002') || (n.includes('015') && n.includes('004'))) {
+    } else if (n.includes('35002') || n.includes('37002') || (n.includes('015') && n.includes('004'))) {
       tempParts[2].push(child);
-    } 
-    else if (n.includes('35003') || n.includes('37003') || (n.includes('015') && n.includes('006'))) {
+    } else if (n.includes('35003') || n.includes('37003') || (n.includes('015') && n.includes('006'))) {
       tempParts[3].push(child);
     }
   }
 });
 
-// 순회가 끝난 후 안전하게 그룹(상자)에 옮겨 담기
-for (let i = 0; i < 4; i++) {
-  tempParts[i].forEach(part => {
-    carWheelNodes[i].add(part);
-  });
-}
+// 차체의 전체 좌표계를 한 번 새로고침 (안전 장치)
+car.updateMatrixWorld(true);
 
-// 묶음의 중심점 잡기 및 역회전 자동 태그
-carWheelNodes.forEach((group, i) => {
-  if (group.children.length > 0) {
+for (let i = 0; i < 4; i++) {
+  const group = carWheelNodes[i];
+  if (tempParts[i].length > 0) {
     car.add(group); 
     
-    // 타이어와 휠이 합쳐진 전체 크기를 기준으로 정중앙 중심축 찾기
+    // 1. attach를 사용해 겉보기 위치가 변하지 않도록 안전하게 그룹에 집어넣기
+    tempParts[i].forEach(part => {
+      group.attach(part);
+    });
+    
+    // 2. 바퀴가 다 담긴 후 좌표계 새로고침
+    group.updateMatrixWorld(true);
+    
+    // 3. 바퀴 전체 덩어리의 '월드(World) 중심점' 계산
     const box = new THREE.Box3().setFromObject(group);
-    const center = new THREE.Vector3();
-    box.getCenter(center);
+    const worldCenter = new THREE.Vector3();
+    box.getCenter(worldCenter);
     
-    group.position.copy(center);
+    // ✨ 핵심 해결 부분: 월드 좌표를 차체 기준의 '로컬(Local) 좌표'로 변환
+    const localCenter = car.worldToLocal(worldCenter.clone());
     
+    // 4. 그룹의 기준점(회전축)을 바퀴의 정중앙으로 이동
+    group.position.copy(localCenter);
+    
+    // 5. 기준점이 이동한 만큼, 부품들을 반대 방향으로 밀어서 원래 자리에 가만히 있게 만들기
     group.children.forEach(child => {
-      child.position.sub(center);
+      child.position.x -= localCenter.x;
+      child.position.y -= localCenter.y;
+      child.position.z -= localCenter.z;
     });
 
-    // 자동 좌/우 판별 (역회전 방지용)
-    if (center.x > 0) {
-      group.userData.side = 'L'; // X좌표가 양수면 보통 왼쪽
+    // 6. X 좌표를 기준으로 좌/우 판별 (역회전 방지)
+    if (localCenter.x > 0) {
+      group.userData.side = 'L';
     } else {
-      group.userData.side = 'R'; // 음수면 오른쪽
+      group.userData.side = 'R';
     }
   }
-});
+}
 
                 carVisualOffsetY = 1.1;
                 carGroup.name = 'MainBody';
