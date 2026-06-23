@@ -1068,7 +1068,7 @@ car.traverse((child) => {
         
         // --- [1. 제외 대상 키워드 확장] ---
         const excludeKeywords = [
-            '.007', '.004', 'material.012', 'material.013', 'material.014',
+            '.007', '.004', 'material.012', 'material.013', 'material.014','011',
             '.028', '.026', '.034', '.032', '.033', '.027', 'material_2', 'material_3',
             'glass', 'window', 'transparent', // 유리
             'tire', 'rubber', 'wheel', 'rim', 'bolt', 'nut', // 타이어/휠
@@ -1148,7 +1148,7 @@ car.traverse((child) => {
     } else if (n.includes('11003')) {
       carWheelNodes[2] = child;       // 인덱스 2: 뒷바퀴 1
       child.userData.side = 'L';      // 일단 왼쪽으로 설정
-    } else if (n.includes('004')) {   // 글자가 깨진 마지막 뒷바퀴 ('004' 패턴)
+    } else if (n.includes('.004')) {   // 글자가 깨진 마지막 뒷바퀴 ('004' 패턴)
       carWheelNodes[3] = child;       // 인덱스 3: 뒷바퀴 2
       child.userData.side = 'R';      // 일단 오른쪽으로 설정
     }
@@ -1919,99 +1919,92 @@ setInterval(() => {
       if (carModel && carWheelNodes.some(n => n !== null)) {
         const carInvQuat = carModel.quaternion.clone().invert();
 
-        for (let i = 0; i < 4; i++) {
-          const node = carWheelNodes[i];
-          if (!node) continue;
+       for (let i = 0; i < 4; i++) {
+  const node = carWheelNodes[i];
+  if (!node) continue;
 
-          vehicle.updateWheelTransform(i);
-          const wt = vehicle.wheelInfos[i].worldTransform;
+  vehicle.updateWheelTransform(i);
+  const wt = vehicle.wheelInfos[i].worldTransform;
 
-          // 세계 쿼터니언에서 차체 회전 제거 -> 로컬 회전
-          const localQuat = carInvQuat.clone().multiply(
-            new THREE.Quaternion(wt.quaternion.x, wt.quaternion.y, wt.quaternion.z, wt.quaternion.w)
-          );
+  // 세계 쿼터니언에서 차체 회전 제거 -> 로컬 회전
+  const localQuat = carInvQuat.clone().multiply(
+    new THREE.Quaternion(wt.quaternion.x, wt.quaternion.y, wt.quaternion.z, wt.quaternion.w)
+  );
 
-         // 1. 물리 엔진이 계산한 실제 조향각(Steering) 가져오기
-          const physicsSteering = vehicle.wheelInfos[i].steering;
+  // 1. 물리 엔진이 계산한 실제 조향각(Steering) 가져오기
+  const physicsSteering = vehicle.wheelInfos[i].steering;
 
-          // 2. 물리 기준의 조향 쿼터니언 생성 (Y축 회전)
-          const physicsSteeringQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), physicsSteering);
+  // 2. 물리 기준의 조향 쿼터니언 생성 (Y축 회전)
+  const physicsSteeringQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), physicsSteering);
 
-          // 3. 전체 로컬 회전에서 조향 성분을 빼버려서, '순수하게 바퀴가 굴러가는 회전(Roll)'만 추출
-          const rollingQuat = physicsSteeringQuat.clone().invert().multiply(localQuat);
+  // 3. 전체 로컬 회전에서 조향 성분을 빼버려서, '순수하게 바퀴가 굴러가는 회전(Roll)'만 추출
+  const rollingQuat = physicsSteeringQuat.clone().invert().multiply(localQuat);
 
-          // 4. 우리가 원하는 시각적 조향각 계산 (SUV 반전 및 앞바퀴 2배 증폭)
-          let visualSteering = physicsSteering;
-          const exaggerationFactor = 2.6; // ⭐ 원하는 꺾임 배율 (1.5 ~ 2.5 사이 추천)
-if (currentCarModel.includes('McLarenP1')) {
-      // ─── ✨ McLaren P1 전용 회전 로직 (쿼터니언 직접 제어) ───
-      const cannonQuat = new THREE.Quaternion(wt.quaternion.x, wt.quaternion.y, wt.quaternion.z, wt.quaternion.w);
-      const finalQuat = cannonQuat.clone();
-      
-      // 왼쪽 바퀴 180도 반전
-      if (node.userData.side === 'L') {
-        const LEFT_SIDE_INVERSION = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI);
-        finalQuat.multiply(LEFT_SIDE_INVERSION);
-      }
-      
-      // 모델 축 보정 (필요시 -Math.PI / 2 값을 조절)
-      const WHEEL_AXIS_CORRECTION = new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0));
-      finalQuat.multiply(WHEEL_AXIS_CORRECTION);
-      
-      node.quaternion.copy(finalQuat);
+  // 4. 우리가 원하는 시각적 조향각 계산 (SUV 반전 및 앞바퀴 증폭)
+  let visualSteering = physicsSteering;
+  const exaggerationFactor = 2.6; // ⭐ 원하는 꺾임 배율
 
-    } else if (currentCarModel.includes('SUV')) {
-            // 레인지로버(SUV)는 조향 축 방향이 반대이므로 마이너스(-) 처리
-            if (i === 0 || i === 1) {
-              visualSteering = -physicsSteering * exaggerationFactor; // 앞바퀴: 반전 + 2배 증폭
-            } else {
-              visualSteering = -physicsSteering; // 뒷바퀴: 반전 (어차피 조향각이 0이라 0입니다)
-            }
-          } else {
-            // 다른 일반 차량들
-            if (i === 0 || i === 1) {
-              visualSteering = physicsSteering * exaggerationFactor;  // 앞바퀴: 2배 증폭
-            }
-          }
+  if (currentCarModel.includes('SUV')) {
+    // 레인지로버(SUV)는 조향 축 방향이 반대이므로 마이너스(-) 처리
+    if (i === 0 || i === 1) {
+      visualSteering = -physicsSteering * exaggerationFactor; 
+    } else {
+      visualSteering = -physicsSteering; 
+    }
+  } else {
+    // 다른 일반 차량들 (McLaren 포함)
+    if (i === 0 || i === 1) {
+      visualSteering = physicsSteering * exaggerationFactor;  
+    }
+  }
 
-          // 5. 새로 계산된 시각적 조향 쿼터니언 생성
-          const visualSteeringQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), visualSteering);
+  // 5. 새로 계산된 시각적 조향 쿼터니언 생성
+  const visualSteeringQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), visualSteering);
 
-          // 6. 새로운 조향값과 아까 추출해 둔 '순수 구름 회전(Roll)'을 결합하여 localQuat를 최종 업데이트
-          localQuat.copy(visualSteeringQuat.multiply(rollingQuat));
-          
-          // ─── 모델별 맞춤형 회전 적용 ─────────────────────────────
-          let correctionQuat = new THREE.Quaternion();
-          if (currentCarModel.includes('SportsCar')) {
-            correctionQuat.setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0));
-          } else if (currentCarModel.includes('SUV')) {
-            // Range Rover는 모델 자체가 90도 회전되어 있을 수 있음
-            correctionQuat.setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0));
-          } else if (currentCarModel.includes('McLarenP1')) {
-            correctionQuat.identity();
-          }
+  // 6. 새로운 조향값과 아까 추출해 둔 '순수 구름 회전(Roll)'을 결합하여 localQuat를 최종 업데이트
+  localQuat.copy(visualSteeringQuat.multiply(rollingQuat));
+  
+  // ─── 모델별 맞춤형 축 보정 ─────────────────────────────
+  let correctionQuat = new THREE.Quaternion();
+  if (currentCarModel.includes('SportsCar')) {
+    correctionQuat.setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0));
+  } else if (currentCarModel.includes('SUV')) {
+    correctionQuat.setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0));
+  } else if (currentCarModel.includes('McLarenP1')) {
+    // ✨ McLaren 축 보정 추가
+    correctionQuat.setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0));
+  }
 
-          const finalQuat = localQuat.clone().multiply(correctionQuat);
-          const euler = new THREE.Euler().setFromQuaternion(finalQuat, 'YXZ');
+  const finalQuat = localQuat.clone().multiply(correctionQuat);
+  const euler = new THREE.Euler().setFromQuaternion(finalQuat, 'YXZ');
 
-          
-          // 공통 반전 처리
-          euler.x = -euler.x; 
-          if (currentCarModel.includes('SUV')) {
-          euler.y = euler.y;
-          } else{euler.y = -euler.y;
-                }
-          
-if (currentCarModel.includes('SUV')) {  
-  node.quaternion.copy(
-    node.userData.baseQuaternion.clone().multiply(finalQuat));
-} else {
+  // 공통 반전 처리
+  euler.x = -euler.x; 
+  if (currentCarModel.includes('SUV')) {
+    euler.y = euler.y;
+  } else {
+    euler.y = -euler.y;
+  }
+  
+  // ─── 최종 회전 적용 ─────────────────────────────
+  if (currentCarModel.includes('McLarenP1')) {
+    // ✨ McLaren은 여기서 왼쪽 바퀴를 180도 뒤집고 쿼터니언으로 바로 적용
+    let mclarenQuat = finalQuat.clone();
+    if (node.userData.side === 'L') {
+      const LEFT_SIDE_INVERSION = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI);
+      mclarenQuat.multiply(LEFT_SIDE_INVERSION);
+    }
+    node.quaternion.copy(mclarenQuat);
+
+  } else if (currentCarModel.includes('SUV')) {  
+    node.quaternion.copy(node.userData.baseQuaternion.clone().multiply(finalQuat));
+  } else {
     node.quaternion.setFromEuler(euler);
+  }
+  
+  // 강제 행렬 업데이트
+  node.updateMatrix();
 }
-          
-          // 강제 행렬 업데이트 (일부 모델에서 필요)
-          node.updateMatrix();
-        }
       }
 
        // 상대방 차량 위치 보간 처리
