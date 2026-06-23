@@ -1068,7 +1068,8 @@ car.traverse((child) => {
         
         // --- [1. 제외 대상 키워드 확장] ---
         const excludeKeywords = [
-            '.007', '.004', 'material.012', 'material.013', 'material.014','011','material_16',
+            'Vert011__0',
+            '.007', '.004', 'material.012', 'material.013', 'material.014','011',
             '.028', '.026', '.034', '.032', '.033', '.027', 'material_2', 'material_3',
             'glass', 'window', 'transparent', // 유리
             'tire', 'rubber', 'wheel', 'rim', 'bolt', 'nut', // 타이어/휠
@@ -1148,11 +1149,11 @@ car.traverse((child) => {
     if (n.includes('Object_35_') || (n.includes('015_0') && !n.includes('002') && !n.includes('004') && !n.includes('006'))) {
       tempParts[0].push(child);
     } else if (n.includes('35001') || (n.includes('015_0') && n.includes('002'))) {
-      tempParts[1].push(child);
-    } else if (n.includes('35002') || (n.includes('015_0') && n.includes('004'))) {
       tempParts[2].push(child);
-    } else if (n.includes('35003') || (n.includes('015_0') && n.includes('006'))) {
+    } else if (n.includes('35002') || (n.includes('015_0') && n.includes('004'))) {
       tempParts[3].push(child);
+    } else if (n.includes('35003') || (n.includes('015_0') && n.includes('006'))) {
+      tempParts[1].push(child);
     }
   }
 });
