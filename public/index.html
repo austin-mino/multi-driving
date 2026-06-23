@@ -1957,7 +1957,7 @@ setInterval(() => {
       }
 
       //  페라리 전용 실제 핸들 회전 시스템
-if (cameraMode === 'first' && currentCarModel === 'SportsCar' && steeringWheelNode) {
+if (steeringWheelNode) {
   // steeringValue에 증폭 값(예: 8~10배)을 곱함
   const steeringWheelRotation = steeringValue * 9.0; 
   steeringWheelNode.rotation.z = steeringWheelRotation;
