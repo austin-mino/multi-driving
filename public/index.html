@@ -1131,57 +1131,70 @@ car.traverse((child) => {
                 carGroup.rotation.y = 0;
 
                // ─── McLaren P1 바퀴 노드 추출 ───────────────────────────
-// ─── McLaren P1 바퀴 노드 추출 ───────────────────────────
-carWheelNodes = [null, null, null, null];
-let wheelIndex = 0;
+// 기존 바퀴 추출 코드를 지우고 아래 내용을 붙여넣으세요.
+carWheelNodes = [new THREE.Group(), new THREE.Group(), new THREE.Group(), new THREE.Group()];
 
+// 타이어(35 시리즈)와 휠(37 시리즈) 부품 세트를 인덱스에 맞게 매핑할 임시 객체
+const wheelPartsMap = {
+    0: { tire: null, rim: null, side: 'L', namePattern: '0' },     // 앞 왼쪽 (인덱스 0)
+    1: { tire: null, rim: null, side: 'R', namePattern: '001' },   // 앞 오른쪽 (인덱스 1)
+    2: { tire: null, rim: null, side: 'L', namePattern: '002' },   // 뒤 왼쪽 (인덱스 2)
+    3: { tire: null, rim: null, side: 'R', namePattern: '003' }    // 뒤 오른쪽 (인덱스 3)
+};
+
+// 모델을 순회하며 부품을 찾습니다.
 car.traverse((child) => {
-  const n = child.name;
+    if (child.isMesh) {
+        const n = child.name;
 
-  // 출력된 목록을 바탕으로 바퀴 관련 최상위 그룹이나 부품을 찾습니다.
-  // 상위 노드를 돌리기 위해 "Object_35"나 "Object_37"이 포함된 메시의 부모를 찾거나,
-  // 해당 그룹 자체의 이름을 짐작하여 잡습니다.
-  
-  // 만약 그룹 이름이 따로 없고 메시 자체를 돌려야 한다면 아래와 같이 묶어서 처리합니다.
-  if (
-      n.includes('Object_35_') || 
-      n.includes('Object_35001_') || 
-      n.includes('Object_35002_') || 
-      n.includes('Object_35003_')
-  ) {
-      // 휠을 구성하는 여러 부품 중 하나가 잡히면, 그 부모 노드(바퀴 전체 그룹)를 선택하도록 합니다.
-      // 보통은 부모 노드를 회전시켜야 타이어와 휠이 같이 돕니다.
-      if (child.parent && !carWheelNodes.includes(child.parent)) {
-          if (wheelIndex < 4) {
-              carWheelNodes[wheelIndex] = child.parent;
-              wheelIndex++;
-          }
-      }
-  }
+        // 패턴 매칭 (정확한 매핑을 위해 'Object_' 뒤 숫자로 식별)
+        Object.keys(wheelPartsMap).forEach(key => {
+            const p = wheelPartsMap[key];
+            
+            // 패턴에 맞는 타이어(Object_35 시리즈) 찾기
+            // 예: Object_35001 mesh 자체를 찾는 것
+            if (p.namePattern === '0') {
+                if (n === 'Object_35') p.tire = child;
+                if (n === 'Object_37') p.rim = child;
+            } else {
+                if (n === `Object_35${p.namePattern}`) p.tire = child;
+                if (n === `Object_37${p.namePattern}`) p.rim = child;
+            }
+        });
+    }
 });
 
-// 바퀴 배열이 덜 찼을 때를 대비해, 다른 패턴(Object_37)으로도 시도
-if (carWheelNodes.includes(null)) {
-  wheelIndex = 0;
-  carWheelNodes = [null, null, null, null]; // 초기화
-  
-  car.traverse((child) => {
-    const n = child.name;
-    if (
-        n.includes('Object_37_') || 
-        n.includes('Object_37001_') || 
-        n.includes('Object_37002_') || 
-        n.includes('Object_37003_')
-    ) {
-        if (child.parent && !carWheelNodes.includes(child.parent)) {
-            if (wheelIndex < 4) {
-                carWheelNodes[wheelIndex] = child.parent;
-                wheelIndex++;
-            }
-        }
+// 찾은 부품들을 새로운 바퀴 그룹에 넣고 초기 배치
+Object.keys(wheelPartsMap).forEach(key => {
+    const p = wheelPartsMap[key];
+    const wheelGroup = carWheelNodes[key];
+    const index = parseInt(key);
+
+    if (p.tire && p.rim) {
+        // [시각적 문제 1 해결: 타이어+휠 함께 회전]
+        // 두 부품을 감싸는 새로운 그룹(wheelGroup)을 만들어서 그룹 자체를 돌립니다.
+
+        // 타이어와 휠의 중간 위치를 계산해서 그룹의 중심으로 삼습니다. (상대 좌표 기준)
+        const tirePos = p.tire.position.clone();
+        const rimPos = p.rim.position.clone();
+        const centerPos = tirePos.lerp(rimPos, 0.5); // 평균 위치
+
+        // 그룹을 계산된 중간 위치에 배치
+        wheelGroup.position.copy(centerPos);
+        car.add(wheelGroup); // 조각들이 원래 있던 차체에 그룹 추가
+
+        // 부품들을 그룹에 넣고, 그룹 내 상대 위치를 0으로 초기화
+        wheelGroup.add(p.tire);
+        wheelGroup.add(p.rim);
+        
+        // 그룹에 추가된 부품들의 로컬 위치를 그룹 중심으로 상대 변환 (기존 부모로부터 detach/attach 효과)
+        p.tire.position.sub(centerPos);
+        p.rim.position.sub(centerPos);
+
+        // [시각적 문제 2 해결 대비] 업데이트 루프에서 활용할 L/R 구분 태그
+        wheelGroup.userData.side = p.side;
     }
-  });
-}
+});
 
                 carVisualOffsetY = 1.1;
                 carGroup.name = 'MainBody';
@@ -1960,8 +1973,24 @@ setInterval(() => {
           // 4. 우리가 원하는 시각적 조향각 계산 (SUV 반전 및 앞바퀴 2배 증폭)
           let visualSteering = physicsSteering;
           const exaggerationFactor = 2.6; // ⭐ 원하는 꺾임 배율 (1.5 ~ 2.5 사이 추천)
+if (currentCarModel.includes('McLarenP1')) {
+      // ─── ✨ McLaren P1 전용 회전 로직 (쿼터니언 직접 제어) ───
+      const cannonQuat = new THREE.Quaternion(wheelTransform.quaternion.x, wheelTransform.quaternion.y, wheelTransform.quaternion.z, wheelTransform.quaternion.w);
+      const finalQuat = cannonQuat.clone();
+      
+      // 왼쪽 바퀴 180도 반전
+      if (node.userData.side === 'L') {
+        const LEFT_SIDE_INVERSION = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI);
+        finalQuat.multiply(LEFT_SIDE_INVERSION);
+      }
+      
+      // 모델 축 보정 (필요시 -Math.PI / 2 값을 조절)
+      const WHEEL_AXIS_CORRECTION = new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0));
+      finalQuat.multiply(WHEEL_AXIS_CORRECTION);
+      
+      node.quaternion.copy(finalQuat);
 
-          if (currentCarModel.includes('SUV')) {
+    } if else (currentCarModel.includes('SUV')) {
             // 레인지로버(SUV)는 조향 축 방향이 반대이므로 마이너스(-) 처리
             if (i === 0 || i === 1) {
               visualSteering = -physicsSteering * exaggerationFactor; // 앞바퀴: 반전 + 2배 증폭
