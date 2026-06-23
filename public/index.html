@@ -1130,31 +1130,31 @@ car.traverse((child) => {
                 // 그룹의 초기 회전은 0
                 carGroup.rotation.y = 0;
 
-// ─── McLaren P1 바퀴 노드 추출 (타이어 고무 + 015 휠 그룹화) ──────────────────
-carWheelNodes = [new THREE.Group(), new THREE.Group(), new THREE.Group(), new THREE.Group()];
-const tempParts = [[], [], [], []];
+// ─── McLaren P1 바퀴 노드 추출 ──────────────────
+    carWheelNodes = [new THREE.Group(), new THREE.Group(), new THREE.Group(), new THREE.Group()];
+    const tempParts = [[], [], [], []];
 
-car.traverse((child) => {
-  if (child.isMesh) {
-    const n = child.name;
-    
-    // ✨ 차체 및 브레이크 부품(쿨링팬, 패드 등) 철통 방어!
-    if (n.includes('Vert')) return;     // 차체 껍데기 제외
-    if (n.includes('Object_37')) return; // ❌ 브레이크 관련 부품 제외
-    if (n.includes('\ufffd') || n.includes('007')) return; // ❌ 글자 깨진 007 부품 제외
+    car.traverse((child) => {
+      if (child.isMesh) {
+        const n = child.name;
 
-    // ✨ '015_0' 패턴으로 정확하게 정품 휠만 타겟팅
-    if (n.includes('Object_35_') || (n.includes('015_0') && !n.includes('002') && !n.includes('004') && !n.includes('006'))) {
-      tempParts[0].push(child);
-    } else if (n.includes('35001') || (n.includes('015_0') && n.includes('002'))) {
-      tempParts[2].push(child);
-    } else if (n.includes('35002') || (n.includes('015_0') && n.includes('004'))) {
-      tempParts[1].push(child);
-    } else if (n.includes('35003') || (n.includes('015_0') && n.includes('006'))) {
-      tempParts[3].push(child);
-    }
-  }
-});
+        // 차체 및 브레이크 부품(쿨링팬, 패드 등) 제외
+        if (n.includes('Vert')) return; 
+        if (n.includes('Object_37')) return; 
+        if (n.includes('\ufffd') || n.includes('007')) return; 
+
+      // 바퀴 설정
+        if (n.includes('Object_35_') || (n.includes('015_0') && !n.includes('002') && !n.includes('004') && !n.includes('006') && !n.includes('006_015_0'))) {
+          tempParts[0].push(child);
+        } else if (n.includes('35001') || (n.includes('015_0') && n.includes('002'))) {
+          tempParts[2].push(child);
+        } else if (n.includes('35002') || (n.includes('015_0') && n.includes('004'))) {
+          tempParts[3].push(child);
+        } else if (n.includes('35003') || (n.includes('015_0') && n.includes('006')) || n.includes('006_015_0')) {
+          tempParts[1].push(child); 
+        }
+      }
+    });
 
 // 차체의 전체 좌표계를 한 번 새로고침
 car.updateMatrixWorld(true);
