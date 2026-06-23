@@ -1130,7 +1130,7 @@ car.traverse((child) => {
                 // 그룹의 초기 회전은 0
                 carGroup.rotation.y = 0;
 
-  // ─── McLaren P1 바퀴 노드 추출 (타이어 고무 + 015 휠 그룹화) ──────────────────
+// ─── McLaren P1 바퀴 노드 추출 (타이어 고무 + 015 휠 그룹화) ──────────────────
 carWheelNodes = [new THREE.Group(), new THREE.Group(), new THREE.Group(), new THREE.Group()];
 const tempParts = [[], [], [], []];
 
@@ -1138,23 +1138,25 @@ car.traverse((child) => {
   if (child.isMesh) {
     const n = child.name;
     
-    // ✨ 핵심 수정 1: 차체(Vert) 부품이 바퀴에 섞여 들어가는 것 철통 방어!
-    if (n.includes('Vert')) return; // 이름에 Vert가 들어가면 무시하고 바로 넘어감
+    // ✨ 차체 및 브레이크 부품(쿨링팬, 패드 등) 철통 방어!
+    if (n.includes('Vert')) return;     // 차체 껍데기 제외
+    if (n.includes('Object_37')) return; // ❌ 브레이크 관련 부품 제외
+    if (n.includes('\ufffd') || n.includes('007')) return; // ❌ 글자 깨진 007 부품 제외
 
-    // ✨ 핵심 수정 2: '015' 대신 '015_0'으로 휠 부품만 정확하게 저격
-    if (n.includes('Object_35_') || n.includes('Object_37_') || (n.includes('015_0') && !n.includes('002') && !n.includes('004') && !n.includes('006'))) {
+    // ✨ '015_0' 패턴으로 정확하게 정품 휠만 타겟팅
+    if (n.includes('Object_35_') || (n.includes('015_0') && !n.includes('002') && !n.includes('004') && !n.includes('006'))) {
       tempParts[0].push(child);
-    } else if (n.includes('35001') || n.includes('37001') || (n.includes('015_0') && n.includes('002'))) {
+    } else if (n.includes('35001') || (n.includes('015_0') && n.includes('002'))) {
       tempParts[1].push(child);
-    } else if (n.includes('35002') || n.includes('37002') || (n.includes('015_0') && n.includes('004'))) {
+    } else if (n.includes('35002') || (n.includes('015_0') && n.includes('004'))) {
       tempParts[2].push(child);
-    } else if (n.includes('35003') || n.includes('37003') || (n.includes('015_0') && n.includes('006'))) {
+    } else if (n.includes('35003') || (n.includes('015_0') && n.includes('006'))) {
       tempParts[3].push(child);
     }
   }
 });
 
-// 차체의 전체 좌표계를 한 번 새로고침 (안전 장치)
+// 차체의 전체 좌표계를 한 번 새로고침
 car.updateMatrixWorld(true);
 
 for (let i = 0; i < 4; i++) {
