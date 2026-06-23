@@ -443,7 +443,11 @@ const buildingMatPoolGlobal = buildingTexPoolGlobal.map(tex =>
   new THREE.MeshStandardMaterial({ map: tex, roughness: 0.7, metalness: 0.1 })
 );
 const sidewalkTex = makeSidewalkTexture();
-
+const buildingPalette = [
+  0x2a3a4a, 0x3a2e2c, 0x2c3a2c, 0x4a3c30, 0x2e3440,
+  0x3a3020, 0x202e20, 0x302020, 0x303840, 0x253038,
+  0x352c28, 0x1e2c36, 0x2a2a20, 0x301e1e, 0x243028
+];
 // ─── 언덕 지형 시스템 ─────────────────────────────────────────
 const TERRAIN_SEGS = 80;     // 높을수록 디테일, 낮출수록 성능 ↑ (64도 충분)
 const TERRAIN_SIZE = 3000;
@@ -691,7 +695,14 @@ function createPark(x, z) {
   const size = BLOCK_SIZE - ROAD_WIDTH - 2;
 
   // 잔디
+const grass = new THREE.Mesh(
+  new THREE.PlaneGeometry(size, size),
   new THREE.MeshStandardMaterial({ map: grassTexShared, roughness: 0.95 })
+);
+grass.rotation.x = -Math.PI / 2;
+grass.position.set(x, -4.83, z);
+grass.receiveShadow = true;
+parkGroup.add(grass);
 
   // 산책로 (십자 경로)
   const pathMat = new THREE.MeshStandardMaterial({ color: 0xc8a878, roughness: 0.9 });
