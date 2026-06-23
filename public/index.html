@@ -1130,39 +1130,54 @@ car.traverse((child) => {
                 // 그룹의 초기 회전은 0
                 carGroup.rotation.y = 0;
 
-             // ─── McLaren P1 바퀴 노드 추출 ───────────────────────────
-carWheelNodes = [null, null, null, null];
+           // ─── McLaren P1 바퀴 노드 추출 (조각난 부품 그룹화) ──────────────────
+// 4개의 빈 그룹(상자)을 만듭니다.
+carWheelNodes = [new THREE.Group(), new THREE.Group(), new THREE.Group(), new THREE.Group()];
 
 car.traverse((child) => {
-  // 실제 형태가 있는 부품(Mesh)인 경우에만 검사
   if (child.isMesh) {
     const n = child.name;
 
-    // 알려주신 숫자 패턴을 찾아 인덱스에 할당합니다.
-    if (n.includes('11001')) {
-      carWheelNodes[0] = child;       // 인덱스 0: 앞바퀴 1
-      child.userData.side = 'L';      // 일단 왼쪽으로 설정
-    } else if (n.includes('11005')) {
-      carWheelNodes[1] = child;       // 인덱스 1: 앞바퀴 2
-      child.userData.side = 'R';      // 일단 오른쪽으로 설정
-    } else if (n.includes('11003')) {
-      carWheelNodes[2] = child;       // 인덱스 2: 뒷바퀴 1
-      child.userData.side = 'L';      // 일단 왼쪽으로 설정
-    } else if (n.includes('.004')) {   // 글자가 깨진 마지막 뒷바퀴 ('004' 패턴)
-      carWheelNodes[3] = child;       // 인덱스 3: 뒷바퀴 2
-      child.userData.side = 'R';      // 일단 오른쪽으로 설정
+    // 타이어 부품(35), 휠 부품(37), 기타 부품(015)을 찾아 각각의 상자에 담습니다.
+    if (n.includes('Object_35_') || n.includes('Object_37_') || (n.includes('015') && !n.includes('002') && !n.includes('004') && !n.includes('006'))) {
+      carWheelNodes[0].add(child);
+    } 
+    else if (n.includes('35001') || n.includes('37001') || (n.includes('015') && n.includes('002'))) {
+      carWheelNodes[1].add(child);
+    } 
+    else if (n.includes('35002') || n.includes('37002') || (n.includes('015') && n.includes('004'))) {
+      carWheelNodes[2].add(child);
+    } 
+    else if (n.includes('35003') || n.includes('37003') || (n.includes('015') && n.includes('006'))) {
+      carWheelNodes[3].add(child);
     }
   }
 });
 
-// 축 불일치를 방지하기 위해 바퀴 자체의 중심점을 다시 잡아줍니다.
-carWheelNodes.forEach((node) => {
-  if (node && node.isMesh) {
-    node.geometry.computeBoundingBox();
+// 조각들을 다 담은 그룹(상자)을 차체에 붙이고 중심점을 잡아줍니다.
+carWheelNodes.forEach((group, i) => {
+  if (group.children.length > 0) {
+    car.add(group); // 차체에 묶음 추가
+    
+    // 묶음의 전체 크기를 계산해서 진짜 중심점 찾기
+    const box = new THREE.Box3().setFromObject(group);
     const center = new THREE.Vector3();
-    node.geometry.boundingBox.getCenter(center);
-    node.geometry.translate(-center.x, -center.y, -center.z);
-    node.position.copy(center);
+    box.getCenter(center);
+    
+    // 그룹의 위치를 바퀴 정중앙으로 이동
+    group.position.copy(center);
+    
+    // 그룹 안의 조각들을 중심점 기준으로 알맞게 재배치
+    group.children.forEach(child => {
+      child.position.sub(center);
+    });
+
+    // 💡 바퀴의 좌/우 위치(X좌표)를 자동으로 계산해서 역회전 태그 달기
+    if (center.x > 0) {
+      group.userData.side = 'L'; // X좌표가 양수면 보통 왼쪽
+    } else {
+      group.userData.side = 'R'; // 음수면 오른쪽
+    }
   }
 });
 
