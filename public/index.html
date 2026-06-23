@@ -1138,60 +1138,59 @@ car.traverse((child) => {
   if (child.isMesh) {
     const n = child.name;
 
-    // 1. 깨진 문자()를 가진 휠인지 체크
-    const isWheel = n.includes('');
-
-    // 2. 예외 처리 (차체 및 브레이크 부품 제외)
+    // 1. 확실한 차체 및 브레이크 패드 부품 제외
     if (n.includes('Vert')) return; 
     if (n.includes('Object_37')) return; 
-    
-    // 휠이 아닌데 깨진 문자(\ufffd)가 포함되어 있다면 제외
-    if (n.includes('\ufffd') && !isWheel) return; 
 
-    // [수정] 'Object_35003_Material007_0'은 제외하지 않고 통과시킴
-    if (n.includes('007') && !n.includes('Object_35003')) return; 
+    // 2. [핵심] 깨진 문자()를 가진 휠 4개 패턴 우선 분리
+    // 이 블록을 통해 바퀴 메쉬들을 확실하게 추출하여 wheelHolders로 보냅니다.
+    if (n.includes('\ufffd')) {
+      if (n.includes('006')) {
+        tempParts[1].push(child); // 앞오른쪽 (FR)
+      } else if (n.includes('002')) {
+        tempParts[2].push(child); // 뒤왼쪽 (RL)
+      } else if (n.includes('004')) {
+        tempParts[3].push(child); // 뒤오른쪽 (RR)
+      } else {
+        tempParts[0].push(child); // 앞왼쪽 (FL) - 숫자가 없는 기본 깨진문자 이름
+      }
+      return; // 휠 매칭이 끝났으므로 아래 조건문들을 타지 않고 즉시 종료
+    }
 
-
-    // 3. 각 바퀴별 조건 정의 (여기에 새로 요청하신 부품을 추가했습니다)
-    
+    // 3. 기존의 정상적인 이름 패턴 및 새로 요청하신 부품 분류
     // 앞왼쪽 (FL)
-    const isFrontLeft = 
+    if (
       n.includes('Object_35_') || 
-      (n.includes('015_0') && !n.includes('002') && !n.includes('004') && !n.includes('006') && !n.includes('006_015_0')) ||
-      n === '';
-
-    // 앞오른쪽 (FR) - 새로 요청하신 Object_35003_Material007_0 추가
-    const isFrontRight = 
+      (n.includes('015_0') && !n.includes('002') && !n.includes('004') && !n.includes('006') && !n.includes('006_015_0'))
+    ) {
+      tempParts[0].push(child);
+    } 
+    // 앞오른쪽 (FR) - Object_35003_Material007_0 포함
+    else if (
       n.includes('35003') || 
+      n.includes('Object_35003_Material007_0') ||
       (n.includes('015_0') && n.includes('006')) || 
-      n.includes('006_015_0') || 
-      n.includes('006') ||
-      n.includes('Object_35003_Material007_0'); 
-
+      n.includes('006_015_0')
+    ) {
+      tempParts[1].push(child);
+    } 
     // 뒤왼쪽 (RL)
-    const isRearLeft = 
+    else if (
       n.includes('35001') || 
-      (n.includes('015_0') && n.includes('002')) ||
-      n.includes('002');
-
+      (n.includes('015_0') && n.includes('002'))
+    ) {
+      tempParts[2].push(child);
+    } 
     // 뒤오른쪽 (RR)
-    const isRearRight = 
+    else if (
       n.includes('35002') || 
-      (n.includes('015_0') && n.includes('004')) ||
-      n.includes('004');
-
-
-    // 4. tempParts 그룹에 할당
-    // ⚠️ 만약 코드를 실행했는데도 뒷바퀴 좌우가 서로 바뀌어 있다면, 
-    // ⚠️ 아래에서 [2]와 [3] 숫자를 서로 맞바꿔주시면 됩니다.
-    if (isFrontLeft) {
-      tempParts[0].push(child); // 앞왼쪽
-    } else if (isFrontRight) {
-      tempParts[2].push(child); // 뒤왼쪽
-    } else if (isRearLeft) {
-      tempParts[3].push(child); // 뒤오른쪽
-    } else if (isRearRight) {
-      tempParts[1].push(child); // 앞오른쪽
+      (n.includes('015_0') && n.includes('004'))
+    ) {
+      tempParts[3].push(child);
+    }
+    // 4. 바퀴와 관련 없는 일반 부품 중 007이 들어간 부품은 여기서 제외
+    else if (n.includes('007')) {
+      return;
     }
   }
 });
