@@ -319,6 +319,85 @@ function getYRotation(q) {
   return Math.atan2(siny_cosp, cosy_cosp);
 }
 
+
+  function makeAsphaltTexture() {
+  const c = document.createElement('canvas');
+  c.width = 128;
+  c.height = 128;
+
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#303030';
+  ctx.fillRect(0, 0, c.width, c.height);
+
+  for (let i = 0; i < 900; i++) {
+    const v = 35 + Math.random() * 35 | 0;
+    ctx.fillStyle = `rgb(${v},${v},${v})`;
+    ctx.fillRect(Math.random() * c.width, Math.random() * c.height, 1, 1);
+  }
+
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = THREE.RepeatWrapping;
+  t.wrapT = THREE.RepeatWrapping;
+  t.repeat.set(8, 8);
+  return t;
+}
+
+function makeSidewalkTexture() {
+  const c = document.createElement('canvas');
+  c.width = 128;
+  c.height = 128;
+
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#8c8c8c';
+  ctx.fillRect(0, 0, c.width, c.height);
+
+  ctx.strokeStyle = '#777777';
+  ctx.lineWidth = 2;
+
+  for (let i = 0; i <= 128; i += 32) {
+    ctx.beginPath();
+    ctx.moveTo(i, 0);
+    ctx.lineTo(i, 128);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(0, i);
+    ctx.lineTo(128, i);
+    ctx.stroke();
+  }
+
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = THREE.RepeatWrapping;
+  t.wrapT = THREE.RepeatWrapping;
+  t.repeat.set(4, 4);
+  return t;
+}
+
+const grassTexShared = (() => {
+  const c = document.createElement('canvas');
+  c.width = 128;
+  c.height = 128;
+
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#356b32';
+  ctx.fillRect(0, 0, c.width, c.height);
+
+  for (let i = 0; i < 800; i++) {
+    const g = 70 + Math.random() * 60 | 0;
+    ctx.fillStyle = `rgb(${25 + Math.random() * 20 | 0},${g},${25 + Math.random() * 20 | 0})`;
+    ctx.fillRect(Math.random() * c.width, Math.random() * c.height, 1, 1);
+  }
+
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = THREE.RepeatWrapping;
+  t.wrapT = THREE.RepeatWrapping;
+  t.repeat.set(6, 6);
+  return t;
+})();
+
+const asphaltTex = makeAsphaltTexture();
+const sidewalkTex = makeSidewalkTexture();
+
 // =======================
 // 바닥 + 도시 맵 생성 코드
 // =======================
