@@ -1134,27 +1134,56 @@ car.traverse((child) => {
     carWheelNodes = [new THREE.Group(), new THREE.Group(), new THREE.Group(), new THREE.Group()];
     const tempParts = [[], [], [], []];
 
-    car.traverse((child) => {
-      if (child.isMesh) {
-        const n = child.name;
+   car.traverse((child) => {
+  if (child.isMesh) {
+    const n = child.name;
 
-        // 차체 및 브레이크 부품(쿨링팬, 패드 등) 제외
-        if (n.includes('Vert')) return; 
-        if (n.includes('Object_37')) return; 
-        if (n.includes('\ufffd') || n.includes('007')) return; 
+    // 휠 이름인지 체크 ( 문자가 포함된 휠)
+    // 인코딩 문제로 깨진 텍스트(\ufffd)가 포함된 휠 모델을 식별합니다.
+    const isWheel = n.includes('');
 
-      // 바퀴 설정
-        if (n.includes('Object_35_') || (n.includes('015_0') && !n.includes('002') && !n.includes('004') && !n.includes('006') && !n.includes('006_015_0'))) {
-          tempParts[0].push(child);
-        } else if (n.includes('35001') || (n.includes('015_0') && n.includes('002'))) {
-          tempParts[2].push(child);
-        } else if (n.includes('35002') || (n.includes('015_0') && n.includes('004'))) {
-          tempParts[3].push(child);
-        } else if (n.includes('35003') || (n.includes('015_0') && n.includes('006')) || n.includes('006_015_0')) {
-          tempParts[1].push(child); 
-        }
-      }
-    });
+    // 차체 및 브레이크 부품(쿨링팬, 패드 등) 제외
+    if (n.includes('Vert')) return; 
+    if (n.includes('Object_37')) return; 
+    
+    // 휠이 "아닌데" 깨진 문자(\ufffd)가 있거나 007인 경우에만 제외 (휠은 통과시킴)
+    if ((n.includes('\ufffd') && !isWheel) || n.includes('007')) return; 
+
+    // 바퀴(타이어) 및 휠 설정
+    // 1. tempParts[0] (보통 프론트 레프트 - FL) : 뒤에 숫자가 안 붙은 기본 이름
+    if (
+      n.includes('Object_35_') || 
+      (n.includes('015_0') && !n.includes('002') && !n.includes('004') && !n.includes('006') && !n.includes('006_015_0')) ||
+      n === ''
+    ) {
+      tempParts[0].push(child);
+    } 
+    // 2. tempParts[2] (보통 리어 레프트 - RL) : 002가 붙은 이름
+    else if (
+      n.includes('35001') || 
+      (n.includes('015_0') && n.includes('002')) ||
+      n.includes('002')
+    ) {
+      tempParts[2].push(child);
+    } 
+    // 3. tempParts[3] (보통 리어 라이트 - RR) : 004가 붙은 이름
+    else if (
+      n.includes('35002') || 
+      (n.includes('015_0') && n.includes('004')) ||
+      n.includes('004')
+    ) {
+      tempParts[3].push(child);
+    } 
+    // 4. tempParts[1] (보통 프론트 라이트 - FR) : 006이 붙은 이름
+    else if (
+      n.includes('35003') || 
+      (n.includes('015_0') && n.includes('006')) || n.includes('006_015_0') ||
+      n.includes('006')
+    ) {
+      tempParts[1].push(child); 
+    }
+  }
+});
 
 // 차체의 전체 좌표계를 한 번 새로고침
 car.updateMatrixWorld(true);
@@ -1972,9 +2001,9 @@ setInterval(() => {
 
   // 4. 우리가 원하는 시각적 조향각 계산 (SUV 반전 및 앞바퀴 증폭)
   let visualSteering = physicsSteering;
-  const exaggerationFactor = 2.6; // ⭐ 원하는 꺾임 배율
+  const exaggerationFactor = 2.6; //원하는 꺾임 배율
 
-  if (currentCarModel.includes('SUV')) {
+  if (currentCarModel.includes('SUV') || currentCarModel.includes('McLarenP1')) {
     // 레인지로버(SUV)는 조향 축 방향이 반대이므로 마이너스(-) 처리
     if (i === 0 || i === 1) {
       visualSteering = -physicsSteering * exaggerationFactor; 
