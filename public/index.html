@@ -1643,7 +1643,7 @@ if (input.handbrake) {
   // 1인칭 흔들림 효과 (G-Force 표현)
   const speed = getSpeedKmH();
   const speedFactor = speed / 100;
-  const shake = Math.sin(Date.now() * 0.01) * 0.001618 * speedFactor;
+  const shake = Math.sin(Date.now() * 0.01) * 0.0041618 * speedFactor;
   offset.y += shake;
   offset.x += -steeringValue * 0.5; // 조향 시 몸이 쏠리는 효과
 
@@ -1957,12 +1957,10 @@ setInterval(() => {
         wheelHolders[i].quaternion.copy(t.quaternion);
       }
 
-      // 페라리 전용 실제 핸들 회전 시스템
-      if (steeringWheelNode) {
-        // steeringValue는 라디안 값이므로, 시각적으로 더 많이 돌아가게 배율을 조정합니다.
-        // 페라리 모델의 핸들 축은 y축이 회전축인 경우가 많으므로 확인이 필요하지만, 
-        // 기존 코드의 z축을 유지하되 배율을 최적화합니다.
-        const steeringWheelRotation = steeringValue * 6.0; 
+      // 페라리 전용 실제 핸들 회전 시스템 (1인칭 시점에서만 업데이트하여 최적화)
+      if (steeringWheelNode && cameraMode === 'first') {
+        // 배율을 기존 6.0에서 15.0으로 높여 핸들이 더 큰 각도로 돌아가게 합니다.
+        const steeringWheelRotation = steeringValue * 15.0; 
         steeringWheelNode.rotation.y = steeringWheelRotation; 
       }
       // ─── GLTF/GLB 모델 바퀴 노드 회전 업데이트 ───────────────────────────
