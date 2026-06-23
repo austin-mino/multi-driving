@@ -1131,25 +1131,57 @@ car.traverse((child) => {
                 carGroup.rotation.y = 0;
 
                // ─── McLaren P1 바퀴 노드 추출 ───────────────────────────
+// ─── McLaren P1 바퀴 노드 추출 ───────────────────────────
 carWheelNodes = [null, null, null, null];
-let wheelCount = 0;
+let wheelIndex = 0;
 
 car.traverse((child) => {
-  if (child.isMesh) {
-    // 1. F12 콘솔창에 모든 부품의 이름을 강제로 출력합니다.
-    console.log("McLaren 부품 이름:", child.name);
-  }
-
   const n = child.name;
+
+  // 출력된 목록을 바탕으로 바퀴 관련 최상위 그룹이나 부품을 찾습니다.
+  // 상위 노드를 돌리기 위해 "Object_35"나 "Object_37"이 포함된 메시의 부모를 찾거나,
+  // 해당 그룹 자체의 이름을 짐작하여 잡습니다.
   
-  // 2. 바퀴 이름 조건을 수정
-  if (n.includes('.001') || n.includes('여기에_깨진_이름2')) {
-    if (wheelCount < 4) {
-      carWheelNodes[wheelCount] = child;
-      wheelCount++;
-    }
+  // 만약 그룹 이름이 따로 없고 메시 자체를 돌려야 한다면 아래와 같이 묶어서 처리합니다.
+  if (
+      n.includes('Object_35_') || 
+      n.includes('Object_35001_') || 
+      n.includes('Object_35002_') || 
+      n.includes('Object_35003_')
+  ) {
+      // 휠을 구성하는 여러 부품 중 하나가 잡히면, 그 부모 노드(바퀴 전체 그룹)를 선택하도록 합니다.
+      // 보통은 부모 노드를 회전시켜야 타이어와 휠이 같이 돕니다.
+      if (child.parent && !carWheelNodes.includes(child.parent)) {
+          if (wheelIndex < 4) {
+              carWheelNodes[wheelIndex] = child.parent;
+              wheelIndex++;
+          }
+      }
   }
 });
+
+// 바퀴 배열이 덜 찼을 때를 대비해, 다른 패턴(Object_37)으로도 시도
+if (carWheelNodes.includes(null)) {
+  wheelIndex = 0;
+  carWheelNodes = [null, null, null, null]; // 초기화
+  
+  car.traverse((child) => {
+    const n = child.name;
+    if (
+        n.includes('Object_37_') || 
+        n.includes('Object_37001_') || 
+        n.includes('Object_37002_') || 
+        n.includes('Object_37003_')
+    ) {
+        if (child.parent && !carWheelNodes.includes(child.parent)) {
+            if (wheelIndex < 4) {
+                carWheelNodes[wheelIndex] = child.parent;
+                wheelIndex++;
+            }
+        }
+    }
+  });
+}
 
                 carVisualOffsetY = 1.1;
                 carGroup.name = 'MainBody';
