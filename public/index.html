@@ -1138,92 +1138,63 @@ car.traverse((child) => {
   if (child.isMesh) {
     const n = child.name;
 
-    // 휠 이름인지 체크 ( 문자가 포함된 휠)
-    // 인코딩 문제로 깨진 텍스트(\ufffd)가 포함된 휠 모델을 식별합니다.
+    // 1. 깨진 문자()를 가진 휠인지 체크
     const isWheel = n.includes('');
 
-    // 차체 및 브레이크 부품(쿨링팬, 패드 등) 제외
+    // 2. 예외 처리 (차체 및 브레이크 부품 제외)
     if (n.includes('Vert')) return; 
     if (n.includes('Object_37')) return; 
     
-    // 휠이 "아닌데" 깨진 문자(\ufffd)가 있거나 007인 경우에만 제외 (휠은 통과시킴)
-    if ((n.includes('\ufffd') && !isWheel) || n.includes('007')) return; 
+    // 휠이 아닌데 깨진 문자(\ufffd)가 포함되어 있다면 제외
+    if (n.includes('\ufffd') && !isWheel) return; 
 
-    // 바퀴(타이어) 및 휠 설정
-    // 1. tempParts[0] (보통 프론트 레프트 - FL) : 뒤에 숫자가 안 붙은 기본 이름
-    if (
+    // [수정] 'Object_35003_Material007_0'은 제외하지 않고 통과시킴
+    if (n.includes('007') && !n.includes('Object_35003')) return; 
+
+
+    // 3. 각 바퀴별 조건 정의 (여기에 새로 요청하신 부품을 추가했습니다)
+    
+    // 앞왼쪽 (FL)
+    const isFrontLeft = 
       n.includes('Object_35_') || 
       (n.includes('015_0') && !n.includes('002') && !n.includes('004') && !n.includes('006') && !n.includes('006_015_0')) ||
-      n === ''
-    ) {
-      tempParts[0].push(child);
-    } 
-    // 2. tempParts[2] (보통 리어 레프트 - RL) : 002가 붙은 이름
-    else if (
+      n === '';
+
+    // 앞오른쪽 (FR) - 새로 요청하신 Object_35003_Material007_0 추가
+    const isFrontRight = 
+      n.includes('35003') || 
+      (n.includes('015_0') && n.includes('006')) || 
+      n.includes('006_015_0') || 
+      n.includes('006') ||
+      n.includes('Object_35003_Material007_0'); 
+
+    // 뒤왼쪽 (RL)
+    const isRearLeft = 
       n.includes('35001') || 
       (n.includes('015_0') && n.includes('002')) ||
-      n.includes('002')
-    ) {
-      tempParts[2].push(child);
-    } 
-    // 3. tempParts[3] (보통 리어 라이트 - RR) : 004가 붙은 이름
-    else if (
+      n.includes('002');
+
+    // 뒤오른쪽 (RR)
+    const isRearRight = 
       n.includes('35002') || 
       (n.includes('015_0') && n.includes('004')) ||
-      n.includes('004')
-    ) {
-      tempParts[3].push(child);
-    } 
-    // 4. tempParts[1] (보통 프론트 라이트 - FR) : 006이 붙은 이름
-    else if (
-      n.includes('35003') || 
-      (n.includes('015_0') && n.includes('006')) || n.includes('006_015_0') ||
-      n.includes('006')
-    ) {
-      tempParts[1].push(child); 
+      n.includes('004');
+
+
+    // 4. tempParts 그룹에 할당
+    // ⚠️ 만약 코드를 실행했는데도 뒷바퀴 좌우가 서로 바뀌어 있다면, 
+    // ⚠️ 아래에서 [2]와 [3] 숫자를 서로 맞바꿔주시면 됩니다.
+    if (isFrontLeft) {
+      tempParts[0].push(child); // 앞왼쪽
+    } else if (isFrontRight) {
+      tempParts[2].push(child); // 뒤왼쪽
+    } else if (isRearLeft) {
+      tempParts[3].push(child); // 뒤오른쪽
+    } else if (isRearRight) {
+      tempParts[1].push(child); // 앞오른쪽
     }
   }
 });
-
-// 차체의 전체 좌표계를 한 번 새로고침
-car.updateMatrixWorld(true);
-
-for (let i = 0; i < 4; i++) {
-  const group = carWheelNodes[i];
-  if (tempParts[i].length > 0) {
-    car.add(group); 
-    
-    // 부품들을 그룹에 안전하게 담기
-    tempParts[i].forEach(part => {
-      group.attach(part);
-    });
-    
-    group.updateMatrixWorld(true);
-    
-    // 바퀴 중심점 계산
-    const box = new THREE.Box3().setFromObject(group);
-    const worldCenter = new THREE.Vector3();
-    box.getCenter(worldCenter);
-    
-    // 월드 좌표를 로컬(차체) 좌표로 변환하여 제자리 지키기
-    const localCenter = car.worldToLocal(worldCenter.clone());
-    
-    group.position.copy(localCenter);
-    
-    group.children.forEach(child => {
-      child.position.x -= localCenter.x;
-      child.position.y -= localCenter.y;
-      child.position.z -= localCenter.z;
-    });
-
-    // X 좌표를 기준으로 좌/우 판별 (역회전 방지)
-    if (localCenter.x > 0) {
-      group.userData.side = 'L';
-    } else {
-      group.userData.side = 'R';
-    }
-  }
-}
 
                 carVisualOffsetY = 1.1;
                 carGroup.name = 'MainBody';
