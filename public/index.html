@@ -420,24 +420,7 @@ const grassTexShared = (() => {
 const asphaltTex = makeAsphaltTexture();
 const sidewalkTex = makeSidewalkTexture();
 
-// =======================
-// 바닥 + 도시 맵 생성 코드
-// =======================
-const groundMaterial = new CANNON.Material("groundMaterial");
-const wheelMaterial = new CANNON.Material("wheelMaterial");
 
-const contactMaterial = new CANNON.ContactMaterial(
-  groundMaterial,
-  wheelMaterial,
-  {
-    friction: 0.45,
-    restitution: 0.0,
-    contactEquationStiffness: 1e7,
-    contactEquationRelaxation: 3
-  }
-);
-
-world.addContactMaterial(contactMaterial);
 // 성능 설정
 const TERRAIN_SEGS = 72;      // 64~80 추천. 낮을수록 렉 감소
 const TERRAIN_SIZE = 3000;
