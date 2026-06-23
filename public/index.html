@@ -1134,23 +1134,65 @@ car.traverse((child) => {
     carWheelNodes = [new THREE.Group(), new THREE.Group(), new THREE.Group(), new THREE.Group()];
     const tempParts = [[], [], [], []];
 
-   car.traverse((child) => {
+  car.traverse((child) => {
   if (child.isMesh) {
     const n = child.name;
-
-  
+    
     // ✨ 핵심 수정 1: 차체(Vert) 부품이 바퀴에 섞여 들어가는 것 철통 방어!
     if (n.includes('Vert')) return; // 이름에 Vert가 들어가면 무시하고 바로 넘어감
 
     // ✨ 핵심 수정 2: '015' 대신 '015_0'으로 휠 부품만 정확하게 저격
     if (n.includes('Object_35_') || n.includes('Object_37_') || (n.includes('015_0') && !n.includes('002') && !n.includes('004') && !n.includes('006'))) {
+      tempParts[0].push(child);
+    } else if (n.includes('35001') || n.includes('37001') || (n.includes('015_0') && n.includes('002'))) {
+      tempParts[1].push(child);
+    } else if (n.includes('35002') || n.includes('37002') || (n.includes('015_0') && n.includes('004'))) {
+      tempParts[2].push(child);
+    } else if (n.includes('35003') || n.includes('37003') || (n.includes('015_0') && n.includes('006'))) {
+      tempParts[3].push(child);
+    }
+  }
+});
 
-          } else if (n.includes('35001') || n.includes('37001') || (n.includes('015_0') && n.includes('002'))) {
+// 차체의 전체 좌표계를 한 번 새로고침 (안전 장치)
+car.updateMatrixWorld(true);
 
-          } else if (n.includes('35002') || n.includes('37002') || (n.includes('015_0') && n.includes('004'))) {
+for (let i = 0; i < 4; i++) {
+  const group = carWheelNodes[i];
+  if (tempParts[i].length > 0) {
+    car.add(group); 
+    
+    // 부품들을 그룹에 안전하게 담기
+    tempParts[i].forEach(part => {
+      group.attach(part);
+    });
+    
+    group.updateMatrixWorld(true);
+    
+    // 바퀴 중심점 계산
+    const box = new THREE.Box3().setFromObject(group);
+    const worldCenter = new THREE.Vector3();
+    box.getCenter(worldCenter);
+    
+    // 월드 좌표를 로컬(차체) 좌표로 변환하여 제자리 지키기
+    const localCenter = car.worldToLocal(worldCenter.clone());
+    
+    group.position.copy(localCenter);
+    
+    group.children.forEach(child => {
+      child.position.x -= localCenter.x;
+      child.position.y -= localCenter.y;
+      child.position.z -= localCenter.z;
+    });
 
-          } else if (n.includes('35003') || n.includes('37003') || (n.includes('015_0') && n.includes('006'))) {
-
+    // X 좌표를 기준으로 좌/우 판별 (역회전 방지)
+    if (localCenter.x > 0) {
+      group.userData.side = 'L';
+    } else {
+      group.userData.side = 'R';
+    }
+  }
+}
                 carVisualOffsetY = 1.1;
                 carGroup.name = 'MainBody';
 
