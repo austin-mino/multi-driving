@@ -1138,62 +1138,18 @@ car.traverse((child) => {
   if (child.isMesh) {
     const n = child.name;
 
-    // 1. 확실한 차체 및 브레이크 패드 부품 제외
-    if (n.includes('Vert')) return; 
-    if (n.includes('Object_37')) return; 
+  
+    // ✨ 핵심 수정 1: 차체(Vert) 부품이 바퀴에 섞여 들어가는 것 철통 방어!
+    if (n.includes('Vert')) return; // 이름에 Vert가 들어가면 무시하고 바로 넘어감
 
-    // 2. [핵심] 깨진 문자()를 가진 휠 4개 패턴 우선 분리
-    // 이 블록을 통해 바퀴 메쉬들을 확실하게 추출하여 wheelHolders로 보냅니다.
-    if (n.includes('\ufffd')) {
-      if (n.includes('006')) {
-        tempParts[1].push(child); // 앞오른쪽 (FR)
-      } else if (n.includes('002')) {
-        tempParts[2].push(child); // 뒤왼쪽 (RL)
-      } else if (n.includes('004')) {
-        tempParts[3].push(child); // 뒤오른쪽 (RR)
-      } else {
-        tempParts[0].push(child); // 앞왼쪽 (FL) - 숫자가 없는 기본 깨진문자 이름
-      }
-      return; // 휠 매칭이 끝났으므로 아래 조건문들을 타지 않고 즉시 종료
-    }
+    // ✨ 핵심 수정 2: '015' 대신 '015_0'으로 휠 부품만 정확하게 저격
+    if (n.includes('Object_35_') || n.includes('Object_37_') || (n.includes('015_0') && !n.includes('002') && !n.includes('004') && !n.includes('006'))) {
 
-    // 3. 기존의 정상적인 이름 패턴 및 새로 요청하신 부품 분류
-    // 앞왼쪽 (FL)
-    if (
-      n.includes('Object_35_') || 
-      (n.includes('015_0') && !n.includes('002') && !n.includes('004') && !n.includes('006') && !n.includes('006_015_0'))
-    ) {
-      tempParts[0].push(child);
-    } 
-    // 앞오른쪽 (FR) - Object_35003_Material007_0 포함
-    else if (
-      n.includes('35003') || 
-      n.includes('Object_35003_Material007_0') ||
-      (n.includes('015_0') && n.includes('006')) || 
-      n.includes('006_015_0')
-    ) {
-      tempParts[1].push(child);
-    } 
-    // 뒤왼쪽 (RL)
-    else if (
-      n.includes('35001') || 
-      (n.includes('015_0') && n.includes('002'))
-    ) {
-      tempParts[2].push(child);
-    } 
-    // 뒤오른쪽 (RR)
-    else if (
-      n.includes('35002') || 
-      (n.includes('015_0') && n.includes('004'))
-    ) {
-      tempParts[3].push(child);
-    }
-    // 4. 바퀴와 관련 없는 일반 부품 중 007이 들어간 부품은 여기서 제외
-    else if (n.includes('007')) {
-      return;
-    }
-  }
-});
+          } else if (n.includes('35001') || n.includes('37001') || (n.includes('015_0') && n.includes('002'))) {
+
+          } else if (n.includes('35002') || n.includes('37002') || (n.includes('015_0') && n.includes('004'))) {
+
+          } else if (n.includes('35003') || n.includes('37003') || (n.includes('015_0') && n.includes('006'))) {
 
                 carVisualOffsetY = 1.1;
                 carGroup.name = 'MainBody';
