@@ -1393,6 +1393,7 @@ btnToggleCam.addEventListener('click', () => {
     const maxSteerVal = Math.PI / 16;
     let engineForce = 0;
     let steeringValue = 0;
+    let visualSteeringLag = 0; // 핸들 시각 전용
 
     function updateGearDisplay() {
       gearDisplay.textContent = `기어: ${gearState}`;
@@ -1957,12 +1958,13 @@ setInterval(() => {
         wheelHolders[i].quaternion.copy(t.quaternion);
       }
 
-      // 페라리 전용 실제 핸들 회전 시스템 (1인칭 시점에서만 업데이트하여 최적화)
-      if (steeringWheelNode && cameraMode === 'first') {
-        // 배율을 기존 6.0에서 15.0으로 높여 핸들이 더 큰 각도로 돌아가게 합니다.
-        const steeringWheelRotation = steeringValue * 15.0; 
-        steeringWheelNode.rotation.y = steeringWheelRotation; 
-      }
+      // 실제 핸들 회전 시스템 (1인칭 시점에서만 업데이트하여 최적화)
+    // 매 프레임마다 시각값이 물리값을 느리게 추적
+visualSteeringLag += (steeringValue - visualSteeringLag) * 0.07;
+
+if (steeringWheelNode && cameraMode === 'first') {
+  steeringWheelNode.rotation.y = visualSteeringLag * 15.0;
+}
       // ─── GLTF/GLB 모델 바퀴 노드 회전 업데이트 ───────────────────────────
       // carWheelNodes[i]는 모델 내부 바퀴 부모 노드를 가리킨다.
       // CANNON의 worldTransform.quaternion에서 차체 회전을 제거하여
