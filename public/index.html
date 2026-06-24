@@ -632,25 +632,16 @@ function rng() {
   return seededRandom(++seedCounter);
 }
 
-// 실제 도시형 지형: 중심 평지 + 긴 오르막 + 외곽 언덕
+// ==========================================
+// 1. 더 현실적이고 구불구불한 언덕 지형 생성
+// ==========================================
 function terrainH(nx, nz) {
-  const dist = Math.sqrt(nx * nx + nz * nz);
-  const flatStart = Math.max(0, 1 - dist / 240);
-
-  const longUphill = Math.max(0, nz + 120) * 0.018;
-  const sideSlope = nx * 0.007;
-
-  const hillA = 24 * Math.exp(-((nx - 380) ** 2 + (nz + 160) ** 2) / 110000);
-  const hillB = 18 * Math.exp(-((nx + 430) ** 2 + (nz - 280) ** 2) / 150000);
-  const hillC = 12 * Math.exp(-((nx - 120) ** 2 + (nz - 540) ** 2) / 95000);
-
-  const smallNoise =
-    Math.sin(nx * 0.008) * 2.8 +
-    Math.cos(nz * 0.007) * 2.4 +
-    Math.sin((nx + nz) * 0.014) * 1.5;
-
-  const h = longUphill + sideSlope + hillA + hillB + hillC + smallNoise;
-  return h * (1 - flatStart * 0.96);
+  // 다양한 크기의 언덕과 산을 조합하여 입체적인 지형 구성
+  const hill1 = 45 * Math.sin(nx * 0.003) * Math.cos(nz * 0.004);
+  const hill2 = 30 * Math.sin(nx * 0.008 + 2) * Math.cos(nz * 0.007 - 1);
+  const mountain = 100 * Math.exp(-((nx - 200)**2 + (nz + 300)**2)/70000); 
+  const valley = -30 * Math.exp(-((nx + 150)**2 + (nz - 100)**2)/50000);
+  return hill1 + hill2 + mountain + valley;
 }
 
 function groundY(x, z) {
@@ -668,7 +659,7 @@ for (let xi = 0; xi < terrainRes; xi++) {
   }
 }
 
-// Three.js 지형
+// Three.js 지형 렌더링
 const terrainGeo = new THREE.PlaneGeometry(
   TERRAIN_SIZE,
   TERRAIN_SIZE,
@@ -689,42 +680,117 @@ const terrainMesh = new THREE.Mesh(terrainGeo, terrainMat);
 terrainMesh.receiveShadow = true;
 scene.add(terrainMesh);
 
-// Cannon 지형 물리
+// Cannon 지형 물리 (기본 바닥)
 const hfShape = new CANNON.Heightfield(heightData, { elementSize: elem });
 const terrainBody = new CANNON.Body({ mass: 0, material: groundMaterial });
 terrainBody.addShape(hfShape);
 terrainBody.position.set(-TERRAIN_SIZE / 2, -5, -TERRAIN_SIZE / 2);
 world.addBody(terrainBody);
 
-// 도로망 생성
-for (let i = -GRID_COUNT; i <= GRID_COUNT; i++) {
-  for (let j = -GRID_COUNT; j <= GRID_COUNT; j++) {
-    const x = i * BLOCK_SIZE;
-    const z = j * BLOCK_SIZE;
+// ==========================================
+// 2. 구불구불한 메인 순환 도로 생성 (바닥 뚫림 방지 적용)
+// ==========================================
+// 도로가 이어질 2D 맵 포인트 (구불구불한 코스)
+const curvePoints2D = [
+  new THREE.Vector2(-50, 0),
+  new THREE.Vector2(50, -80),
+  new THREE.Vector2(150, -50),
+  new THREE.Vector2(300, -180),
+  new THREE.Vector2(100, -350),
+  new THREE.Vector2(-150, -400),
+  new THREE.Vector2(-300, -250),
+  new THREE.Vector2(-350, -50),
+  new THREE.Vector2(-200, 150),
+  new THREE.Vector2(-50, 200),
+  new THREE.Vector2(150, 300),
+  new THREE.Vector2(350, 150),
+  new THREE.Vector2(200, 0)
+];
 
-    createRoadTile(x, z);
-    createSidewalkBlock(x, z);
-    addLaneMarkings(x, z);
+// 2D 포인트를 지형 높이(groundY)에 맞춘 3D 포인트로 변환
+const curvePoints3D = curvePoints2D.map(p => {
+  return new THREE.Vector3(p.x, groundY(p.x, p.y) + 0.5, p.y);
+});
 
-    if ((i + j) % 2 === 0) {
-      addCrosswalk(x, z);
-    }
+// 점들을 부드럽게 이어주는 3D 커브 곡선 (루프형)
+const trackCurve = new THREE.CatmullRomCurve3(curvePoints3D, true);
 
-    const isCentral = Math.abs(i) <= 1 && Math.abs(j) <= 1;
-    const isPark = !isCentral && rng() < 0.13;
+const segmentCount = 400; // 곡선의 부드러움 (해상도)
+const roadW = 24; // 도로 폭
+const roadThickness = 8; // 핵심: 8m 두께의 물리 박스로 바닥 뚫림 절대 방지
 
-    if (isPark) {
-      createPark(x, z);
-    } else {
-      createBuilding(x, z, isCentral);
-    }
+for (let i = 0; i < segmentCount; i++) {
+  const t1 = i / segmentCount;
+  const t2 = (i + 1) / segmentCount;
+  
+  const p1 = trackCurve.getPointAt(t1);
+  const p2 = trackCurve.getPointAt(t2);
+  
+  const center = new THREE.Vector3().addVectors(p1, p2).multiplyScalar(0.5);
+  const distance = p1.distanceTo(p2);
+  
+  // 도로가 향하는 방향 및 회전 각도 계산
+  const direction = new THREE.Vector3().subVectors(p2, p1).normalize();
+  const axis = new THREE.Vector3(0, 0, 1);
+  const quaternion = new THREE.Quaternion().setFromUnitVectors(axis, direction);
 
-    addStreetProps(x, z);
+  // --- [시각적 도로 생성] ---
+  const meshGeo = new THREE.BoxGeometry(roadW, 0.4, distance + 0.1);
+  const mesh = new THREE.Mesh(meshGeo, roadMat);
+  mesh.position.copy(center);
+  mesh.quaternion.copy(quaternion);
+  mesh.receiveShadow = true;
+  roadGroup.add(mesh);
+
+  // 시각적 중앙선
+  if (i % 2 === 0) {
+    const lineGeo = new THREE.BoxGeometry(0.4, 0.45, distance * 0.5);
+    const line = new THREE.Mesh(lineGeo, yellowMat);
+    line.position.copy(center);
+    line.quaternion.copy(quaternion);
+    roadGroup.add(line);
+  }
+
+  // --- [물리적 도로 생성: 바닥 뚫림 완벽 방지] ---
+  // 두꺼운 보이지 않는 Box를 도로마다 깔아서 고속 주행 시에도 뚫리지 않게 세팅
+  const roadBody = new CANNON.Body({ mass: 0, material: groundMaterial });
+  roadBody.addShape(new CANNON.Box(new CANNON.Vec3(roadW / 2, roadThickness / 2, distance / 2)));
+  // 박스가 위로 튀어나오지 않게 높이를 살짝 내림
+  roadBody.position.set(center.x, center.y - roadThickness / 2 + 0.2, center.z);
+  roadBody.quaternion.set(quaternion.x, quaternion.y, quaternion.z, quaternion.w);
+  world.addBody(roadBody);
+
+  // --- [도로 주변 도시 환경 배치] ---
+  // 오른쪽, 왼쪽 방향 벡터 도출
+  const right = new THREE.Vector3(-direction.z, 0, direction.x).normalize();
+  
+  // 좌우 건물 무작위 배치
+  if (Math.random() < 0.35) {
+    const dist = roadW / 2 + 15 + Math.random() * 15;
+    const bPos = center.clone().add(right.clone().multiplyScalar(dist));
+    createBuilding(bPos.x, bPos.z, Math.random() > 0.7);
+  }
+  if (Math.random() < 0.35) {
+    const dist = roadW / 2 + 15 + Math.random() * 15;
+    const bPos = center.clone().add(right.clone().multiplyScalar(-dist));
+    createBuilding(bPos.x, bPos.z, Math.random() > 0.7);
+  }
+
+  // 일정한 간격으로 가로등 배치
+  if (i % 10 === 0) {
+    const lPos = center.clone().add(right.clone().multiplyScalar(roadW / 2 + 2));
+    createStreetLight(lPos.x, lPos.z);
+  } else if (i % 10 === 5) {
+    const lPos = center.clone().add(right.clone().multiplyScalar(-(roadW / 2 + 2)));
+    createStreetLight(lPos.x, lPos.z);
+  }
+  
+  // 가로수 숲 배치
+  if (Math.random() < 0.25) {
+    const tPos = center.clone().add(right.clone().multiplyScalar(roadW / 2 + 7));
+    createTree(tPos.x, tPos.z);
   }
 }
-
-createHillsideRoadDetails();
-createOverpass();
 
 function createRoadTile(x, z) {
   const y = groundY(x, z) + 0.055;
