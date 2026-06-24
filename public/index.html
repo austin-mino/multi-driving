@@ -337,15 +337,15 @@ const contactMaterial = new CANNON.ContactMaterial(groundMaterial, wheelMaterial
 world.addContactMaterial(contactMaterial);
 
 // ─── 안개 ────────────────────────────────────
-scene.fog = new THREE.Fog(0x87ceeb, 120, 500);
-  scene.background = new THREE.Color(0x87ceeb);
+scene.fog = new THREE.Fog(0x87ceeb, 200, 800);
+scene.background = new THREE.Color(0x87ceeb);
 
 // ─── 조명 ─────────────────────────────────────────────────
 const sun = new THREE.DirectionalLight(0xfff5e0, 1.4);
 sun.position.set(200, 400, 100);
 sun.castShadow = true;
-sun.shadow.mapSize.width = 256;
-sun.shadow.mapSize.height = 256;
+sun.shadow.mapSize.width = 512;
+sun.shadow.mapSize.height = 512;
 sun.shadow.camera.left = -300;
 sun.shadow.camera.right = 300;
 sun.shadow.camera.top = 300;
@@ -418,96 +418,31 @@ function makeBuildingTexture(hexColor, floors = 10, cols = 5) {
 }
 
 const asphaltTex = makeAsphaltTexture();
-// ─── 전역 공유 텍스처/재질 풀 (함수 안에 있으면 매 호출마다 재생성되므로 반드시 밖에) ───
-const grassTexShared = (() => {
-  const c = document.createElement('canvas');
-  c.width = c.height = 64;
-  const ctx = c.getContext('2d');
-  ctx.fillStyle = '#1a4020';
-  ctx.fillRect(0, 0, 64, 64);
-  for (let i = 0; i < 400; i++) {
-    const v = 30 + Math.random() * 35 | 0;
-    ctx.fillStyle = `rgb(${v},${35 + Math.random() * 30 | 0},${v})`;
-    ctx.fillRect(Math.random() * 64, Math.random() * 64, 2, 2);
-  }
-  const t = new THREE.CanvasTexture(c);
-  t.wrapS = t.wrapT = THREE.RepeatWrapping;
-  t.repeat.set(4, 4);
-  return t;
-})();
-
-const buildingTexPoolGlobal = buildingPalette.map(color =>
-  makeBuildingTexture(color, 7, 4)   // floors, cols 줄여서 캔버스 연산 감소
-);
-const buildingMatPoolGlobal = buildingTexPoolGlobal.map(tex =>
-  new THREE.MeshStandardMaterial({ map: tex, roughness: 0.7, metalness: 0.1 })
-);
 const sidewalkTex = makeSidewalkTexture();
-const buildingPalette = [
-  0x2a3a4a, 0x3a2e2c, 0x2c3a2c, 0x4a3c30, 0x2e3440,
-  0x3a3020, 0x202e20, 0x302020, 0x303840, 0x253038,
-  0x352c28, 0x1e2c36, 0x2a2a20, 0x301e1e, 0x243028
-];
-// ─── 언덕 지형 시스템 ─────────────────────────────────────────
-const TERRAIN_SEGS = 80;     // 높을수록 디테일, 낮출수록 성능 ↑ (64도 충분)
-const TERRAIN_SIZE = 3000;
-const elem = TERRAIN_SIZE / TERRAIN_SEGS;
-const terrainRes = TERRAIN_SEGS + 1;
 
-function terrainH(nx, nz) {
-  // 도심(원점 기준 220m 이내) 평탄화, 외곽으로 갈수록 언덕
-  const flatZone = Math.max(0, 1 - Math.sqrt(nx * nx + nz * nz) / 220);
-  const raw =
-    Math.sin(nx * 0.009) * 14 +
-    Math.cos(nz * 0.007) * 11 +
-    Math.sin(nx * 0.022 + nz * 0.016) * 5 +
-    Math.cos(nx * 0.038 - nz * 0.028) * 2.5;
-  return raw * (1 - flatZone * 0.97);
-}
+// ─── 물리 바닥 ─────────────────────────────────────────────
+const floorBody = new CANNON.Body({
+  mass: 0,
+  shape: new CANNON.Box(new CANNON.Vec3(10000, 5, 10000)),
+  position: new CANNON.Vec3(0, -10, 0),
+});
+floorBody.material = groundMaterial;
+world.addBody(floorBody);
 
-// heightData[xi][zi]: cannon xi=X축, zi=Z축
-const heightData = [];
-for (let xi = 0; xi < terrainRes; xi++) {
-  heightData[xi] = [];
-  for (let zi = 0; zi < terrainRes; zi++) {
-    const nx = (xi / TERRAIN_SEGS - 0.5) * TERRAIN_SIZE;
-    const nz = (zi / TERRAIN_SEGS - 0.5) * TERRAIN_SIZE;
-    heightData[xi][zi] = terrainH(nx, nz);
-  }
-}
-
-// ── Three.js 시각 ──────────────────────────────────────────────
-// PlaneGeometry vertex (row i → Z방향, col j → X방향)
-// 매핑: xi = col j, zi = row i → posAttr.setY(i*res+j, heightData[j][i])
-const terrainGeo = new THREE.PlaneGeometry(TERRAIN_SIZE, TERRAIN_SIZE, TERRAIN_SEGS, TERRAIN_SEGS);
-terrainGeo.rotateX(-Math.PI / 2);
-const posAttr = terrainGeo.attributes.position;
-for (let i = 0; i < terrainRes; i++) {
-  for (let j = 0; j < terrainRes; j++) {
-    posAttr.setY(i * terrainRes + j, heightData[j][i] - 5);
-  }
-}
-terrainGeo.computeVertexNormals();
-
-const terrainMesh = new THREE.Mesh(
-  terrainGeo,
-  new THREE.MeshStandardMaterial({ color: 0x4a7040, roughness: 0.95 }) // 외곽 초록 언덕
+// ─── 시각 바닥 (아스팔트) ──────────────────────────────────
+const floorMesh = new THREE.Mesh(
+  new THREE.PlaneGeometry(10000, 10000),
+  new THREE.MeshStandardMaterial({ map: asphaltTex, roughness: 0.95 })
 );
-terrainMesh.receiveShadow = true;
-scene.add(terrainMesh);
-
-// ── Cannon Heightfield 물리 ────────────────────────────────────
-// (xi=0, zi=0) 기준점을 world(-SIZE/2, -5, -SIZE/2)에 배치
-const hfShape = new CANNON.Heightfield(heightData, { elementSize: elem });
-const terrainBody = new CANNON.Body({ mass: 0, material: groundMaterial });
-terrainBody.addShape(hfShape);
-terrainBody.position.set(-TERRAIN_SIZE / 2, -5, -TERRAIN_SIZE / 2);
-world.addBody(terrainBody);
+floorMesh.rotation.x = -Math.PI / 2;
+floorMesh.position.y = -5;
+floorMesh.receiveShadow = true;
+scene.add(floorMesh);
 
 // ─── 도시 설정 ─────────────────────────────────────────────
 const BLOCK_SIZE = 100;
 const ROAD_WIDTH = 20;
-const GRID_COUNT = 3;
+const GRID_COUNT = 4;
 
 const roadGroup = new THREE.Group();
 const buildingGroup = new THREE.Group();
@@ -526,6 +461,11 @@ let seedCounter = 0;
 function rng() { return seededRandom(++seedCounter); }
 
 // ─── 블록 생성 루프 ────────────────────────────────────────
+const buildingPalette = [
+  0x2a3a4a, 0x3a2e2c, 0x2c3a2c, 0x4a3c30, 0x2e3440,
+  0x3a3020, 0x202e20, 0x302020, 0x303840, 0x253038,
+  0x352c28, 0x1e2c36, 0x2a2a20, 0x301e1e, 0x243028
+];
 
   const MAX_LIGHTS = 30;
 let streetLightCount = 0;
@@ -543,7 +483,6 @@ for (let i = -GRID_COUNT; i <= GRID_COUNT; i++) {
     else createBuilding(x, z);
   }
 }
-  createOverpass();
 
 // ─── 보도 + 연석 ───────────────────────────────────────────
 function createSidewalk(x, z) {
@@ -623,9 +562,12 @@ function createBuilding(x, z) {
   const h = 25 + rng() * 130;
   const baseColor = buildingPalette[Math.floor(rng() * buildingPalette.length)];
 
- 
+  const buildingTexPool = buildingPalette.map(color =>
+  makeBuildingTexture(color, 10, 5)
+);
+  const tex = buildingTexPool[Math.floor(rng() * buildingTexPool.length)];
   const geo = new THREE.BoxGeometry(w, h, d);
-  const mat = buildingMatPoolGlobal[Math.floor(rng() * buildingMatPoolGlobal.length)];
+  const mat = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.7, metalness: 0.1 });
   const mesh = new THREE.Mesh(geo, mat);
   mesh.position.set(x, -5 + h / 2, z);
   mesh.castShadow = true;
@@ -690,14 +632,28 @@ function createPark(x, z) {
   const size = BLOCK_SIZE - ROAD_WIDTH - 2;
 
   // 잔디
-const grass = new THREE.Mesh(
-  new THREE.PlaneGeometry(size, size),
-  new THREE.MeshStandardMaterial({ map: grassTexShared, roughness: 0.95 })
-);
-grass.rotation.x = -Math.PI / 2;
-grass.position.set(x, -4.83, z);
-grass.receiveShadow = true;
-parkGroup.add(grass);
+  const grassC = document.createElement('canvas');
+  grassC.width = grassC.height = 128;
+  const gc = grassC.getContext('2d');
+  gc.fillStyle = '#1a4020';
+  gc.fillRect(0, 0, 128, 128);
+  for (let i = 0; i < 800; i++) {
+    const v = 30 + Math.random() * 35 | 0;
+    gc.fillStyle = `rgb(${v},${35 + Math.random() * 30 | 0},${v})`;
+    gc.fillRect(Math.random() * 128, Math.random() * 128, 2, 2);
+  }
+  const grassTex = new THREE.CanvasTexture(grassC);
+  grassTex.wrapS = grassTex.wrapT = THREE.RepeatWrapping;
+  grassTex.repeat.set(4, 4);
+
+  const grass = new THREE.Mesh(
+    new THREE.PlaneGeometry(size, size),
+    new THREE.MeshStandardMaterial({ map: grassTex, roughness: 0.95 })
+  );
+  grass.rotation.x = -Math.PI / 2;
+  grass.position.set(x, -4.83, z);
+  grass.receiveShadow = true;
+  parkGroup.add(grass);
 
   // 산책로 (십자 경로)
   const pathMat = new THREE.MeshStandardMaterial({ color: 0xc8a878, roughness: 0.9 });
@@ -812,131 +768,6 @@ function addStreetProps(x, z, w, d) {
     }
   }
 }  
-
-  // ─── 고가도로 ─────────────────────────────────────────────────
-function createOverpass() {
-  const concreteMat = new THREE.MeshStandardMaterial({ color: 0xbbbbbb, roughness: 0.85 });
-  const barrierMat  = new THREE.MeshStandardMaterial({ color: 0xeeeeee, roughness: 0.6 });
-  const rampMat     = new THREE.MeshStandardMaterial({ map: asphaltTex, roughness: 0.85 });
-
-  const H   = 10;     // 고가도로 높이 (world y 기준, ground y=-5)
-  const LEN = 300;    // Z 방향 길이
-  const W   = 13;     // 폭
-  const OX  = 140;    // X 위치 (도시 격자 바깥)
-
-  // ── 도로 슬래브 ───────────────────────────────────────────────
-  const slab = new THREE.Mesh(new THREE.BoxGeometry(W, 0.9, LEN), concreteMat);
-  slab.position.set(OX, H, 0);
-  slab.receiveShadow = true;
-  scene.add(slab);
-
-  const slabBody = new CANNON.Body({ mass: 0, material: groundMaterial });
-  slabBody.addShape(new CANNON.Box(new CANNON.Vec3(W / 2, 0.45, LEN / 2)));
-  slabBody.position.set(OX, H, 0);
-  world.addBody(slabBody);
-
-  // ── 아스팔트 표면 + 차선 ─────────────────────────────────────
-  const surface = new THREE.Mesh(
-    new THREE.BoxGeometry(W - 1, 0.12, LEN), rampMat
-  );
-  surface.position.set(OX, H + 0.51, 0);
-  scene.add(surface);
-
-  for (let z = -LEN / 2 + 10; z < LEN / 2; z += 18) {
-    const dash = new THREE.Mesh(
-      new THREE.BoxGeometry(0.3, 0.02, 9),
-      new THREE.MeshStandardMaterial({ color: 0xffdd00 })
-    );
-    dash.position.set(OX, H + 0.58, z);
-    scene.add(dash);
-  }
-
-  // ── 가드레일 (물리 포함) ──────────────────────────────────────
-  for (const side of [-1, 1]) {
-    const rail = new THREE.Mesh(new THREE.BoxGeometry(0.35, 1.3, LEN), barrierMat);
-    rail.position.set(OX + side * (W / 2 - 0.2), H + 1.1, 0);
-    scene.add(rail);
-
-    const rb = new CANNON.Body({ mass: 0 });
-    rb.addShape(new CANNON.Box(new CANNON.Vec3(0.175, 0.65, LEN / 2)));
-    rb.position.set(OX + side * (W / 2 - 0.2), H + 1.1, 0);
-    world.addBody(rb);
-  }
-
-  // ── 지지 기둥 + 가로보 ────────────────────────────────────────
-  const SPACING = 45;
-  for (let z = -LEN / 2 + 22; z < LEN / 2; z += SPACING) {
-    // 가로보 (빔)
-    const beam = new THREE.Mesh(new THREE.BoxGeometry(W + 5, 1.0, 2.8), concreteMat);
-    beam.position.set(OX, H - 0.5, z);
-    scene.add(beam);
-
-    // 기둥 양쪽
-    for (const side of [-1, 1]) {
-      const pillar = new THREE.Mesh(new THREE.BoxGeometry(2.2, H + 5, 2.2), concreteMat);
-      pillar.position.set(OX + side * (W / 2 - 1.1), (H + 5) / 2 - 5, z);
-      pillar.castShadow = true;
-      scene.add(pillar);
-
-      const pb = new CANNON.Body({ mass: 0 });
-      pb.addShape(new CANNON.Box(new CANNON.Vec3(1.1, (H + 5) / 2, 1.1)));
-      pb.position.set(OX + side * (W / 2 - 1.1), (H + 5) / 2 - 5, z);
-      world.addBody(pb);
-    }
-
-    // 가로등 (고가 위)
-    if (z % (SPACING * 2) < SPACING) {
-      const pole = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.06, 0.1, 4.5, 6),
-        new THREE.MeshStandardMaterial({ color: 0x4a4a4a, metalness: 0.8 })
-      );
-      pole.position.set(OX - W / 2 + 0.6, H + 2.8, z);
-      scene.add(pole);
-      const bulbMat = new THREE.MeshStandardMaterial({
-        color: 0xfff5cc, emissive: 0xfff5cc, emissiveIntensity: 2.5
-      });
-      const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.18, 6, 6), bulbMat);
-      bulb.position.set(OX - W / 2 + 1.4, H + 5.1, z);
-      scene.add(bulb);
-    }
-  }
-
-  // ── 경사 램프 (진입/진출) ─────────────────────────────────────
-  // 고가(y=H)에서 지면(y≈-4)까지 내려오는 경사로
-  const RAMP_LEN  = 95;
-  const RAMP_DY   = H - (-4);              // 높이 차 (≈14)
-  const RAMP_ANG  = Math.atan2(RAMP_DY, RAMP_LEN);
-  const rampCenterY = (H + (-4)) / 2;     // 수직 중심
-
-  for (const dir of [-1, 1]) {
-    const cosA = Math.cos(RAMP_ANG);
-    const rampCenterZ = dir * (LEN / 2 + RAMP_LEN * cosA / 2);
-
-    // 시각 메시
-    const ramp = new THREE.Mesh(
-      new THREE.BoxGeometry(W, 0.55, RAMP_LEN), rampMat
-    );
-    ramp.rotation.x = -dir * RAMP_ANG;
-    ramp.position.set(OX, rampCenterY, rampCenterZ);
-    ramp.receiveShadow = true;
-    scene.add(ramp);
-
-    // 물리
-    const rb = new CANNON.Body({ mass: 0, material: groundMaterial });
-    rb.addShape(new CANNON.Box(new CANNON.Vec3(W / 2, 0.275, RAMP_LEN / 2)));
-    rb.position.set(OX, rampCenterY, rampCenterZ);
-    rb.quaternion.setFromEuler(-dir * RAMP_ANG, 0, 0);
-    world.addBody(rb);
-
-    // 측면 방호벽
-    for (const side of [-1, 1]) {
-      const wall = new THREE.Mesh(new THREE.BoxGeometry(0.4, 1.4, RAMP_LEN), concreteMat);
-      wall.rotation.x = -dir * RAMP_ANG;
-      wall.position.set(OX + side * (W / 2 + 0.2), rampCenterY + 0.7, rampCenterZ);
-      scene.add(wall);
-    }
-  }
-}
     // 자동차 차체 물리 (박스)
     const chassisShape = new CANNON.Box(new CANNON.Vec3(1.5, 0.33, 3));
     const chassisBody = new CANNON.Body({ mass: 1200 });
