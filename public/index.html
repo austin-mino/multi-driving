@@ -680,12 +680,31 @@ const terrainMesh = new THREE.Mesh(terrainGeo, terrainMat);
 terrainMesh.receiveShadow = true;
 scene.add(terrainMesh);
 
-// Cannon 지형 물리 (기본 바닥)
-const hfShape = new CANNON.Heightfield(heightData, { elementSize: elem });
+// ==========================================
+// 수정된 Cannon 지형 물리 (바닥 뚫림 완벽 해결)
+// ==========================================
+// Three.js의 시각적 지형과 Cannon.js의 물리 지형은 Z축(깊이) 방향이 반대입니다.
+// 완벽한 지형 동기화를 위해 배열 순서를 뒤집은 물리용 데이터를 새로 만듭니다.
+const physicsHeightData = [];
+for (let xi = 0; xi < terrainRes; xi++) {
+  physicsHeightData[xi] = [];
+  for (let zi = 0; zi < terrainRes; zi++) {
+    physicsHeightData[xi][zi] = heightData[xi][terrainRes - 1 - zi];
+  }
+}
+
+const hfShape = new CANNON.Heightfield(physicsHeightData, { elementSize: elem });
 const terrainBody = new CANNON.Body({ mass: 0, material: groundMaterial });
 terrainBody.addShape(hfShape);
-terrainBody.position.set(-TERRAIN_SIZE / 2, -5, -TERRAIN_SIZE / 2);
+
+// ★ 핵심 원인 해결: 세워져 있던 물리 지형을 -90도 회전시켜 바닥으로 눕혀줍니다.
+terrainBody.quaternion.setFromEuler(-Math.PI / 2, 0, 0);
+
+// 회전 후 Three.js의 시작점 기준(Top-Left)에 맞게 Z축 시작 위치를 + 쪽으로 잡아줍니다.
+terrainBody.position.set(-TERRAIN_SIZE / 2, -5, TERRAIN_SIZE / 2);
+
 world.addBody(terrainBody);
+// ==========================================
 
 // ==========================================
 // 2. 구불구불한 메인 순환 도로 생성 (바닥 뚫림 방지 적용)
