@@ -907,6 +907,9 @@ group.add(tailBar);
     wGroup.userData.baseQuaternion = wGroup.quaternion.clone();
   });
 
+  group.userData.wheelNodes = carWheelNodes;
+  group.userData.modelName = 'GrandeurIG';
+      
   return group;
 }
 
@@ -970,7 +973,11 @@ function createSportsCar(color = '#ffffff') {
         carWheelNodes.forEach((node) => {
           if (node) node.userData.baseQuaternion = node.quaternion.clone();
         });
-
+        
+        car.userData.wheelNodes = carWheelNodes;
+        car.userData.steeringNode = steeringWheelNode;
+        car.userData.modelName = 'SportsCar';
+        
         resolve(car);
       },
       undefined,
@@ -1041,6 +1048,10 @@ function createSUVCar(color = '#ffffff') {
         });
 
         carVisualOffsetY = -0.8;
+
+        car.userData.wheelNodes = carWheelNodes;
+        car.userData.modelName = 'SUV';
+        
         resolve(wrapper);
       },
       undefined,
@@ -1214,6 +1225,9 @@ for (let i = 0; i < 4; i++) {
                 carVisualOffsetY = 1.1;
                 carGroup.name = 'MainBody';
 
+                carGroup.userData.wheelNodes = carWheelNodes;
+                carGroup.userData.modelName = 'McLarenP1'; 
+              
                 resolve(carGroup); // carGroup 반환
             },
 
@@ -1746,7 +1760,8 @@ function sendPlayerState() {
     position: { x: chassisBody.position.x, y: chassisBody.position.y, z: chassisBody.position.z },
     rotation: { x: chassisBody.quaternion.x, y: chassisBody.quaternion.y, z: chassisBody.quaternion.z, w: chassisBody.quaternion.w },
     gear: gearState,
-    wheels
+    wheels,
+    steeringValue: steeringValue
   });
 }
 // 예시: 키 입력 처리 후
@@ -1775,6 +1790,7 @@ socket.on('updatePlayers', async (players) => {
         pData.targetPosition.set(player.position.x, player.position.y, player.position.z);
         pData.targetQuaternion.set(player.rotation.x, player.rotation.y, player.rotation.z, player.rotation.w);
         pData.wheels = player.wheels || [];
+        pData.steeringValue = player.steeringValue || 0;
         
         // 차량 색상 실시간 업데이트 (필요시)
         if (pData.model) {
@@ -2090,6 +2106,53 @@ for (const id in otherPlayers) {
             }
         }
     }
+  if (pData.model.userData.wheelNodes && pData.wheels) {
+        const remoteSteering = pData.steeringValue || 0;
+        const rCarType = pData.model.userData.modelName || 'GrandeurIG';
+        const carInvQuat = pData.model.quaternion.clone().invert();
+
+        for (let i = 0; i < 4; i++) {
+            const node = pData.model.userData.wheelNodes[i];
+            if (!node || !pData.wheels[i]) continue;
+
+            // 네트워크로 전달받은 바퀴의 월드 회전값
+            const wQuat = pData.wheels[i].quaternion;
+            const remoteWheelWorldQuat = new THREE.Quaternion(wQuat.x, wQuat.y, wQuat.z, wQuat.w);
+            
+            // 차체 회전값을 제외하여 바퀴만의 순수 로컬 회전 추출
+            const localQuat = carInvQuat.clone().multiply(remoteWheelWorldQuat);
+            
+            // 시각적 조향(Steering) 배율 적용 (앞바퀴 전용)
+            if (i === 0 || i === 1) {
+                let visSteer = remoteSteering * 2.6;
+                // SUV 등 조향축 반전 모델 예외 처리
+                if (rCarType.includes('SUV')) visSteer = -visSteer; 
+                
+                const steerQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), visSteer);
+                localQuat.premultiply(steerQuat);
+            }
+
+            // 모델별 YXZ 축 기본 보정
+            let correctionQuat = new THREE.Quaternion();
+            if (rCarType !== 'GrandeurIG') { // 기본 차 제외 나머지 모델들
+                correctionQuat.setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0));
+            }
+            const finalQuat = localQuat.clone().multiply(correctionQuat);
+            
+            // 렌더링 적용 (McLaren 등 특수 케이스 포함)
+            if (rCarType.includes('McLarenP1') && node.userData.side === 'L') {
+                finalQuat.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI));
+            }
+            
+            if (rCarType.includes('SUV')) {
+                node.quaternion.copy(node.userData.baseQuaternion.clone().multiply(finalQuat));
+            } else {
+                node.quaternion.copy(finalQuat);
+            }
+            node.updateMatrix();
+        }
+    }
+}
 }
     
     // 속도 + RPM + 기어 UI 표시
@@ -2143,6 +2206,8 @@ if (cameraMode === 'third') {
   }
 
   scene.add(carModel);
+  carModel.userData.wheelNodes = carWheelNodes; 
+  carModel.userData.modelName = currentCarModel;
   wheelHolders.forEach(h => scene.add(h));
 
   // 물리 바디 보간용 초기값 설정
