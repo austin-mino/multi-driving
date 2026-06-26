@@ -1644,7 +1644,7 @@ if (input.handbrake) {
   // 1인칭 흔들림 효과 (G-Force 표현)
   const speed = getSpeedKmH();
   const speedFactor = speed / 100;
-  const shake = Math.sin(Date.now() * 0.01) * 0.0041618 * speedFactor;
+  const shake = Math.sin(Date.now() * 0.01) * 0.0021618 * speedFactor;
   offset.y += shake;
   offset.x += -steeringValue * 0.5; // 조향 시 몸이 쏠리는 효과
 
