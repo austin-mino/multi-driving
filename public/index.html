@@ -2092,10 +2092,27 @@ for (const id in otherPlayers) {
     if (pData.loading || !pData.model) continue;
 
     // 1. 차체 위치/회전 보간 (lerp/slerp를 사용하여 뚝뚝 끊김 방지)
-    pData.model.position.lerp(pData.targetPosition, 0.15);
+   // 1. 오프셋을 적용한 시각적 목표 위치 계산
     const remoteOffset = pData.model.userData.visualOffsetY || 0;
-    pData.model.position.y += remoteOffset;
+    const visualTargetPos = pData.targetPosition.clone();
+    visualTargetPos.y += remoteOffset;
+
+    // 2. 시각 모델을 부드럽게 이동 및 회전
+    pData.model.position.lerp(visualTargetPos, 0.15);
     pData.model.quaternion.slerp(pData.targetQuaternion, 0.15);
+
+    // 3. 충돌용 물리 바디는 오프셋을 빼서 원래 바닥 높이로 맞춤
+    pData.chassisBody.position.set(
+        pData.model.position.x,
+        pData.model.position.y - remoteOffset,
+        pData.model.position.z
+    );
+    pData.chassisBody.quaternion.set(
+        pData.model.quaternion.x,
+        pData.model.quaternion.y,
+        pData.model.quaternion.z,
+        pData.model.quaternion.w
+    );
 
     // 2. 물리 바디 위치도 모델에 맞춰 업데이트 (충돌 판정용)
     pData.chassisBody.position.copy(pData.model.position);
