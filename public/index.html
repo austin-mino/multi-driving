@@ -1763,7 +1763,7 @@ function sendPlayerState() {
     position: { x: chassisBody.position.x, y: chassisBody.position.y, z: chassisBody.position.z },
     rotation: { x: chassisBody.quaternion.x, y: chassisBody.quaternion.y, z: chassisBody.quaternion.z, w: chassisBody.quaternion.w },
     gear: gearState,
-    wheels,
+    wheels: wheels,
     steeringValue: steeringValue
   });
 }
