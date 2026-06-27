@@ -907,6 +907,10 @@ group.add(tailBar);
     wGroup.userData.baseQuaternion = wGroup.quaternion.clone();
   });
 
+  group.userData.wheelNodes = carWheelNodes;
+  group.userData.modelName = 'GrandeurIG';
+  group.userData.visualOffsetY = 0;
+      
   return group;
 }
 
@@ -954,7 +958,7 @@ function createSportsCar(color = '#ffffff') {
 
         car.scale.set(2.5, 2.5, 2.5);
         car.rotation.y = Math.PI;
-        carVisualOffsetY = -0.8;
+     
 
         // ─── Ferrari 바퀴 노드 추출 ───────────────────────────────
         // 모델 내 바퀴 부모 노드: wheel_fl, wheel_fr, wheel_rl, wheel_rr
@@ -970,7 +974,12 @@ function createSportsCar(color = '#ffffff') {
         carWheelNodes.forEach((node) => {
           if (node) node.userData.baseQuaternion = node.quaternion.clone();
         });
-
+        
+        car.userData.wheelNodes = carWheelNodes;
+        car.userData.steeringNode = steeringWheelNode;
+        car.userData.modelName = 'SportsCar';
+        car.userData.visualOffsetY = -0.8;
+        
         resolve(car);
       },
       undefined,
@@ -1040,7 +1049,11 @@ function createSUVCar(color = '#ffffff') {
           }
         });
 
-        carVisualOffsetY = -0.8;
+
+        wrapper.userData.wheelNodes = carWheelNodes;
+        wrapper.userData.modelName = 'SUV';
+        wrapper.userData.visualOffsetY = -0.8;
+                          
         resolve(wrapper);
       },
       undefined,
@@ -1211,9 +1224,13 @@ for (let i = 0; i < 4; i++) {
     }
   }
 }
-                carVisualOffsetY = 1.1;
+                
                 carGroup.name = 'MainBody';
 
+                carGroup.userData.wheelNodes = carWheelNodes;
+                carGroup.userData.modelName = 'McLarenP1'; 
+                carGroup.userData.visualOffsetY = 1.1;
+              
                 resolve(carGroup); // carGroup 반환
             },
 
@@ -1746,7 +1763,8 @@ function sendPlayerState() {
     position: { x: chassisBody.position.x, y: chassisBody.position.y, z: chassisBody.position.z },
     rotation: { x: chassisBody.quaternion.x, y: chassisBody.quaternion.y, z: chassisBody.quaternion.z, w: chassisBody.quaternion.w },
     gear: gearState,
-    wheels
+    wheels,
+    steeringValue: steeringValue
   });
 }
 // 예시: 키 입력 처리 후
@@ -1775,6 +1793,7 @@ socket.on('updatePlayers', async (players) => {
         pData.targetPosition.set(player.position.x, player.position.y, player.position.z);
         pData.targetQuaternion.set(player.rotation.x, player.rotation.y, player.rotation.z, player.rotation.w);
         pData.wheels = player.wheels || [];
+        pData.steeringValue = player.steeringValue || 0;
         
         // 차량 색상 실시간 업데이트 (필요시)
         if (pData.model) {
@@ -1809,9 +1828,6 @@ socket.on('updatePlayers', async (players) => {
           break;
         case 'McLarenP1':
           otherCar = await createMcLarenP1(player.carColor || '#aaaaaa');
-          otherCar.children.forEach(child => {
-              child.position.y += 0.932; 
-          });
           break;
         default:
           otherCar = createGrandeurIGCarDetailed(player.carColor || '#aaaaaa');
@@ -1867,7 +1883,8 @@ socket.on('updatePlayers', async (players) => {
         wheelHolders: otherWheelHolders,
         targetPosition: new THREE.Vector3(player.position.x, player.position.y, player.position.z),
         targetQuaternion: new THREE.Quaternion(player.rotation.x, player.rotation.y, player.rotation.z, player.rotation.w),
-        wheels: player.wheels || []
+        wheels: player.wheels || [],
+        steeringValue: player.steeringValue || 0
       };
     } catch (err) {
       console.error("플레이어 로딩 중 에러 발생:", err);
@@ -1943,7 +1960,8 @@ setInterval(() => {
 
   // 시각적 끊김 감소를 위한 보간 적용
   carModel.position.lerpVectors(chassisBody.previousPosition, currentPos, alpha);
-  carModel.position.y += carVisualOffsetY;
+  const myOffset = carModel.userData.visualOffsetY || 0;
+  carModel.position.y += myOffset;
   carModel.quaternion.slerpQuaternions(chassisBody.previousQuaternion, currentQuat, alpha);
 
   // 카메라 위치 업데이트 시에도 보간된 차량 위치 사용
@@ -1969,11 +1987,13 @@ if (steeringWheelNode && cameraMode === 'first') {
       // carWheelNodes[i]는 모델 내부 바퀴 부모 노드를 가리킨다.
       // CANNON의 worldTransform.quaternion에서 차체 회전을 제거하여
       // 로컬 공간의 바퀴 회전을 추출한 뒤 모델 노드에 적용한다.
-      if (carModel && carWheelNodes.some(n => n !== null)) {
+const myWheels = carModel ? carModel.userData.wheelNodes : null;
+      
+     if (carModel && myWheels && myWheels.some(n => n !== null)) {
         const carInvQuat = carModel.quaternion.clone().invert();
 
        for (let i = 0; i < 4; i++) {
-  const node = carWheelNodes[i];
+ const node = myWheels[i];
   if (!node) continue;
 
   vehicle.updateWheelTransform(i);
@@ -2073,6 +2093,8 @@ for (const id in otherPlayers) {
 
     // 1. 차체 위치/회전 보간 (lerp/slerp를 사용하여 뚝뚝 끊김 방지)
     pData.model.position.lerp(pData.targetPosition, 0.15);
+    const remoteOffset = pData.model.userData.visualOffsetY || 0;
+    pData.model.position.y += remoteOffset;
     pData.model.quaternion.slerp(pData.targetQuaternion, 0.15);
 
     // 2. 물리 바디 위치도 모델에 맞춰 업데이트 (충돌 판정용)
@@ -2090,7 +2112,58 @@ for (const id in otherPlayers) {
             }
         }
     }
+  if (pData.model.userData.wheelNodes && pData.wheels) {
+        const remoteSteering = pData.steeringValue || 0;
+        const rCarType = pData.model.userData.modelName || 'GrandeurIG';
+        const carInvQuat = pData.model.quaternion.clone().invert();
+        if (pData.model.userData.steeringNode) {
+            // 1인칭 시점의 내 핸들과 똑같은 비율로 회전시킵니다.
+            pData.model.userData.steeringNode.rotation.y = remoteSteering * 15.0; 
+        }
+
+        for (let i = 0; i < 4; i++) {
+            const node = pData.model.userData.wheelNodes[i];
+            if (!node || !pData.wheels[i]) continue;
+
+            // 네트워크로 전달받은 바퀴의 월드 회전값
+            const wQuat = pData.wheels[i].quaternion;
+            const remoteWheelWorldQuat = new THREE.Quaternion(wQuat.x, wQuat.y, wQuat.z, wQuat.w);
+            
+            // 차체 회전값을 제외하여 바퀴만의 순수 로컬 회전 추출
+            const localQuat = carInvQuat.clone().multiply(remoteWheelWorldQuat);
+            
+            // 시각적 조향(Steering) 배율 적용 (앞바퀴 전용)
+            if (i === 0 || i === 1) {
+                let visSteer = remoteSteering * 2.6;
+                // SUV 등 조향축 반전 모델 예외 처리
+                if (rCarType.includes('SUV')) visSteer = -visSteer; 
+                
+                const steerQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), visSteer);
+                localQuat.premultiply(steerQuat);
+            }
+
+            // 모델별 YXZ 축 기본 보정
+            let correctionQuat = new THREE.Quaternion();
+            if (rCarType !== 'GrandeurIG') { // 기본 차 제외 나머지 모델들
+                correctionQuat.setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0));
+            }
+            const finalQuat = localQuat.clone().multiply(correctionQuat);
+            
+            // 렌더링 적용 (McLaren 등 특수 케이스 포함)
+            if (rCarType.includes('McLarenP1') && node.userData.side === 'L') {
+                finalQuat.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI));
+            }
+            
+            if (rCarType.includes('SUV')) {
+                node.quaternion.copy(node.userData.baseQuaternion.clone().multiply(finalQuat));
+            } else {
+                node.quaternion.copy(finalQuat);
+            }
+            node.updateMatrix();
+        }
+    }
 }
+
     
     // 속도 + RPM + 기어 UI 표시
 hud.textContent = `속도: ${getSpeedKmH().toFixed(1)} km/h | RPM: ${Math.floor(rpm)} | 기어: ${currentGear}`;
@@ -2143,6 +2216,8 @@ if (cameraMode === 'third') {
   }
 
   scene.add(carModel);
+  carModel.userData.wheelNodes = carWheelNodes; 
+  carModel.userData.modelName = currentCarModel;
   wheelHolders.forEach(h => scene.add(h));
 
   // 물리 바디 보간용 초기값 설정
