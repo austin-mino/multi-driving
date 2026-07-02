@@ -2092,95 +2092,30 @@ for (const id in otherPlayers) {
     if (pData.loading || !pData.model) continue;
 
     // 1. 차체 위치/회전 보간 (lerp/slerp를 사용하여 뚝뚝 끊김 방지)
-   // 1. 오프셋을 적용한 시각적 목표 위치 계산
     const remoteOffset = pData.model.userData.visualOffsetY || 0;
     const visualTargetPos = pData.targetPosition.clone();
     visualTargetPos.y += remoteOffset;
 
-    // 2. 시각 모델을 부드럽게 이동 및 회전
+    // 시각 모델을 부드럽게 이동 및 회전
     pData.model.position.lerp(visualTargetPos, 0.15);
     pData.model.quaternion.slerp(pData.targetQuaternion, 0.15);
 
-    // 3. 충돌용 물리 바디는 오프셋을 빼서 원래 바닥 높이로 맞춤
+    // 충돌용 물리 바디 업데이트
     pData.chassisBody.position.set(
         pData.model.position.x,
         pData.model.position.y - remoteOffset,
         pData.model.position.z
     );
-    pData.chassisBody.quaternion.set(
-        pData.model.quaternion.x,
-        pData.model.quaternion.y,
-        pData.model.quaternion.z,
-        pData.model.quaternion.w
-    );
-
-    // 2. 물리 바디 위치도 모델에 맞춰 업데이트 (충돌 판정용)
-    pData.chassisBody.position.copy(pData.model.position);
     pData.chassisBody.quaternion.copy(pData.model.quaternion);
 
-    // 3. 바퀴 위치/회전 업데이트
-    if (pData.wheels && pData.wheelHolders && pData.wheels.length > 0) {
-        for (let i = 0; i < pData.wheels.length; i++) {
-            const wheelData = pData.wheels[i];
-            const wheelMesh = pData.wheelHolders[i];
-            if (wheelMesh && wheelData) {
-                wheelMesh.position.set(wheelData.position.x, wheelData.position.y, wheelData.position.z);
-                wheelMesh.quaternion.set(wheelData.quaternion.x, wheelData.quaternion.y, wheelData.quaternion.z, wheelData.quaternion.w);
-            }
-        }
-    }
-  if (pData.model.userData.wheelNodes && pData.wheels) {
+    // 2. 내부 운전대(1인칭 시점 핸들) 동기화
+    if (pData.model.userData.steeringNode) {
         const remoteSteering = pData.steeringValue || 0;
-        const rCarType = pData.model.userData.modelName || 'GrandeurIG';
-        const carInvQuat = pData.model.quaternion.clone().invert();
-        if (pData.model.userData.steeringNode) {
-            // 1인칭 시점의 내 핸들과 똑같은 비율로 회전시킵니다.
-            pData.model.userData.steeringNode.rotation.y = remoteSteering * 15.0; 
-        }
-
-        for (let i = 0; i < 4; i++) {
-            const node = pData.model.userData.wheelNodes[i];
-            if (!node || !pData.wheels[i]) continue;
-
-            // 네트워크로 전달받은 바퀴의 월드 회전값
-            const wQuat = pData.wheels[i].quaternion;
-            const remoteWheelWorldQuat = new THREE.Quaternion(wQuat.x, wQuat.y, wQuat.z, wQuat.w);
-            
-            // 차체 회전값을 제외하여 바퀴만의 순수 로컬 회전 추출
-            const localQuat = carInvQuat.clone().multiply(remoteWheelWorldQuat);
-            
-            // 시각적 조향(Steering) 배율 적용 (앞바퀴 전용)
-            if (i === 0 || i === 1) {
-                let visSteer = remoteSteering * 2.6;
-                // SUV 등 조향축 반전 모델 예외 처리
-                if (rCarType.includes('SUV')) visSteer = -visSteer; 
-                
-                const steerQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), visSteer);
-                localQuat.premultiply(steerQuat);
-            }
-
-            // 모델별 YXZ 축 기본 보정
-            let correctionQuat = new THREE.Quaternion();
-            if (rCarType !== 'GrandeurIG') { // 기본 차 제외 나머지 모델들
-                correctionQuat.setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0));
-            }
-            const finalQuat = localQuat.clone().multiply(correctionQuat);
-            
-            // 렌더링 적용 (McLaren 등 특수 케이스 포함)
-            if (rCarType.includes('McLarenP1') && node.userData.side === 'L') {
-                finalQuat.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI));
-            }
-            
-            if (rCarType.includes('SUV')) {
-                node.quaternion.copy(node.userData.baseQuaternion.clone().multiply(finalQuat));
-            } else {
-                node.quaternion.copy(finalQuat);
-            }
-            node.updateMatrix();
-        }
+        pData.model.userData.steeringNode.rotation.y = remoteSteering * 15.0; 
     }
-  // ====== [여기서부터 복사] 상대방 바퀴 강제 굴림 및 조향 동기화 ======
-      if (pData.model.userData.wheelNodes) {
+
+    // 3. 상대방 바퀴 강제 굴림 및 조향 동기화 (충돌 나던 구형 코드 삭제 후 깔끔하게 통합)
+    if (pData.model.userData.wheelNodes) {
         // 이전 위치 저장용 변수 초기화
         if (!pData.lastPos) pData.lastPos = pData.model.position.clone();
         if (pData.accumulatedRoll === undefined) pData.accumulatedRoll = 0;
@@ -2188,42 +2123,43 @@ for (const id in otherPlayers) {
         // 차가 이동한 실제 거리 계산
         const distance = pData.model.position.distanceTo(pData.lastPos);
         
-        // 차가 전진 중인지 후진 중인지 파악 (내적 사용)
+        // 차가 전진 중인지 후진 중인지 파악
         const moveDir = new THREE.Vector3().subVectors(pData.model.position, pData.lastPos).normalize();
-        // 차량의 앞방향 (Three.js 기본 모델들은 보통 Z축이 앞이거나 뒤를 향함)
         const forwardDir = new THREE.Vector3(0, 0, 1).applyQuaternion(pData.model.quaternion).normalize();
         
-        // 거리가 조금이라도 이동했을 때만 바퀴를 굴림 (0.001 이상)
+        // 거리가 이동했을 때만 바퀴 굴림
         if (distance > 0.001) {
-          // 전진이면 +, 후진이면 - 방향으로 굴러가게 방향 설정
-          const direction = moveDir.dot(forwardDir) > 0 ? 1 : -1;
-          // 2.5는 바퀴 굴림 속도입니다. (바퀴가 너무 빠르거나 느리면 이 숫자를 조절하세요)
-          pData.accumulatedRoll += distance * 2.5 * direction;
+            const direction = moveDir.dot(forwardDir) > 0 ? 1 : -1;
+            pData.accumulatedRoll += distance * 2.5 * direction; // 2.5는 굴림 속도
         }
 
         const wheels = pData.model.userData.wheelNodes;
         for (let i = 0; i < wheels.length; i++) {
-          const wheel = wheels[i];
-          if (!wheel) continue;
-          
-          // 앞바퀴(0번, 1번)에만 핸들 꺾임(Steering) 각도를 가져옴
-          let steerAngle = (i === 0 || i === 1) ? (pData.steeringValue || 0) : 0;
-          
-          // SUV 모델 등 축이 반대인 차량의 경우 핸들 방향 반전 (필요시 사용)
-          if (pData.model.userData.modelName === 'SUV') {
-             steerAngle = -steerAngle; 
-          }
+            const wheel = wheels[i];
+            if (!wheel) continue;
+            
+            // 앞바퀴(0번, 1번)에만 조향각 적용
+            let steerAngle = (i === 0 || i === 1) ? (pData.steeringValue || 0) : 0;
+            if (pData.model.userData.modelName === 'SUV') {
+                steerAngle = -steerAngle; // SUV 축 반전 처리
+            }
 
-          // 기존에 꼬여있던 회전값 초기화 후 새롭게 적용 (순서: Y축 조향 -> X축 굴림)
-          wheel.rotation.set(0, 0, 0); 
-          wheel.rotation.y = steerAngle; // 좌우 핸들 꺾임 적용
-          wheel.rotation.x = pData.accumulatedRoll; // 앞뒤 굴러감 적용
+            // 모델별 기본 각도(baseQuaternion)가 있으면 기준으로 삼고, 없으면 0으로 초기화
+            if (wheel.userData.baseQuaternion) {
+                wheel.quaternion.copy(wheel.userData.baseQuaternion);
+            } else {
+                wheel.rotation.set(0, 0, 0); 
+            }
+            
+            // Three.js 내장 함수를 이용해 로컬 축 기준으로 회전 (안전한 방식)
+            wheel.rotateY(steerAngle);             // 핸들 꺾임
+            wheel.rotateX(pData.accumulatedRoll);  // 바퀴 굴러감
+            wheel.updateMatrix();
         }
         
-        // 다음 프레임 계산을 위해 현재 위치를 저장
+        // 다음 프레임을 위해 위치 갱신
         pData.lastPos.copy(pData.model.position);
-      }
-    
+    }
 }
 
     
