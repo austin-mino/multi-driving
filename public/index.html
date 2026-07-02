@@ -2137,41 +2137,70 @@ for (const id in otherPlayers) {
             pData.accumulatedRoll += distance * 2.5 * direction; // 2.5는 굴림 속도
         }
 
-        const wheels = pData.model.userData.wheelNodes;
-        for (let i = 0; i < wheels.length; i++) {
-            const wheel = wheels[i];
-            if (!wheel) continue;
-            
-            // 앞바퀴(0번, 1번)에만 조향각 적용
-            let steerAngle = (i === 0 || i === 1) ? (pData.steeringValue || 0) : 0;
-            if (pData.model.userData.modelName === 'SUV') {
-                steerAngle = -steerAngle; // SUV 축 반전 처리
-            }
+       // 상대방 차량 바퀴 업데이트 루프 내부
+    const wheels = pData.model.userData.wheelNodes;
+    for (let i = 0; i < wheels.length; i++) {
+      const wheel = wheels[i];
+      if (!wheel) continue;
+      
+      // 앞바퀴(0번: FL, 1번: FR)에만 조향각 적용
+      let steerAngle = (i === 0 || i === 1) ? (pData.steeringValue || 0) : 0;
+      
+      const modelName = pData.model.userData.modelName;
 
-            // 모델별 기본 각도(baseQuaternion)가 있으면 기준으로 삼고, 없으면 0으로 초기화
-           // 모델별 기본 각도(baseQuaternion)가 있으면 기준으로 삼고, 없으면 0으로 초기화
-        if (wheel.userData.baseQuaternion) {
-          wheel.quaternion.copy(wheel.userData.baseQuaternion);
-        } else {
-          wheel.rotation.set(0, 0, 0);
+      // SUV 모델의 축 반전 처리
+      if (modelName === 'SUV') {
+        steerAngle = -steerAngle; 
+      }
+
+      // 1. 모델별 기본 각도(baseQuaternion) 초기화
+      if (wheel.userData.baseQuaternion) {
+        wheel.quaternion.copy(wheel.userData.baseQuaternion);
+      } else {
+        wheel.rotation.set(0, 0, 0);
+      }
+
+      // ======================= [여기를 추가/수정 하세요] =======================
+      
+      // 2. 조향 회전(Y축)과 바퀴 굴림 회전(X축) 쿼터니언 생성
+      const steerQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), -steerAngle); 
+      const rollQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), pData.wheelRollAngle || 0);
+
+      // 두 회전을 결합 (조향 적용 후 굴림 적용)
+      const combinedQuat = steerQuat.clone().multiply(rollQuat);
+
+      // 3. 차종별 3D 모델의 축 방향(Axis) 보정
+      let correctionQuat = new THREE.Quaternion();
+      if (modelName === 'SportsCar' || modelName === 'SUV' || modelName === 'McLarenP1') {
+        // 이 모델들은 에셋의 로컬 축이 누워있으므로 -90도(X축) 보정이 필요합니다.
+        correctionQuat.setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0));
+      }
+      
+      const finalQuat = combinedQuat.clone().multiply(correctionQuat);
+
+      // 4. 최종 회전값(Quaternion) 모델에 적용
+      if (modelName === 'McLarenP1') {
+        // 맥라렌의 경우 왼쪽 바퀴 모델의 축이 180도 뒤집혀 있음
+        let mclarenQuat = finalQuat.clone();
+        if (wheel.userData.side === 'L') {
+          const leftInversion = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI);
+          mclarenQuat.multiply(leftInversion);
         }
-
-        // ======================= [여기를 추가/수정 하세요] =======================
-        // 1. 조향각(Steering) 적용: Y축을 기준으로 바퀴를 좌우로 꺾습니다.
-        // 차종이나 모델 축에 따라 꺾이는 양이 작으면 곱하는 값(예: 1.5)을 늘리거나 방향(-)을 조절하세요.
-        wheel.rotateY(-steerAngle * 1.5); 
-
-        // 2. 구르는 각도(Rolling) 적용: X축을 기준으로 바퀴를 굴립니다.
-        // 위에서 누적된 pData.model.userData.wheelAngle 값을 이용합니다.
-        const rollAngle = pData.model.userData.wheelAngle || 0;
-        wheel.rotateX(rollAngle);
-        // =========================================================================
-            
-            // Three.js 내장 함수를 이용해 로컬 축 기준으로 회전 (안전한 방식)
-            wheel.rotateY(steerAngle);             // 핸들 꺾임
-            wheel.rotateX(pData.accumulatedRoll);  // 바퀴 굴러감
-            wheel.updateMatrix();
-        }
+        wheel.quaternion.copy(mclarenQuat);
+      } 
+      else if (modelName === 'SUV') {
+        // SUV는 기본 각도(baseQuaternion)에 보정된 회전값을 곱하여 적용
+        wheel.quaternion.copy(wheel.userData.baseQuaternion.clone().multiply(finalQuat));
+      } 
+      else if (modelName === 'SportsCar') {
+        wheel.quaternion.copy(finalQuat);
+      } 
+      else {
+        // Box 카(GrandeurIG 등) 기본 모델 처리
+        wheel.quaternion.multiply(steerQuat).multiply(rollQuat);
+      }
+     
+    }
         
         // 다음 프레임을 위해 위치 갱신
         pData.lastPos.copy(pData.model.position);
