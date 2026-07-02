@@ -2084,23 +2084,20 @@ const myWheels = carModel ? carModel.userData.wheelNodes : null;
       
   const now = performance.now();
 // 상대방 차량 위치 보간 처리
-// 상대방 차량 위치 및 회전 업데이트 (부드러운 보간)
 for (const id in otherPlayers) {
     const pData = otherPlayers[id];
     
     // 로딩 중이거나 모델이 아직 없는 경우 건너뜀
     if (pData.loading || !pData.model) continue;
 
-    // 1. 차체 위치/회전 보간 (lerp/slerp를 사용하여 뚝뚝 끊김 방지)
+    // 1. 차체 위치/회전 보간
     const remoteOffset = pData.model.userData.visualOffsetY || 0;
     const visualTargetPos = pData.targetPosition.clone();
     visualTargetPos.y += remoteOffset;
 
-    // 시각 모델을 부드럽게 이동 및 회전
     pData.model.position.lerp(visualTargetPos, 0.15);
     pData.model.quaternion.slerp(pData.targetQuaternion, 0.15);
 
-    // 충돌용 물리 바디 업데이트
     pData.chassisBody.position.set(
         pData.model.position.x,
         pData.model.position.y - remoteOffset,
@@ -2110,27 +2107,24 @@ for (const id in otherPlayers) {
 
     // 2. 내부 운전대(1인칭 시점 핸들) 동기화
     if (pData.model.userData.steeringNode) {
+        // 값이 잘 들어왔는지 확인하고 기본값 0 처리
         const remoteSteering = pData.steeringValue || 0;
+        // 기존에 쓰시던 15배율 복구
         pData.model.userData.steeringNode.rotation.y = remoteSteering * 15.0; 
     }
 
-    // 3. 상대방 바퀴 강제 굴림 및 조향 동기화 (충돌 나던 구형 코드 삭제 후 깔끔하게 통합)
+    // 3. 상대방 바퀴 강제 굴림 및 조향 동기화
     if (pData.model.userData.wheelNodes) {
-        // 이전 위치 저장용 변수 초기화
         if (!pData.lastPos) pData.lastPos = pData.model.position.clone();
         if (pData.accumulatedRoll === undefined) pData.accumulatedRoll = 0;
         
-        // 차가 이동한 실제 거리 계산
         const distance = pData.model.position.distanceTo(pData.lastPos);
-        
-        // 차가 전진 중인지 후진 중인지 파악
         const moveDir = new THREE.Vector3().subVectors(pData.model.position, pData.lastPos).normalize();
         const forwardDir = new THREE.Vector3(0, 0, 1).applyQuaternion(pData.model.quaternion).normalize();
         
-        // 거리가 이동했을 때만 바퀴 굴림
         if (distance > 0.001) {
             const direction = moveDir.dot(forwardDir) > 0 ? 1 : -1;
-            pData.accumulatedRoll += distance * 2.5 * direction; // 2.5는 굴림 속도
+            pData.accumulatedRoll += distance * 2.5 * direction;
         }
 
         const wheels = pData.model.userData.wheelNodes;
@@ -2138,26 +2132,29 @@ for (const id in otherPlayers) {
             const wheel = wheels[i];
             if (!wheel) continue;
             
-            // 앞바퀴(0번, 1번)에만 조향각 적용
-            let steerAngle = (i === 0 || i === 1) ? (pData.steeringValue || 0) : 0;
-            if (pData.model.userData.modelName === 'SUV') {
-                steerAngle = -steerAngle; // SUV 축 반전 처리
+            // ★ 조향각(Steering) 계산 및 시각적 2.6배율 복구!
+            let steerAngle = 0;
+            if (i === 0 || i === 1) { // 앞바퀴만
+                steerAngle = (pData.steeringValue || 0) * 2.6; 
+                // SUV 조향축 반전
+                if (pData.model.userData.modelName === 'SUV') steerAngle = -steerAngle; 
             }
 
-            // 모델별 기본 각도(baseQuaternion)가 있으면 기준으로 삼고, 없으면 0으로 초기화
+            // ★ 회전 순서 및 축 꼬임 방지 (절대 꼬이지 않는 공식)
+            // 1. 초기화 및 좌우 조향(핸들 꺾임) 먼저 적용
+            wheel.rotation.set(0, steerAngle, 0); 
+            
+            // 2. 차종별 바퀴 방향 보정 (맥라렌/SUV 등 누운 바퀴 세우기)
             if (wheel.userData.baseQuaternion) {
-                wheel.quaternion.copy(wheel.userData.baseQuaternion);
-            } else {
-                wheel.rotation.set(0, 0, 0); 
+                wheel.quaternion.multiply(wheel.userData.baseQuaternion);
             }
             
-            // Three.js 내장 함수를 이용해 로컬 축 기준으로 회전 (안전한 방식)
-            wheel.rotateY(steerAngle);             // 핸들 꺾임
-            wheel.rotateX(pData.accumulatedRoll);  // 바퀴 굴러감
+            // 3. 앞뒤로 굴리기 (각 바퀴 고유의 로컬 축 기준)
+            wheel.rotateX(pData.accumulatedRoll);
+            
             wheel.updateMatrix();
         }
         
-        // 다음 프레임을 위해 위치 갱신
         pData.lastPos.copy(pData.model.position);
     }
 }
