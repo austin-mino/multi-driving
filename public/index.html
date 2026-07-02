@@ -2179,6 +2179,51 @@ for (const id in otherPlayers) {
             node.updateMatrix();
         }
     }
+  // ====== [여기서부터 복사] 상대방 바퀴 강제 굴림 및 조향 동기화 ======
+      if (pData.model.userData.wheelNodes) {
+        // 이전 위치 저장용 변수 초기화
+        if (!pData.lastPos) pData.lastPos = pData.model.position.clone();
+        if (pData.accumulatedRoll === undefined) pData.accumulatedRoll = 0;
+        
+        // 차가 이동한 실제 거리 계산
+        const distance = pData.model.position.distanceTo(pData.lastPos);
+        
+        // 차가 전진 중인지 후진 중인지 파악 (내적 사용)
+        const moveDir = new THREE.Vector3().subVectors(pData.model.position, pData.lastPos).normalize();
+        // 차량의 앞방향 (Three.js 기본 모델들은 보통 Z축이 앞이거나 뒤를 향함)
+        const forwardDir = new THREE.Vector3(0, 0, 1).applyQuaternion(pData.model.quaternion).normalize();
+        
+        // 거리가 조금이라도 이동했을 때만 바퀴를 굴림 (0.001 이상)
+        if (distance > 0.001) {
+          // 전진이면 +, 후진이면 - 방향으로 굴러가게 방향 설정
+          const direction = moveDir.dot(forwardDir) > 0 ? 1 : -1;
+          // 2.5는 바퀴 굴림 속도입니다. (바퀴가 너무 빠르거나 느리면 이 숫자를 조절하세요)
+          pData.accumulatedRoll += distance * 2.5 * direction;
+        }
+
+        const wheels = pData.model.userData.wheelNodes;
+        for (let i = 0; i < wheels.length; i++) {
+          const wheel = wheels[i];
+          if (!wheel) continue;
+          
+          // 앞바퀴(0번, 1번)에만 핸들 꺾임(Steering) 각도를 가져옴
+          let steerAngle = (i === 0 || i === 1) ? (pData.steeringValue || 0) : 0;
+          
+          // SUV 모델 등 축이 반대인 차량의 경우 핸들 방향 반전 (필요시 사용)
+          if (pData.model.userData.modelName === 'SUV') {
+             steerAngle = -steerAngle; 
+          }
+
+          // 기존에 꼬여있던 회전값 초기화 후 새롭게 적용 (순서: Y축 조향 -> X축 굴림)
+          wheel.rotation.set(0, 0, 0); 
+          wheel.rotation.y = steerAngle; // 좌우 핸들 꺾임 적용
+          wheel.rotation.x = pData.accumulatedRoll; // 앞뒤 굴러감 적용
+        }
+        
+        // 다음 프레임 계산을 위해 현재 위치를 저장
+        pData.lastPos.copy(pData.model.position);
+      }
+    
 }
 
     
