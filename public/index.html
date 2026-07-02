@@ -2118,59 +2118,44 @@ for (const id in otherPlayers) {
         pData.model.userData.steeringNode.rotation.y = remoteSteering * 15.0; 
     }
 
-      // 3. 상대방 바퀴 강제 굴림 및 조향 동기화 (통합 및 최적화 버전)
+     
+       // 3. 상대방 바퀴 강제 굴림 및 조향 동기화 
     if (pData.model.userData.wheelNodes) {
-        // 이전 위치 저장용 변수 초기화 (바퀴 굴림 계산용)
         if (!pData.lastPos) pData.lastPos = pData.model.position.clone();
         if (pData.accumulatedRoll === undefined) pData.accumulatedRoll = 0;
         
-        // 차가 이동한 실제 거리 계산하여 바퀴 굴림(Roll) 값 누적
         const distance = pData.model.position.distanceTo(pData.lastPos);
-        const moveDir = new THREE.Vector3().subVectors(pData.model.position, pData.lastPos).normalize();
-        const forwardDir = new THREE.Vector3(0, 0, 1).applyQuaternion(pData.model.quaternion).normalize();
-        
         if (distance > 0.001) {
+            const moveDir = new THREE.Vector3().subVectors(pData.model.position, pData.lastPos).normalize();
+            const forwardDir = new THREE.Vector3(0, 0, 1).applyQuaternion(pData.model.quaternion).normalize();
             const direction = moveDir.dot(forwardDir) > 0 ? 1 : -1;
-            pData.accumulatedRoll += distance * 2.8 * direction; // 굴림 속도 조절
+            pData.accumulatedRoll += distance * 2.8 * direction;
         }
 
         const wheels = pData.model.userData.wheelNodes;
-        const steerValue = pData.steeringValue || 0; // 서버에서 받은 조향값
+        // [확인] pData.steeringValue가 위에서 저장되어야 이 값이 0이 아니게 됩니다.
+        const steerAngle = pData.steeringValue || 0; 
 
         for (let i = 0; i < wheels.length; i++) {
             const wheel = wheels[i];
             if (!wheel) continue;
             
-            // [1] 기본 자세로 리셋 (모델별 baseQuaternion 적용)
+            // 1) 기본 자세로 리셋
             if (wheel.userData.baseQuaternion) {
                 wheel.quaternion.copy(wheel.userData.baseQuaternion);
             } else {
                 wheel.quaternion.set(0, 0, 0, 1);
             }
 
-            // [2] 조향(Steering) 적용: 앞바퀴(0, 1번)만 좌우로 꺾음
-            if (i === 0 || i === 1) {
-                let visualSteer = steerValue * 1.8; // 꺾임 배율 강화
-                
-                // SUV나 특정 모델의 경우 축 반전 처리
-                if (pData.model.userData.modelName === 'SUV' || pData.model.userData.modelName === 'McLarenP1') {
-                    visualSteer = -visualSteer;
-                }
-                
-                // Y축(위아래축)을 기준으로 바퀴를 좌우로 회전
-                const steerQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), visualSteer);
-                wheel.quaternion.multiplyQuaternions(steerQuat, wheel.quaternion);
-            }
-
-            // [3] 굴림(Rolling) 적용: 모든 바퀴를 앞뒤로 굴림
-            // X축(좌우축)을 기준으로 바퀴를 회전
+            // 2) 조향 및 굴림 통합 쿼터니언 생성
+            const finalSteer = (i === 0 || i === 1) ? steerAngle * 1.5 : 0;
+            const steerQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), -finalSteer);
             const rollQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), pData.accumulatedRoll);
-            wheel.quaternion.multiply(rollQuat);
 
+            // 3) 조향 후 굴림 적용 (순서 중요)
+            wheel.quaternion.multiply(steerQuat).multiply(rollQuat);
             wheel.updateMatrix();
         }
-        
-        // 다음 프레임을 위해 위치 저장
         pData.lastPos.copy(pData.model.position);
     }
 
