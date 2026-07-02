@@ -2149,11 +2149,23 @@ for (const id in otherPlayers) {
             }
 
             // 모델별 기본 각도(baseQuaternion)가 있으면 기준으로 삼고, 없으면 0으로 초기화
-            if (wheel.userData.baseQuaternion) {
-                wheel.quaternion.copy(wheel.userData.baseQuaternion);
-            } else {
-                wheel.rotation.set(0, 0, 0); 
-            }
+           // 모델별 기본 각도(baseQuaternion)가 있으면 기준으로 삼고, 없으면 0으로 초기화
+        if (wheel.userData.baseQuaternion) {
+          wheel.quaternion.copy(wheel.userData.baseQuaternion);
+        } else {
+          wheel.rotation.set(0, 0, 0);
+        }
+
+        // ======================= [여기를 추가/수정 하세요] =======================
+        // 1. 조향각(Steering) 적용: Y축을 기준으로 바퀴를 좌우로 꺾습니다.
+        // 차종이나 모델 축에 따라 꺾이는 양이 작으면 곱하는 값(예: 1.5)을 늘리거나 방향(-)을 조절하세요.
+        wheel.rotateY(-steerAngle * 1.5); 
+
+        // 2. 구르는 각도(Rolling) 적용: X축을 기준으로 바퀴를 굴립니다.
+        // 위에서 누적된 pData.model.userData.wheelAngle 값을 이용합니다.
+        const rollAngle = pData.model.userData.wheelAngle || 0;
+        wheel.rotateX(rollAngle);
+        // =========================================================================
             
             // Three.js 내장 함수를 이용해 로컬 축 기준으로 회전 (안전한 방식)
             wheel.rotateY(steerAngle);             // 핸들 꺾임
