@@ -2118,64 +2118,62 @@ for (const id in otherPlayers) {
         pData.model.userData.steeringNode.rotation.y = remoteSteering * 15.0; 
     }
 
-    // 3. 상대방 바퀴 강제 굴림 및 조향 동기화 (충돌 나던 구형 코드 삭제 후 깔끔하게 통합)
+      // 3. 상대방 바퀴 강제 굴림 및 조향 동기화 (통합 및 최적화 버전)
     if (pData.model.userData.wheelNodes) {
-        // 이전 위치 저장용 변수 초기화
+        // 이전 위치 저장용 변수 초기화 (바퀴 굴림 계산용)
         if (!pData.lastPos) pData.lastPos = pData.model.position.clone();
         if (pData.accumulatedRoll === undefined) pData.accumulatedRoll = 0;
         
-        // 차가 이동한 실제 거리 계산
+        // 차가 이동한 실제 거리 계산하여 바퀴 굴림(Roll) 값 누적
         const distance = pData.model.position.distanceTo(pData.lastPos);
-        
-        // 차가 전진 중인지 후진 중인지 파악
         const moveDir = new THREE.Vector3().subVectors(pData.model.position, pData.lastPos).normalize();
         const forwardDir = new THREE.Vector3(0, 0, 1).applyQuaternion(pData.model.quaternion).normalize();
         
-        // 거리가 이동했을 때만 바퀴 굴림
         if (distance > 0.001) {
             const direction = moveDir.dot(forwardDir) > 0 ? 1 : -1;
-            pData.accumulatedRoll += distance * 2.5 * direction; // 2.5는 굴림 속도
+            pData.accumulatedRoll += distance * 2.8 * direction; // 굴림 속도 조절
         }
 
         const wheels = pData.model.userData.wheelNodes;
+        const steerValue = pData.steeringValue || 0; // 서버에서 받은 조향값
+
         for (let i = 0; i < wheels.length; i++) {
             const wheel = wheels[i];
             if (!wheel) continue;
             
-            // 앞바퀴(0번, 1번)에만 조향각 적용
-            let steerAngle = (i === 0 || i === 1) ? (pData.steeringValue || 0) : 0;
-            if (pData.model.userData.modelName === 'SUV') {
-                steerAngle = -steerAngle; // SUV 축 반전 처리
+            // [1] 기본 자세로 리셋 (모델별 baseQuaternion 적용)
+            if (wheel.userData.baseQuaternion) {
+                wheel.quaternion.copy(wheel.userData.baseQuaternion);
+            } else {
+                wheel.quaternion.set(0, 0, 0, 1);
             }
 
-            // 모델별 기본 각도(baseQuaternion)가 있으면 기준으로 삼고, 없으면 0으로 초기화
-           // 모델별 기본 각도(baseQuaternion)가 있으면 기준으로 삼고, 없으면 0으로 초기화
-        if (wheel.userData.baseQuaternion) {
-          wheel.quaternion.copy(wheel.userData.baseQuaternion);
-        } else {
-          wheel.rotation.set(0, 0, 0);
-        }
+            // [2] 조향(Steering) 적용: 앞바퀴(0, 1번)만 좌우로 꺾음
+            if (i === 0 || i === 1) {
+                let visualSteer = steerValue * 1.8; // 꺾임 배율 강화
+                
+                // SUV나 특정 모델의 경우 축 반전 처리
+                if (pData.model.userData.modelName === 'SUV' || pData.model.userData.modelName === 'McLarenP1') {
+                    visualSteer = -visualSteer;
+                }
+                
+                // Y축(위아래축)을 기준으로 바퀴를 좌우로 회전
+                const steerQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), visualSteer);
+                wheel.quaternion.multiplyQuaternions(steerQuat, wheel.quaternion);
+            }
 
-        // ======================= [여기를 추가/수정 하세요] =======================
-        // 1. 조향각(Steering) 적용: Y축을 기준으로 바퀴를 좌우로 꺾습니다.
-        // 차종이나 모델 축에 따라 꺾이는 양이 작으면 곱하는 값(예: 1.5)을 늘리거나 방향(-)을 조절하세요.
-        wheel.rotateY(-steerAngle * 1.5); 
+            // [3] 굴림(Rolling) 적용: 모든 바퀴를 앞뒤로 굴림
+            // X축(좌우축)을 기준으로 바퀴를 회전
+            const rollQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), pData.accumulatedRoll);
+            wheel.quaternion.multiply(rollQuat);
 
-        // 2. 구르는 각도(Rolling) 적용: X축을 기준으로 바퀴를 굴립니다.
-        // 위에서 누적된 pData.model.userData.wheelAngle 값을 이용합니다.
-        const rollAngle = pData.model.userData.wheelAngle || 0;
-        wheel.rotateX(rollAngle);
-        // =========================================================================
-            
-            // Three.js 내장 함수를 이용해 로컬 축 기준으로 회전 (안전한 방식)
-            wheel.rotateY(steerAngle);             // 핸들 꺾임
-            wheel.rotateX(pData.accumulatedRoll);  // 바퀴 굴러감
             wheel.updateMatrix();
         }
         
-        // 다음 프레임을 위해 위치 갱신
+        // 다음 프레임을 위해 위치 저장
         pData.lastPos.copy(pData.model.position);
     }
+
 }
 
     
