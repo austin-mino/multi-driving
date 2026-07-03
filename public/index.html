@@ -777,29 +777,6 @@ function addStreetProps(x, z, w, d) {
     chassisBody.collisionFilterGroup = 1;
     chassisBody.collisionFilterMask = 1 | 2;
     world.addBody(chassisBody);
-
-  // 1. 차체 전용 물리 재질 생성
-const carPhysicsMaterial = new CANNON.Material("carMaterial");
-
-// 2. 내 차 바디 생성 시점에 재질을 지정해줍니다.
-chassisBody.material = carPhysicsMaterial;
-
-// 3. "차체와 차체가 부딪힐 때"의 규칙 정의
-const carContactMaterial = new CANNON.ContactMaterial(
-  carPhysicsMaterial, // 재질 A (내 차 혹은 다른 유저 차)
-  carPhysicsMaterial, // 재질 B (다른 유저 차)
-  {
-    friction: 0.05,               // 마찰력을 대폭 감소 (자석처럼 안 붙고 미끄러짐)
-    restitution: 0.4,            // 반발력 부여 (팅~ 하고 부드럽게 튕겨나감)
-    contactEquationStiffness: 1e7,  // 표면 단단함 (차가 서로 파고드는 현상 방지)
-    contactEquationRelaxation: 3    // 완화도
-  }
-);
-
-// 4. 물리 세계에 이 접촉 규칙을 등록합니다.
-world.addContactMaterial(carContactMaterial);
-  
-    world.addBody(chassisBody);
   
   let carModel; // 선언만
   let carVisualOffsetY = 0;
