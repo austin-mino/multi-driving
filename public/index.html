@@ -1988,11 +1988,18 @@ setInterval(() => {
       // 실제 핸들 회전 시스템 (1인칭 시점에서만 업데이트하여 최적화)
     // 매 프레임마다 시각값이 물리값을 느리게 추적
 // 실제 핸들 회전 시스템 (1인칭 시점에서만 업데이트하여 최적화)
+// 실제 핸들 회전 시스템 (매 프레임마다 시각값이 물리값을 부드럽게 추적)
 visualSteeringLag += (steeringValue - visualSteeringLag) * 0.1;
 
-// ★ steeringWheelNode(전역변수) 대신 carModel.userData.steeringNode(내 차 전용 변수)를 사용!
-if (carModel && carModel.userData.steeringNode && cameraMode === 'first') {
-  carModel.userData.steeringNode.rotation.y = visualSteeringLag * 15.0;
+// ★ 내 차 전용 변수(steeringNode) 업데이트
+if (carModel && carModel.userData.steeringNode) {
+  if (cameraMode === 'first') {
+    // 내가 1인칭 시점일 때만 핸들을 실시간으로 회전시킵니다.
+    carModel.userData.steeringNode.rotation.y = visualSteeringLag * 15.0;
+  } else {
+    // 3인칭 시점으로 바꾸면 핸들을 정중앙(0)으로 리셋하여 고정시킵니다.
+    carModel.userData.steeringNode.rotation.y = 0;
+  }
 }
       // ─── GLTF/GLB 모델 바퀴 노드 회전 업데이트 ───────────────────────────
       // carWheelNodes[i]는 모델 내부 바퀴 부모 노드를 가리킨다.
@@ -2118,12 +2125,6 @@ const myWheels = carModel ? carModel.userData.wheelNodes : null;
         pData.model.position.z
     );
     pData.chassisBody.quaternion.copy(pData.model.quaternion);
-
-    // 2. 내부 운전대(1인칭 시점 핸들) 동기화
-    if (pData.model.userData.steeringNode) {
-        const remoteSteering = pData.steeringValue || 0;
-        pData.model.userData.steeringNode.rotation.y = remoteSteering * 15.0; 
-    }
 
     // 3. 상대방 바퀴 강제 굴림 및 조향 동기화 
     if (pData.model.userData.wheelNodes) {
