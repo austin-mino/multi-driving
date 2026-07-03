@@ -1836,6 +1836,10 @@ socket.on('updatePlayers', async (players) => {
           otherCar = createGrandeurIGCarDetailed(player.carColor || '#aaaaaa');
       }
 
+  if (typeof carWheelNodes !== 'undefined') {
+          otherCar.userData.wheelNodes = [...carWheelNodes]; 
+      }
+
       // 닉네임 텍스트 생성 및 추가
       const nicknameText = await createTextMesh(player.nickname);
       nicknameText.position.set(0, 2.5, 0); // 차 지붕 위에 표시
