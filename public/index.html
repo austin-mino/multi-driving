@@ -1911,16 +1911,18 @@ socket.on('updatePlayers', async (players) => {
 
 
 // 매 프레임 또는 50ms 간격으로 내 위치/상태 서버 전송
-  setInterval(() => {
+ setInterval(() => {
   if (playerId) {
     socket.emit('updateInput', input);
   }
 }, 50);
+
 setInterval(() => {
-  if (chassisBody.velocity.length() > 0.1) {
+  // 속도 조건(velocity)을 지우고, 내 차(chassisBody)가 존재할 때 무조건 전송하도록 변경!
+  if (chassisBody) { 
     sendPlayerState();
   }
-}, 100);
+}, 50);
 //  // 위치 상태 전송
 //setInterval(() => {
   //sendPlayerState();
@@ -2144,7 +2146,7 @@ const myWheels = carModel ? carModel.userData.wheelNodes : null;
             if (!wheel) continue;
             
             // 1) 조향 및 굴림 통합 쿼터니언 생성
-            const finalSteer = (i === 0 || i === 1) ? steerAngle * 1.5 : 0;
+            const finalSteer = (i === 0 || i === 1) ? steerAngle * 2.6 : 0;
             const steerQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), -finalSteer);
             const rollQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), pData.accumulatedRoll);
 
