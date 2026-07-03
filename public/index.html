@@ -1134,7 +1134,7 @@ car.traverse((child) => {
                 const center = box.getCenter(new THREE.Vector3());
 
               // 1.크기 조절
-                car.scale.set(0.012, 0.012, 0.012);
+                car.scale.set(0.011, 0.011, 0.011);
               //방향 조절
                // 모델을 원점으로 이동
                 car.position.x -= center.x;
@@ -1231,7 +1231,7 @@ for (let i = 0; i < 4; i++) {
 
                 carGroup.userData.wheelNodes = carWheelNodes;
                 carGroup.userData.modelName = 'McLarenP1'; 
-                carGroup.userData.visualOffsetY = 1.1;
+                carGroup.userData.visualOffsetY = 0.8;
                 carGroup.userData.steeringNode = steeringWheelNode;
               
                 resolve(carGroup); // carGroup 반환
