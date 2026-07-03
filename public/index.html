@@ -356,6 +356,11 @@ scene.add(new THREE.HemisphereLight(0x87ceeb, 0x4a7a3a, 0.5));
 
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
 
+const roadGroup = new THREE.Group();
+const buildingGroup = new THREE.Group();
+const parkGroup = new THREE.Group();
+  
+
 scene.add(roadGroup);
 scene.add(buildingGroup);
 scene.add(parkGroup);
