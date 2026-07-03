@@ -112,6 +112,16 @@ io.on('connection', (socket) => {
   if (typeof data.gear === 'string') {
     players[socket.id].gear = data.gear;
   }
+
+  // 클라이언트가 보낸 조향각(steeringValue)을 서버에 저장합니다.
+  if (typeof data.steeringValue === 'number') {
+    players[socket.id].steeringValue = data.steeringValue;
+  }
+
+  // (선택) 클라이언트에서 wheels 데이터도 보내고 계시니, 나중을 위해 같이 저장해 둡니다.
+  if (data.wheels) {
+    players[socket.id].wheels = data.wheels;
+  }
 });
 
 
