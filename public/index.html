@@ -777,6 +777,28 @@ function addStreetProps(x, z, w, d) {
     chassisBody.linearDamping = 0.06;
     chassisBody.collisionFilterGroup = 1;
     chassisBody.collisionFilterMask = 1 | 2;
+
+  // 1. 차체 전용 물리 재질 생성
+const carPhysicsMaterial = new CANNON.Material("carMaterial");
+
+// 2. 내 차 바디 생성 시점에 재질을 지정해줍니다.
+chassisBody.material = carPhysicsMaterial;
+
+// 3. "차체와 차체가 부딪힐 때"의 규칙 정의
+const carContactMaterial = new CANNON.ContactMaterial(
+  carPhysicsMaterial, // 재질 A (내 차 혹은 다른 유저 차)
+  carPhysicsMaterial, // 재질 B (다른 유저 차)
+  {
+    friction: 0.05,               // 마찰력을 대폭 감소 (자석처럼 안 붙고 미끄러짐)
+    restitution: 0.4,            // 반발력 부여 (팅~ 하고 부드럽게 튕겨나감)
+    contactEquationStiffness: 1e7,  // 표면 단단함 (차가 서로 파고드는 현상 방지)
+    contactEquationRelaxation: 3    // 완화도
+  }
+);
+
+// 4. 물리 세계에 이 접촉 규칙을 등록합니다.
+world.addContactMaterial(carContactMaterial);
+  
     world.addBody(chassisBody);
   
   let carModel; // 선언만
@@ -2235,6 +2257,37 @@ if (cameraMode === 'third') {
       
   async function startGame(modelName = 'GrandeurIG', color = '#ffffff', nickname) {
   currentCarModel = modelName;
+
+// 1. 차량별 물리 박스 크기(절반 크기: Half-extents) 정의
+  // [가로(X)/2, 높이(Y)/2, 길이(Z)/2]
+  let extents;
+  switch (modelName) {
+    case 'SUV':        // 레인지로버: 크고 높음
+      extents = new CANNON.Vec3(1.0, 0.6, 2.4); 
+      break;
+    case 'SportsCar':  // 스포츠카: 낮고 넓음
+    case 'McLarenP1':
+      extents = new CANNON.Vec3(1.0, 0.35, 2.25); 
+      break;
+    case 'GrandeurIG': // 일반 세단
+    default:
+      extents = new CANNON.Vec3(0.9, 0.4, 2.2);
+  }
+
+  // 2. 기존 chassisBody의 물리 박스가 있다면 제거하고 새로 장착
+  if (chassisBody) {
+    if (chassisBody.shapes.length > 0) {
+      chassisBody.removeShape(chassisBody.shapes[0]);
+    }
+    
+    // 새 크기의 박스 쉐이프 추가
+    const newShape = new CANNON.Box(extents);
+    chassisBody.addShape(newShape);
+    
+    // 무게중심 및 질량 재계산 (필수)
+    chassisBody.updateMassProperties();
+  }
+    
   socket.emit('joinGame', {
     nickname: nickname,
     carModel: modelName,
