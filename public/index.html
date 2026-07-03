@@ -1134,7 +1134,7 @@ car.traverse((child) => {
                 const center = box.getCenter(new THREE.Vector3());
 
               // 1.크기 조절
-                car.scale.set(0.016, 0.016, 0.016);
+                car.scale.set(0.014, 0.014, 0.014);
               //방향 조절
                // 모델을 원점으로 이동
                 car.position.x -= center.x;
@@ -1652,13 +1652,13 @@ if (input.handbrake) {
   // 차종별 운전석 위치
   let offset;
   if (currentCarModel === 'SUV') {
-    offset = new THREE.Vector3(0, 3.5, 4); // Range Rover 운전석
+    offset = new THREE.Vector3(-1.6, 3.5, 4); // Range Rover 운전석
   } else if (currentCarModel === 'SportsCar') {
     offset = new THREE.Vector3(-0.85, 2.5, -0.25); // Ferrari
   } else if (currentCarModel === 'McLarenP1') {
-    offset = new THREE.Vector3(-0.85, 2.5, -0.25); // mclaren
+    offset = new THREE.Vector3(-1, 2.4, 0); // mclaren
   } else {
-    offset = new THREE.Vector3(-0.85, 2.5, -0.4); // 그랜저 기본
+    offset = new THREE.Vector3(-0.85, 2.5, 0); // 그랜저 기본
   }
 
   // 1인칭 흔들림 효과 (G-Force 표현)
