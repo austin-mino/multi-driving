@@ -364,7 +364,7 @@ function makeAsphaltTexture() {
   ctx.fillStyle = '#111111';
   ctx.fillRect(0, 0, 256, 256);
   for (let i = 0; i < 4000; i++) {
-  const v = 12 + Math.random() * 10 | 0;
+    const v = 12 + Math.random() * 10 | 0;
     ctx.fillStyle = `rgb(${v},${v},${v})`;
     ctx.fillRect(Math.random() * 256, Math.random() * 256, 1 + Math.random() * 2, 1);
   }
@@ -467,10 +467,12 @@ const buildingPalette = [
   0x352c28, 0x1e2c36, 0x2a2a20, 0x301e1e, 0x243028
 ];
 
-  const MAX_LIGHTS = 30;
+// 미리 텍스처 풀 생성 (중복 연산 방지)
+const buildingTexPool = buildingPalette.map(color => makeBuildingTexture(color, 12, 6));
+
+const MAX_LIGHTS = 30;
 let streetLightCount = 0;
 
-  
 for (let i = -GRID_COUNT; i <= GRID_COUNT; i++) {
   for (let j = -GRID_COUNT; j <= GRID_COUNT; j++) {
     const x = i * BLOCK_SIZE;
@@ -478,7 +480,11 @@ for (let i = -GRID_COUNT; i <= GRID_COUNT; i++) {
     createSidewalk(x, z);
     addLaneMarkings(x, z);
     if (i % 2 === 0 && j % 2 === 0) addCrosswalk(x, z);
-    const isPark = rng() < 0.12;
+    
+    // 중앙부 (0,0) 주변에는 무조건 빌딩(도심 마천루)이 들어서도록 조닝 수정
+    const isCenter = Math.abs(i) <= 1 && Math.abs(j) <= 1;
+    const isPark = !isCenter && rng() < 0.12;
+    
     if (isPark) createPark(x, z);
     else createBuilding(x, z);
   }
@@ -554,30 +560,67 @@ function addCrosswalk(x, z) {
 }
 
 // ─── 건물 생성 ─────────────────────────────────────────────
-
 function createBuilding(x, z) {
   const maxArea = BLOCK_SIZE - ROAD_WIDTH - 8;
   const w = 22 + rng() * (maxArea - 22);
   const d = 22 + rng() * (maxArea - 22);
-  const h = 25 + rng() * 130;
-  const baseColor = buildingPalette[Math.floor(rng() * buildingPalette.length)];
 
-  const buildingTexPool = buildingPalette.map(color =>
-  makeBuildingTexture(color, 10, 5)
-);
+  // ① 중심(0,0)에서 멀어질수록 높이가 낮아지도록 설정 (스카이라인 형성)
+  const distanceToCenter = Math.sqrt(x * x + z * z);
+  const maxPossibleHeight = Math.max(30, 220 - distanceToCenter * 0.45); 
+  const h = 15 + rng() * maxPossibleHeight;
+
   const tex = buildingTexPool[Math.floor(rng() * buildingTexPool.length)];
-  const geo = new THREE.BoxGeometry(w, h, d);
-  const mat = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.7, metalness: 0.1 });
-  const mesh = new THREE.Mesh(geo, mat);
-  mesh.position.set(x, -5 + h / 2, z);
-  mesh.castShadow = true;
-  mesh.receiveShadow = true;
-  buildingGroup.add(mesh);
+  
+  // ② 유리 빌딩 재질 다변화 (30% 확률로 현대적인 유리 오피스 외관 설정)
+  const isGlassBuilding = rng() > 0.7;
+  const mat = new THREE.MeshStandardMaterial({ 
+    map: tex, 
+    roughness: isGlassBuilding ? 0.15 : 0.7, 
+    metalness: isGlassBuilding ? 0.85 : 0.1,
+    color: isGlassBuilding ? 0x99ccff : 0xffffff
+  });
 
-  // 옥상 디테일
-  addRooftop(x, z, w, d, h);
+  // ③ 복합 구조 빌딩 (Group을 활용하여 1단 및 계단형 2단 레이어 결합)
+  const buildingContainer = new THREE.Group();
 
-  // 물리
+  if (h > 65 && rng() > 0.4) {
+    // 계단형식 고층 빌딩 (하단부 + 상단부)
+    const h1 = h * 0.65;
+    const geo1 = new THREE.BoxGeometry(w, h1, d);
+    const mesh1 = new THREE.Mesh(geo1, mat);
+    mesh1.position.y = h1 / 2;
+    mesh1.castShadow = true;
+    mesh1.receiveShadow = true;
+    buildingContainer.add(mesh1);
+
+    const w2 = w * 0.75;
+    const d2 = d * 0.75;
+    const h2 = h * 0.35;
+    const geo2 = new THREE.BoxGeometry(w2, h2, d2);
+    const mesh2 = new THREE.Mesh(geo2, mat);
+    mesh2.position.y = h1 + h2 / 2;
+    mesh2.castShadow = true;
+    mesh2.receiveShadow = true;
+    buildingContainer.add(mesh2);
+
+    addRooftop(buildingContainer, 0, 0, w2, d2, h);
+  } else {
+    // 단일 상자 빌딩
+    const geo = new THREE.BoxGeometry(w, h, d);
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.position.y = h / 2;
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    buildingContainer.add(mesh);
+
+    addRooftop(buildingContainer, 0, 0, w, d, h);
+  }
+
+  buildingContainer.position.set(x, -5, z);
+  buildingGroup.add(buildingContainer);
+
+  // 물리 바디 (전체 높이와 넓이를 포함하는 고정 박스 바디)
   const body = new CANNON.Body({ mass: 0 });
   body.addShape(new CANNON.Box(new CANNON.Vec3(w / 2, h / 2, d / 2)));
   body.position.set(x, -5 + h / 2, z);
@@ -587,15 +630,15 @@ function createBuilding(x, z) {
 }
 
 // ─── 옥상 디테일 ───────────────────────────────────────────
-function addRooftop(x, z, w, d, h) {
-  const roofY = -5 + h;
+function addRooftop(container, x, z, w, d, h) {
+  const roofY = h;
   const grayMat = new THREE.MeshStandardMaterial({ color: 0x888888, roughness: 0.8 });
 
   // 에어컨 실외기
   for (let i = 0; i < 2 + Math.floor(rng() * 3); i++) {
     const ac = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.8, 1.2), grayMat);
     ac.position.set(x + (rng() - 0.5) * w * 0.7, roofY + 0.4, z + (rng() - 0.5) * d * 0.7);
-    buildingGroup.add(ac);
+    container.add(ac);
   }
 
   // 계단실
@@ -605,7 +648,7 @@ function addRooftop(x, z, w, d, h) {
       new THREE.MeshStandardMaterial({ color: 0x707070, roughness: 0.9 })
     );
     stair.position.set(x + (rng() - 0.5) * w * 0.5, roofY + 1.5, z + (rng() - 0.5) * d * 0.5);
-    buildingGroup.add(stair);
+    container.add(stair);
   }
 
   // 물탱크
@@ -615,14 +658,15 @@ function addRooftop(x, z, w, d, h) {
     const tx = x + (rng() - 0.5) * w * 0.5;
     const tz = z + (rng() - 0.5) * d * 0.5;
     tank.position.set(tx, roofY + 1.25, tz);
-    buildingGroup.add(tank);
+    container.add(tank);
+    
     // 지지대
     const legMat = new THREE.MeshStandardMaterial({ color: 0x555555 });
     for (let i = 0; i < 4; i++) {
       const a = (i / 4) * Math.PI * 2;
       const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 1.8, 4), legMat);
       leg.position.set(tx + Math.cos(a) * 0.9, roofY + 0.6, tz + Math.sin(a) * 0.9);
-      buildingGroup.add(leg);
+      container.add(leg);
     }
   }
 }
@@ -708,8 +752,7 @@ function createTree(x, z) {
   }
 }
 
-// ─── 가로등 (실제 빛 포함) ─────────────────────────────────
-  
+// ─── 가로등 (실제 도로 조명 스팟 구현) ───────────────────────
 function createStreetLight(x, z) {
   const poleMat = new THREE.MeshStandardMaterial({ color: 0x4a4a4a, metalness: 0.8, roughness: 0.3 });
   const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.14, 7.5, 8), poleMat);
@@ -730,17 +773,34 @@ function createStreetLight(x, z) {
 
   // 발광 구체
   const bulbMat = new THREE.MeshStandardMaterial({
-  color: 0xfff5cc,
-  emissive: 0xfff5cc,
-  emissiveIntensity: 3.0, // 더 밝게
-  roughness: 0.2
-});
+    color: 0xfff5cc,
+    emissive: 0xfff5cc,
+    emissiveIntensity: 3.0,
+    roughness: 0.2
+  });
   
   const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.2, 8, 8), bulbMat);
   bulb.position.set(x + 2.2, 2.35, z);
   scene.add(bulb);
 
-
+  // ④ 가로등 실제 광원 효과 (SpotLight 추가)
+  if (streetLightCount < MAX_LIGHTS) {
+    const streetSpot = new THREE.SpotLight(0xfff0b3, 4.5, 28, Math.PI / 3.5, 0.5, 1.5);
+    streetSpot.position.set(x + 2.2, 2.3, z);
+    
+    // 조명이 보도 및 차로 안쪽을 향하도록 타겟 생성 및 바인딩
+    const lightTarget = new THREE.Object3D();
+    lightTarget.position.set(x + 2.2, -5, z);
+    scene.add(lightTarget);
+    
+    streetSpot.target = lightTarget;
+    streetSpot.castShadow = true;
+    streetSpot.shadow.mapSize.width = 512;
+    streetSpot.shadow.mapSize.height = 512;
+    
+    scene.add(streetSpot);
+    streetLightCount++;
+  }
 }
 
 // ─── 건물 주변 소품 ────────────────────────────────────────
@@ -767,7 +827,7 @@ function addStreetProps(x, z, w, d) {
       scene.add(bin);
     }
   }
-}  
+}
     // 자동차 차체 물리 (박스)
     const chassisShape = new CANNON.Box(new CANNON.Vec3(1.5, 0.33, 3));
     const chassisBody = new CANNON.Body({ mass: 1200 });
