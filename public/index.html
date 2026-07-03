@@ -1134,7 +1134,7 @@ car.traverse((child) => {
                 const center = box.getCenter(new THREE.Vector3());
 
               // 1.크기 조절
-                car.scale.set(0.014, 0.014, 0.014);
+                car.scale.set(0.012, 0.012, 0.012);
               //방향 조절
                // 모델을 원점으로 이동
                 car.position.x -= center.x;
@@ -1656,7 +1656,7 @@ if (input.handbrake) {
   } else if (currentCarModel === 'SportsCar') {
     offset = new THREE.Vector3(-0.85, 2.5, -0.25); // Ferrari
   } else if (currentCarModel === 'McLarenP1') {
-    offset = new THREE.Vector3(0, 1.5, -4); // mclaren
+    offset = new THREE.Vector3(0, 0.5, -4); // mclaren
   } else {
     offset = new THREE.Vector3(-0.85, 2.5, -0.4); // 그랜저 기본
   }
