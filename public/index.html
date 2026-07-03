@@ -2146,18 +2146,21 @@ for (const id in otherPlayers) {
             
             // 1) 기본 자세로 리셋
             if (wheel.userData.baseQuaternion) {
-                wheel.quaternion.copy(wheel.userData.baseQuaternion);
-            } else {
-                wheel.quaternion.set(0, 0, 0, 1);
-            }
+                // 2) 조향 및 굴림 통합 쿼터니언 생성
+const finalSteer = (i === 0 || i === 1) ? steerAngle * 1.5 : 0;
+const steerQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), -finalSteer);
+const rollQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), pData.accumulatedRoll);
 
-            // 2) 조향 및 굴림 통합 쿼터니언 생성
-            const finalSteer = (i === 0 || i === 1) ? steerAngle * 1.5 : 0;
-            const steerQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), -finalSteer);
-            const rollQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), pData.accumulatedRoll);
+// ★수정됨: 조향(Steer)과 굴림(Roll)을 먼저 합칩니다. (순서가 매우 중요!)
+const finalTransform = new THREE.Quaternion().copy(steerQuat).multiply(rollQuat);
 
-            // 3) 조향 후 굴림 적용 (순서 중요)
-            wheel.quaternion.multiply(steerQuat).multiply(rollQuat);
+// 그 다음 마지막에 모델의 기본 각도를 곱해줍니다.
+if (wheel.userData.baseQuaternion) {
+    wheel.quaternion.copy(finalTransform).multiply(wheel.userData.baseQuaternion);
+} else {
+    wheel.quaternion.copy(finalTransform);
+}
+
             wheel.updateMatrix();
         }
         pData.lastPos.copy(pData.model.position);
