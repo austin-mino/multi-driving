@@ -1249,27 +1249,29 @@ for (let i = 0; i < 4; i++) {
 }
 
 
-  async function createPontiacFirebird(color = '#ffffff') {
+ async function createPontiacFirebird(color = '#ffffff') {
   return new Promise((resolve) => {
     const loader = new GLTFLoader();
     
-    // 경로에 띄어쓰기가 있다면 %20을 쓰거나, 폴더명을 Pontiac_Firebird로 바꾸는 것을 권장합니다.
     loader.load(
-      'models/Pontiac Firebird/uploads_files_6012214_American+Muscle.glb', // 실제 glb 파일명으로 변경하세요
+      'models/Pontiac Firebird/uploads_files_6012214_American+Muscle.glb', 
       (gltf) => {
         const car = gltf.scene;
 
-        // 1. 그림자 설정 및 차체 색상 적용
+        // 1. 그림자 설정, 차체 색상 적용 및 불필요한 메쉬(Plane) 제거
         car.traverse((child) => {
-
-          if (child.parent) child.parent.remove(child);
+          
+          // ⭐ [수정] 이름에 'plane'이 들어간 부품만 찾아서 숨깁니다.
+          if (child.name.toLowerCase().includes('plane')) {
+            child.visible = false; 
+            return; // 바닥은 숨겼으므로 아래 로직을 건너뜁니다.
+          }
           
           if (child.isMesh && child.material) {
             child.castShadow = true;
             child.receiveShadow = true;
             
             // 모델 구조에 따라 차체(Body) 메쉬 이름을 확인하고 색상을 적용합니다.
-            // (예: 메쉬 이름에 'body'가 들어가는 경우)
             if (child.name.toLowerCase().includes('body')) {
               child.material = child.material.clone();
               child.material.color.set(color);
@@ -1282,7 +1284,7 @@ for (let i = 0; i < 4; i++) {
         const box = new THREE.Box3().setFromObject(car);
         const center = box.getCenter(new THREE.Vector3());
         
-        // 크기 조절 (glb 파일 기본 크기에 맞춰 0.01 ~ 1.0 등으로 조절)
+        // 크기 조절 (차가 너무 작거나 크면 이 값을 0.5 또는 1.5 등으로 조절하세요)
         car.scale.set(1.0, 1.0, 1.0); 
 
         // 모델을 원점으로 이동
@@ -1296,16 +1298,16 @@ for (let i = 0; i < 4; i++) {
         carGroup.rotation.y = 0;
 
         // 4. 바퀴 노드(Node) 추출
-        // CANNON 인덱스: 0=FL(앞왼쪽), 1=FR(앞오른쪽), 2=RL(뒤왼쪽), 3=RR(뒤오른쪽)
         const carWheelNodes = [null, null, null, null];
         car.traverse((child) => {
           if (child.isMesh) {
             const n = child.name.toLowerCase();
-            // 실제 glb 내부의 바퀴 노드 이름에 맞춰 수정해야 합니다.
-            if (n.includes('Wheel_FL')) carWheelNodes[0] = child;
-            else if (n.includes('Wheel_FR')) carWheelNodes[1] = child;
-            else if (n.includes('Wheel_RL')) carWheelNodes[2] = child;
-            else if (n.includes('Wheel_RR')) carWheelNodes[3] = child;
+            // 💡 팁: 만약 인게임에서 바퀴가 안 굴러가거나 엉뚱한 게 굴러간다면
+            // 아래의 'wheel_fl' 같은 이름을 실제 glb 파일 내의 바퀴 메쉬 이름으로 고쳐야 합니다.
+            if (n.includes('wheel_fl') || n.includes('wheel_front_left')) carWheelNodes[0] = child;
+            else if (n.includes('wheel_fr') || n.includes('wheel_front_right')) carWheelNodes[1] = child;
+            else if (n.includes('wheel_rl') || n.includes('wheel_rear_left')) carWheelNodes[2] = child;
+            else if (n.includes('wheel_rr') || n.includes('wheel_rear_right')) carWheelNodes[3] = child;
           }
         });
 
@@ -1317,17 +1319,13 @@ for (let i = 0; i < 4; i++) {
         // 5. 그룹 userData에 필수 정보 저장
         carGroup.userData.wheelNodes = carWheelNodes;
         carGroup.userData.modelName = 'PontiacFirebird';
-        carGroup.userData.visualOffsetY = -0.5; // 차체가 붕 떠있거나 파묻히면 이 값을 조절
-        
-
-         carGroup.userData.steeringNode = steeringWheelNode; 
+        carGroup.userData.visualOffsetY = -0.5; // 차체가 공중에 뜨거나 땅에 파묻히면 이 값을 조절하세요.
 
         resolve(carGroup);
       },
       undefined,
       (error) => {
         console.error('Pontiac Firebird 로드 실패:', error);
-        // 실패 시 기본 모델로 폴백(Fallback)
         resolve(createGrandeurIGCarDetailed(color)); 
       }
     );
