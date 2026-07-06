@@ -1742,6 +1742,8 @@ if (input.handbrake) {
     offset = new THREE.Vector3(-0.85, 2.5, -0.25); // Ferrari
   } else if (currentCarModel === 'McLarenP1') {
     offset = new THREE.Vector3(0, 0.5, -4); // mclaren
+  } else if (currentCarModel === 'PontiacFirebird') {
+    offset = new THREE.Vector3(-0.85, 2.5, -0.25); // PontiacFirebird
   } else {
     offset = new THREE.Vector3(-0.85, 2.5, -0.4); // 그랜저 기본
   }
@@ -2147,9 +2149,13 @@ const myWheels = carModel ? carModel.userData.wheelNodes : null;
     correctionQuat.setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0));
   } else if (currentCarModel.includes('SUV')) {
     correctionQuat.setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0));
-  } else if (currentCarModel.includes('McLarenP1') || currentCarModel.includes('PontiacFirebird')) {
-    // ✨ McLaren 및 Pontiac 축 보정
+  } else if (currentCarModel.includes('McLarenP1')) {
+    // ✨ McLaren 축 보정
     correctionQuat.setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0));
+  } else if (currentCarModel.includes('PontiacFirebird')) {
+    // ✨ Pontiac 축 보정: 90도 돌아가 있는 현상 수정
+    // 모델의 기본 회전이 (90, 0, 90)이므로 이를 상쇄하고 물리 엔진의 회전과 맞춥니다.
+    correctionQuat.setFromEuler(new THREE.Euler(0, -Math.PI / 2, 0));
   }
 
   const finalQuat = localQuat.clone().multiply(correctionQuat);
@@ -2255,8 +2261,8 @@ const myWheels = carModel ? carModel.userData.wheelNodes : null;
                     wheel.quaternion.copy(finalTransform);
                 }
 
-            } else if (remoteModelName.includes('McLarenP1') || remoteModelName.includes('PontiacFirebird')) {
-                // ─── [2] 맥라렌 및 폰티악 전용 바퀴 정렬 로직 ───
+            } else if (remoteModelName.includes('McLarenP1')) {
+                // ─── [2] 맥라렌 전용 바퀴 정렬 로직 ───
                 const visualSteering = (i === 0 || i === 1) ? -steerAngle * 2.6 : 0;
                 const steerQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), visualSteering);
                 const rollQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), pData.accumulatedRoll);
@@ -2265,7 +2271,23 @@ const myWheels = carModel ? carModel.userData.wheelNodes : null;
                 const correctionQuat = new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0));
                 let finalTransform = localTransform.clone().multiply(correctionQuat);
                 
-                // 왼쪽 바퀴 180도 반전 대칭 처리
+                if (wheel.userData.side === 'L') {
+                    const LEFT_SIDE_INVERSION = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI);
+                    finalTransform.multiply(LEFT_SIDE_INVERSION);
+                }
+                wheel.quaternion.copy(finalTransform);
+
+            } else if (remoteModelName.includes('PontiacFirebird')) {
+                // ─── [3] 폰티악 전용 바퀴 정렬 로직 (90도 회전 수정) ───
+                const visualSteering = (i === 0 || i === 1) ? -steerAngle * 2.6 : 0;
+                const steerQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), visualSteering);
+                const rollQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), pData.accumulatedRoll);
+                
+                const localTransform = new THREE.Quaternion().copy(steerQuat).multiply(rollQuat);
+                // 폰티악은 Y축 기준 -90도 보정이 필요함
+                const correctionQuat = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, -Math.PI / 2, 0));
+                let finalTransform = localTransform.clone().multiply(correctionQuat);
+                
                 if (wheel.userData.side === 'L') {
                     const LEFT_SIDE_INVERSION = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI);
                     finalTransform.multiply(LEFT_SIDE_INVERSION);
