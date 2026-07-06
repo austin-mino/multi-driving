@@ -1319,28 +1319,21 @@ async function createPontiacFirebird(color = '#ffffff') {
           const group = wheelNodes[i];
           
           if (wheelMesh) {
-            // 원본 메쉬를 새로운 그룹에 부착
-            car.add(group);
-            group.attach(wheelMesh);
-            group.updateMatrixWorld(true);
+            // 1. 바퀴 메쉬의 원래 중심(Center)을 구함 (이동하기 전에 먼저 계산!)
+            const wheelBox = new THREE.Box3().setFromObject(wheelMesh);
+            const center = wheelBox.getCenter(new THREE.Vector3());
+            
+            // 2. 그룹을 바퀴의 실제 중심 위치로 이동
+            group.position.copy(center);
+            
+            // 3. 바퀴 메쉬를 그룹의 자식으로 넣음 (이때 로컬 좌표를 빼줌)
+            group.add(wheelMesh);
+            wheelMesh.position.x -= center.x;
+            wheelMesh.position.y -= center.y;
+            wheelMesh.position.z -= center.z;
 
-            // 바퀴의 실제 기하학적 중심점 계산
-            const wheelBox = new THREE.Box3().setFromObject(group);
-            const worldCenter = new THREE.Vector3();
-            wheelBox.getCenter(worldCenter);
-            
-            // 차체 기준 로컬 좌표로 변환
-            const localCenter = car.worldToLocal(worldCenter.clone());
-            
-            // 그룹의 위치를 바퀴 정중앙으로 이동
-            group.position.copy(localCenter);
-            
-            // 그룹 내부에 있는 메쉬의 위치를 반대로 밀어서 회전축 보정
-            group.children.forEach(child => {
-              child.position.x -= localCenter.x;
-              child.position.y -= localCenter.y;
-              child.position.z -= localCenter.z;
-            });
+            // 4. 완성된 바퀴 그룹을 차체(car)에 추가
+            car.add(group);
 
             // 좌우측 판별 (조향 반전 등을 위한 데이터)
             if (i === 0 || i === 2) group.userData.side = 'L';
