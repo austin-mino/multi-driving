@@ -2148,9 +2148,8 @@ const myWheels = carModel ? carModel.userData.wheelNodes : null;
 if (currentCarModel.includes('SportsCar') || currentCarModel.includes('SUV') || currentCarModel.includes('McLarenP1')) {
     correctionQuat.setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0));
   } else if (currentCarModel.includes('PontiacFirebird')) {
-    // 폰티악 전용 축 보정: 모델의 기본 회전이 (90, 0, 90)이므로 이를 보정합니다.
-    // 조향 축(Y)과 구름 축(X)을 물리 엔진과 일치시킵니다.
-    correctionQuat.setFromEuler(new THREE.Euler(-Math.PI / 2, 0, -Math.PI / 2));
+    // 폰티악 전용 축 보정: 모델 기본 회전을 유지하면서 물리 엔진의 X축 회전(구름)을 적용하기 위한 보정
+    correctionQuat.setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0));
   }
 
   const finalQuat = localQuat.clone().multiply(correctionQuat);
@@ -2173,13 +2172,16 @@ if (currentCarModel.includes('SportsCar') || currentCarModel.includes('SUV') || 
     }
     node.quaternion.copy(finalModelQuat);
   } else if (currentCarModel.includes('PontiacFirebird')) {
-    // ✨ Pontiac 바퀴 대칭 정렬: 왼쪽 바퀴가 180도 돌아가 있는 경우 'L'을 반전시킵니다.
-    let finalModelQuat = finalQuat.clone();
+    // ✨ Pontiac: SUV와 유사하게 baseQuaternion을 유지하며 회전을 더합니다.
+    // 옆으로 눕는 현상을 방지하기 위해 로컬 축을 보존하는 multiply 방식을 사용합니다.
+    let pontiacQuat = node.userData.baseQuaternion.clone().multiply(finalQuat);
+    
+    // 왼쪽 바퀴 반전이 필요하다면 여기서 추가 처리
     if (node.userData.side === 'L') {
-      const LEFT_SIDE_INVERSION = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI);
-      finalModelQuat.multiply(LEFT_SIDE_INVERSION);
+      const LEFT_SIDE_INVERSION = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI);
+      pontiacQuat.multiply(LEFT_SIDE_INVERSION);
     }
-    node.quaternion.copy(finalModelQuat);
+    node.quaternion.copy(pontiacQuat);
 
   } else if (currentCarModel.includes('SUV')) {  
     node.quaternion.copy(node.userData.baseQuaternion.clone().multiply(finalQuat));
@@ -2280,21 +2282,26 @@ if (currentCarModel.includes('SportsCar') || currentCarModel.includes('SUV') || 
                 wheel.quaternion.copy(finalTransform);
 
                         } else if (remoteModelName.includes('PontiacFirebird')) {
-                // ─── [3] 폰티악 전용 바퀴 정렬 로직 (조향 및 반전 수정) ───
+                // ─── [3] 폰티악 전용 바퀴 정렬 로직 (baseQuaternion 기반) ───
                 const visualSteering = (i === 0 || i === 1) ? -steerAngle * 2.6 : 0;
                 const steerQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), visualSteering);
                 const rollQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), pData.accumulatedRoll);
                 
                 const localTransform = new THREE.Quaternion().copy(steerQuat).multiply(rollQuat);
-                // 폰티악 전용 복합 축 보정 (YXZ 순서 고려)
-                const correctionQuat = new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI / 2, 0, -Math.PI / 2));
+                // 폰티악 전용 축 보정 (SUV 스타일)
+                const correctionQuat = new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0));
                 let finalTransform = localTransform.clone().multiply(correctionQuat);
                 
-                if (wheel.userData.side === 'L') {
-                    const LEFT_SIDE_INVERSION = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI);
-                    finalTransform.multiply(LEFT_SIDE_INVERSION);
+                if (wheel.userData.baseQuaternion) {
+                    let pontiacQuat = wheel.userData.baseQuaternion.clone().multiply(finalTransform);
+                    if (wheel.userData.side === 'L') {
+                        const LEFT_SIDE_INVERSION = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI);
+                        pontiacQuat.multiply(LEFT_SIDE_INVERSION);
+                    }
+                    wheel.quaternion.copy(pontiacQuat);
+                } else {
+                    wheel.quaternion.copy(finalTransform);
                 }
-                wheel.quaternion.copy(finalTransform);
             } else {
                 // ─── [3] 일반 차량 로직 (그랜저, 스포츠카 등) ───
                 const finalSteer = (i === 0 || i === 1) ? steerAngle * 2.6 : 0;
