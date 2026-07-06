@@ -1261,21 +1261,24 @@ for (let i = 0; i < 4; i++) {
         // 1. 그림자 설정, 차체 색상 적용 및 불필요한 메쉬(Plane) 제거
         car.traverse((child) => {
           
-          // ⭐ [수정] 이름에 'plane'이 들어간 부품만 찾아서 숨깁니다.
+          // 이름에 'plane'이 들어간 부품은 숨김
           if (child.name.toLowerCase().includes('plane')) {
             child.visible = false; 
-            return; // 바닥은 숨겼으므로 아래 로직을 건너뜁니다.
+            return; 
           }
           
-          if (child.isMesh && child.material) {
+          if (child.isMesh) {
             child.castShadow = true;
             child.receiveShadow = true;
             
-            // 모델 구조에 따라 차체(Body) 메쉬 이름을 확인하고 색상을 적용합니다.
+            // 💡 [핵심 수정] 오류 나는 순정 재질 대신 Three.js의 검증된 표준 재질로 교체합니다.
             if (child.name.toLowerCase().includes('body')) {
-              child.material = child.material.clone();
-              child.material.color.set(color);
-              child.name = 'MainBody'; // 멀티플레이 동기화용 이름
+              child.material = new THREE.MeshStandardMaterial({
+                color: new THREE.Color(color),
+                metalness: 0.8,   // 금속 느낌 (0 ~ 1)
+                roughness: 0.2,   // 매끄러운 정도 (0 ~ 1)
+              });
+              child.name = 'MainBody'; 
             }
           }
         });
