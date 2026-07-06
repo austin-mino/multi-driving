@@ -2269,7 +2269,7 @@ if (currentCarModel.includes('SportsCar') || currentCarModel.includes('SUV') || 
                 }
                 wheel.quaternion.copy(finalTransform);
 
-            } } else if (remoteModelName.includes('PontiacFirebird')) {
+            }  else if (remoteModelName.includes('PontiacFirebird')) {
       const visualSteering = (i === 0 || i === 1) ? -steerAngle * 2.6 : 0;
       const steerQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), visualSteering);
       const rollQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), pData.accumulatedRoll);
