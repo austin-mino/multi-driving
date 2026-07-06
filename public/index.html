@@ -1254,75 +1254,73 @@ for (let i = 0; i < 4; i++) {
     const loader = new GLTFLoader();
     
     loader.load(
-'https://raw.githubusercontent.com/austin-mino/multi-driving/main/models/Pontiac%20Firebird/uploads_files_6012214_American+Muscle.glb',
+      'https://raw.githubusercontent.com/austin-mino/multi-driving/main/models/Pontiac%20Firebird/uploads_files_6012214_American+Muscle.glb', 
       (gltf) => {
         const car = gltf.scene;
 
-        // 1. 그림자 설정, 차체 색상 적용 및 불필요한 메쉬(Plane) 제거
+        // 1. 불필요한 바닥(Plane) 숨기기
         car.traverse((child) => {
-          
-          // 이름에 'plane'이 들어간 부품은 숨김
           if (child.name.toLowerCase().includes('plane')) {
             child.visible = false; 
-            return; 
-          }
-          
-          if (child.isMesh) {
-            child.castShadow = true;
-            child.receiveShadow = true;
-            
-            // 💡 [핵심 수정] 오류 나는 순정 재질 대신 Three.js의 검증된 표준 재질로 교체합니다.
-            if (child.name.toLowerCase().includes('body')) {
-              child.material = new THREE.MeshStandardMaterial({
-                color: new THREE.Color(color),
-                metalness: 0.8,   // 금속 느낌 (0 ~ 1)
-                roughness: 0.2,   // 매끄러운 정도 (0 ~ 1)
-              });
-              child.name = 'MainBody'; 
-            }
           }
         });
 
-        // 2. 차량 크기 및 중심점 맞추기
+        // 2. 차량 회전(앞뒤 반전) 및 크기 키우기
+        // 기본 1.0 상태에서 앞뒤가 반대라면 Y축 기준으로 180도(Math.PI)를 돌려줍니다.
+        car.rotation.y = Math.PI; 
+        
+        // 💡 [크기 조정] 차가 너무 작다면 2.5 ~ 4.0 사이의 값으로 키워주세요. (우선 3.0 세팅)
+        car.scale.set(3.0, 3.0, 3.0); 
+
+        // 회전과 크기가 적용된 상태에서 중심점 정렬
         const box = new THREE.Box3().setFromObject(car);
         const center = box.getCenter(new THREE.Vector3());
         
-        // 크기 조절 (차가 너무 작거나 크면 이 값을 0.5 또는 1.5 등으로 조절하세요)
-        car.scale.set(1.0, 1.0, 1.0); 
-
-        // 모델을 원점으로 이동
         car.position.x -= center.x;
         car.position.z -= center.z;
         car.position.y -= box.min.y;
 
-        // 3. 물리 연산과 시각 모델을 동기화하기 위한 컨테이너 그룹 생성
+        // 3. 컨테이너 그룹 생성
         const carGroup = new THREE.Group();
         carGroup.add(car);
-        carGroup.rotation.y = 0;
 
-        // 4. 바퀴 노드(Node) 추출
+        // 4. ⭐ [바퀴 노드 수정] 이 모델의 실제 바퀴 메쉬 키워드 매칭
+        // 이 모델은 바퀴 부품 이름에 Wheel이 아니라 'tyre' 또는 'tire'가 들어갑니다.
         const carWheelNodes = [null, null, null, null];
         car.traverse((child) => {
           if (child.isMesh) {
             const n = child.name.toLowerCase();
-            // 💡 팁: 만약 인게임에서 바퀴가 안 굴러가거나 엉뚱한 게 굴러간다면
-            // 아래의 'wheel_fl' 같은 이름을 실제 glb 파일 내의 바퀴 메쉬 이름으로 고쳐야 합니다.
-            if (n.includes('wheel_fl') || n.includes('wheel_front_left')) carWheelNodes[0] = child;
-            else if (n.includes('wheel_fr') || n.includes('wheel_front_right')) carWheelNodes[1] = child;
-            else if (n.includes('wheel_rl') || n.includes('wheel_rear_left')) carWheelNodes[2] = child;
-            else if (n.includes('wheel_rr') || n.includes('wheel_rear_right')) carWheelNodes[3] = child;
+            
+            // 앞왼쪽 (Front Left)
+            if (n.includes('tyre_fl') || n.includes('tire_fl') || (n.includes('front') && n.includes('left'))) {
+              carWheelNodes[0] = child;
+            }
+            // 앞오른쪽 (Front Right)
+            else if (n.includes('tyre_fr') || n.includes('tire_fr') || (n.includes('front') && n.includes('right'))) {
+              carWheelNodes[1] = child;
+            }
+            // 뒤왼쪽 (Rear Left)
+            else if (n.includes('tyre_rl') || n.includes('tire_rl') || (n.includes('rear') && n.includes('left'))) {
+              carWheelNodes[2] = child;
+            }
+            // 뒤오른쪽 (Rear Right)
+            else if (n.includes('tyre_rr') || n.includes('tire_rr') || (n.includes('rear') && n.includes('right'))) {
+              carWheelNodes[3] = child;
+            }
           }
         });
 
-        // 바퀴 초기 쿼터니언 값 저장 (회전 애니메이션용)
+        // 바퀴 회전 기준점 저장
         carWheelNodes.forEach((node) => {
           if (node) node.userData.baseQuaternion = node.quaternion.clone();
         });
 
-        // 5. 그룹 userData에 필수 정보 저장
+        // 5. 필수 데이터 연동
         carGroup.userData.wheelNodes = carWheelNodes;
         carGroup.userData.modelName = 'PontiacFirebird';
-        carGroup.userData.visualOffsetY = -0.5; // 차체가 공중에 뜨거나 땅에 파묻히면 이 값을 조절하세요.
+        
+        // 💡 [높이 조절] 차가 공중에 붕 뜨면 -1.0 등으로 더 내리고, 땅에 묻히면 0.0 쪽으로 올려주세요.
+        carGroup.userData.visualOffsetY = -0.5; 
 
         resolve(carGroup);
       },
