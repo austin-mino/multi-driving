@@ -1773,7 +1773,7 @@ if (input.handbrake) {
   } else if (currentCarModel === 'McLarenP1') {
     offset = new THREE.Vector3(0, 0.5, -4); // mclaren
   } else if (currentCarModel === 'PontiacFirebird') {
-    offset = new THREE.Vector3(-0.85, 2.5, -0.25); // PontiacFirebird
+    offset = new THREE.Vector3(-0.85, 2.5, 0.5); // PontiacFirebird
   } else {
     offset = new THREE.Vector3(-0.85, 2.5, -0.4); // 그랜저 기본
   }
@@ -2322,15 +2322,19 @@ if (currentCarModel.includes('SportsCar') || currentCarModel.includes('SUV') || 
                 wheel.quaternion.copy(finalTransform);
 
                         } else if (remoteModelName.includes('PontiacFirebird')) {
-                // ─── [3] 폰티악 전용 바퀴 정렬 로직 (직관적 회전 방식) ───
+                // ─── [3] 폰티악 전용 바퀴 정렬 로직 (수정됨) ───
                 const finalSteer = (i === 0 || i === 1) ? steerAngle * 2.6 : 0;
                 
-                wheel.quaternion.setFromEuler(new THREE.Euler(0, 0, 0));
+                // 1. 무식하게 0,0,0으로 초기화하지 않고, 처음에 저장해둔 완벽한 기본축을 불러옵니다.
+                if (wheel.userData.baseQuaternion) {
+                    wheel.quaternion.copy(wheel.userData.baseQuaternion);
+                }
+                
+                // 2. 좌우 조향(핸들) 회전 적용
                 wheel.rotateY(-finalSteer);
+                
+                // 3. 앞으로 굴러가는 회전 적용
                 wheel.rotateX(pData.accumulatedRoll);
-                if (wheel.userData.side === 'L') wheel.rotateY(Math.PI);
-                wheel.rotateZ(Math.PI / 2);
-                wheel.rotateY(Math.PI / 2);
             } else {
                 // ─── [3] 일반 차량 로직 (그랜저, 스포츠카 등) ───
                 const finalSteer = (i === 0 || i === 1) ? steerAngle * 2.6 : 0;
