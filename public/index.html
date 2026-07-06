@@ -1299,21 +1299,15 @@ async function createPontiacFirebird(color = '#ffffff') {
 
         // 4. ⭐ [바퀴 노드 완벽 반영] 실제 GLB 내부의 메쉬 이름 매칭
         // CANNON 인덱스 순서: 0=앞왼쪽(FL), 1=앞오른쪽(FR), 2=뒤왼쪽(RL), 3=뒤오른쪽(RR)
-        carWheelNodes = [null, null, null, null];
+        const wheelNodes = [null, null, null, null];
         car.traverse((child) => {
-          if (child.isMesh) {
-            // 대소문자 실수를 방지하기 위해 텍스트 그대로 비교하거나 포함 여부를 체크합니다.
-            if (child.name.includes('Wheel_FL')) {
-              carWheelNodes[0] = child;
-            } else if (child.name.includes('Wheel_FR')) {
-              carWheelNodes[1] = child;
-            } else if (child.name.includes('Wheel_RL')) {
-              carWheelNodes[2] = child;
-            } else if (child.name.includes('Wheel_RR')) {
-              carWheelNodes[3] = child;
-            }
-          }
+          // Pontiac 모델은 Wheel_FL 등의 노드가 메쉬가 아닌 그룹일 수 있으므로 name으로 직접 찾습니다.
+          if (child.name === 'Wheel_FL') { wheelNodes[0] = child; child.userData.side = 'L'; }
+          else if (child.name === 'Wheel_FR') { wheelNodes[1] = child; child.userData.side = 'R'; }
+          else if (child.name === 'Wheel_RL') { wheelNodes[2] = child; child.userData.side = 'L'; }
+          else if (child.name === 'Wheel_RR') { wheelNodes[3] = child; child.userData.side = 'R'; }
         });
+        carWheelNodes = wheelNodes;
 
         // 바퀴 회전 기준점 저장 (이 작업이 없으면 굴러갈 때 축이 뒤틀립니다)
         carWheelNodes.forEach((node) => {
@@ -2153,8 +2147,8 @@ const myWheels = carModel ? carModel.userData.wheelNodes : null;
     correctionQuat.setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0));
   } else if (currentCarModel.includes('SUV')) {
     correctionQuat.setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0));
-  } else if (currentCarModel.includes('McLarenP1')) {
-    // ✨ McLaren 축 보정 추가
+  } else if (currentCarModel.includes('McLarenP1') || currentCarModel.includes('PontiacFirebird')) {
+    // ✨ McLaren 및 Pontiac 축 보정
     correctionQuat.setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0));
   }
 
@@ -2170,14 +2164,14 @@ const myWheels = carModel ? carModel.userData.wheelNodes : null;
   }
   
   // ─── 최종 회전 적용 ─────────────────────────────
-  if (currentCarModel.includes('McLarenP1')) {
-    // ✨ McLaren은 여기서 왼쪽 바퀴를 180도 뒤집고 쿼터니언으로 바로 적용
-    let mclarenQuat = finalQuat.clone();
+  if (currentCarModel.includes('McLarenP1') || currentCarModel.includes('PontiacFirebird')) {
+    // ✨ McLaren 및 Pontiac은 왼쪽 바퀴를 180도 뒤집어 대칭을 맞춥니다.
+    let finalModelQuat = finalQuat.clone();
     if (node.userData.side === 'L') {
       const LEFT_SIDE_INVERSION = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI);
-      mclarenQuat.multiply(LEFT_SIDE_INVERSION);
+      finalModelQuat.multiply(LEFT_SIDE_INVERSION);
     }
-    node.quaternion.copy(mclarenQuat);
+    node.quaternion.copy(finalModelQuat);
 
   } else if (currentCarModel.includes('SUV')) {  
     node.quaternion.copy(node.userData.baseQuaternion.clone().multiply(finalQuat));
@@ -2261,9 +2255,9 @@ const myWheels = carModel ? carModel.userData.wheelNodes : null;
                     wheel.quaternion.copy(finalTransform);
                 }
 
-            } else if (remoteModelName.includes('McLarenP1')) {
-                // ─── [2] 맥라렌 전용 바퀴 정렬 로직 ───
-                const visualSteering = (i === 0 || i === 1) ? -steerAngle * 2.6 : -steerAngle;
+            } else if (remoteModelName.includes('McLarenP1') || remoteModelName.includes('PontiacFirebird')) {
+                // ─── [2] 맥라렌 및 폰티악 전용 바퀴 정렬 로직 ───
+                const visualSteering = (i === 0 || i === 1) ? -steerAngle * 2.6 : 0;
                 const steerQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), visualSteering);
                 const rollQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), pData.accumulatedRoll);
                 
