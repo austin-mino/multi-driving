@@ -2207,7 +2207,8 @@ if (currentCarModel.includes('SportsCar') || currentCarModel.includes('SUV') || 
       finalModelQuat.multiply(LEFT_SIDE_INVERSION);
     }
     node.quaternion.copy(finalModelQuat);
-  } } else if (currentCarModel.includes('PontiacFirebird')) {
+  } 
+       else if (currentCarModel.includes('PontiacFirebird')) {
     // ✨ Pontiac: 오일러 각도를 직접 제어하여 축 뒤틀림을 원천 차단합니다.
     const finalSteer = (i === 0 || i === 1) ? visualSteering : 0;
     const rollAngle = vehicle.wheelInfos[i].rollAngle;
@@ -2238,6 +2239,7 @@ if (currentCarModel.includes('SportsCar') || currentCarModel.includes('SUV') || 
   node.updateMatrix();
 }
       }
+    }
 
        // 상대방 차량 위치 보간 처리
       
