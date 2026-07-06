@@ -1919,12 +1919,11 @@ socket.on('updatePlayers', async (players) => {
         case 'McLarenP1':
           otherCar = await createMcLarenP1(player.carColor || '#aaaaaa');
           break;
+        case 'PontiacFirebird':
+          otherCar = await createPontiacFirebird(player.carColor || '#aaaaaa');
+          break;
         default:
           otherCar = createGrandeurIGCarDetailed(player.carColor || '#aaaaaa');
-      }
-
-  if (typeof carWheelNodes !== 'undefined') {
-          otherCar.userData.wheelNodes = [...carWheelNodes]; 
       }
 
       // 닉네임 텍스트 생성 및 추가
@@ -2149,6 +2148,7 @@ if (currentCarModel.includes('SportsCar') || currentCarModel.includes('SUV') || 
   } else if (currentCarModel.includes('PontiacFirebird')) {
     // 폰티악 전용 축 보정: Y축 기준 -90도 회전
     correctionQuat.setFromEuler(new THREE.Euler(0, -Math.PI / 2, 0));
+  }
 
   const finalQuat = localQuat.clone().multiply(correctionQuat);
   const euler = new THREE.Euler().setFromQuaternion(finalQuat, 'YXZ');
@@ -2347,7 +2347,7 @@ if (cameraMode === 'third') {
       carModel = await createSportsCar(color); // ← await 필수
       break;
     case 'SUV':
-      carModel = await createSUVCar(color); // ← await 추가 필요
+      carModel = await createSUVCar(color); 
       break;
     case 'McLarenP1':
       carModel = await createMcLarenP1(color);
