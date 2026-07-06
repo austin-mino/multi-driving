@@ -145,6 +145,7 @@
 <select id="modelSelect"> 
   <option value="SportsCar">Ferrari 458 Italia</option>
   <option value="SUV">Range Rover Sport</option>
+  <option value="PontiacFirebird">Pontiac Firebird</option>
   <option value="McLarenP1">McLaren P1</option>
   <option value="GrandeurIG">box car</option>
 
@@ -1246,6 +1247,92 @@ for (let i = 0; i < 4; i++) {
         );
     });
 }
+
+
+  async function createPontiacFirebird(color = '#ffffff') {
+  return new Promise((resolve) => {
+    const loader = new GLTFLoader();
+    
+    // 경로에 띄어쓰기가 있다면 %20을 쓰거나, 폴더명을 Pontiac_Firebird로 바꾸는 것을 권장합니다.
+    loader.load(
+      'models/Pontiac Firebird/uploads_files_6012214_American+Muscle.glb', // 실제 glb 파일명으로 변경하세요
+      (gltf) => {
+        const car = gltf.scene;
+
+        // 1. 그림자 설정 및 차체 색상 적용
+        car.traverse((child) => {
+
+          if (child.parent) child.parent.remove(child);
+          
+          if (child.isMesh && child.material) {
+            child.castShadow = true;
+            child.receiveShadow = true;
+            
+            // 모델 구조에 따라 차체(Body) 메쉬 이름을 확인하고 색상을 적용합니다.
+            // (예: 메쉬 이름에 'body'가 들어가는 경우)
+            if (child.name.toLowerCase().includes('body')) {
+              child.material = child.material.clone();
+              child.material.color.set(color);
+              child.name = 'MainBody'; // 멀티플레이 동기화용 이름
+            }
+          }
+        });
+
+        // 2. 차량 크기 및 중심점 맞추기
+        const box = new THREE.Box3().setFromObject(car);
+        const center = box.getCenter(new THREE.Vector3());
+        
+        // 크기 조절 (glb 파일 기본 크기에 맞춰 0.01 ~ 1.0 등으로 조절)
+        car.scale.set(1.0, 1.0, 1.0); 
+
+        // 모델을 원점으로 이동
+        car.position.x -= center.x;
+        car.position.z -= center.z;
+        car.position.y -= box.min.y;
+
+        // 3. 물리 연산과 시각 모델을 동기화하기 위한 컨테이너 그룹 생성
+        const carGroup = new THREE.Group();
+        carGroup.add(car);
+        carGroup.rotation.y = 0;
+
+        // 4. 바퀴 노드(Node) 추출
+        // CANNON 인덱스: 0=FL(앞왼쪽), 1=FR(앞오른쪽), 2=RL(뒤왼쪽), 3=RR(뒤오른쪽)
+        const carWheelNodes = [null, null, null, null];
+        car.traverse((child) => {
+          if (child.isMesh) {
+            const n = child.name.toLowerCase();
+            // 실제 glb 내부의 바퀴 노드 이름에 맞춰 수정해야 합니다.
+            if (n.includes('Wheel_FL')) carWheelNodes[0] = child;
+            else if (n.includes('Wheel_FR')) carWheelNodes[1] = child;
+            else if (n.includes('Wheel_RL')) carWheelNodes[2] = child;
+            else if (n.includes('Wheel_RR')) carWheelNodes[3] = child;
+          }
+        });
+
+        // 바퀴 초기 쿼터니언 값 저장 (회전 애니메이션용)
+        carWheelNodes.forEach((node) => {
+          if (node) node.userData.baseQuaternion = node.quaternion.clone();
+        });
+
+        // 5. 그룹 userData에 필수 정보 저장
+        carGroup.userData.wheelNodes = carWheelNodes;
+        carGroup.userData.modelName = 'PontiacFirebird';
+        carGroup.userData.visualOffsetY = -0.5; // 차체가 붕 떠있거나 파묻히면 이 값을 조절
+        
+
+         carGroup.userData.steeringNode = steeringWheelNode; 
+
+        resolve(carGroup);
+      },
+      undefined,
+      (error) => {
+        console.error('Pontiac Firebird 로드 실패:', error);
+        // 실패 시 기본 모델로 폴백(Fallback)
+        resolve(createGrandeurIGCarDetailed(color)); 
+      }
+    );
+  });
+}
       
     // 차량용 RaycastVehicle 설정
     const vehicle = new CANNON.RaycastVehicle({
@@ -2252,9 +2339,12 @@ if (cameraMode === 'third') {
     case 'SUV':
       carModel = await createSUVCar(color); // ← await 추가 필요
       break;
-     case 'McLarenP1':
-        carModel = await createMcLarenP1(color);
-        break;
+    case 'McLarenP1':
+      carModel = await createMcLarenP1(color);
+      break;
+    case 'PontiacFirebird':
+      carModel = await createPontiacFirebird(color);
+      break;
     default:
       carModel = createGrandeurIGCarDetailed(color);
   }
