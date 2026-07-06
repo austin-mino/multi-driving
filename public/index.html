@@ -1283,7 +1283,7 @@ async function createPontiacFirebird(color = '#ffffff') {
         car.rotation.y = Math.PI; 
         
         // 차 크기가 작으므로 스케일을 3.5배로 키웁니다. (인게임 상황을 보고 3.0 ~ 4.5 사이로 조절 가능)
-        car.scale.set(3.5, 3.5, 3.5); 
+        car.scale.set(3, 3, 3); 
 
         // 크기와 회전이 반영된 상태에서 중심점(Center) 재정렬
         const box = new THREE.Box3().setFromObject(car);
@@ -1299,7 +1299,7 @@ async function createPontiacFirebird(color = '#ffffff') {
 
         // 4. ⭐ [바퀴 노드 완벽 반영] 실제 GLB 내부의 메쉬 이름 매칭
         // CANNON 인덱스 순서: 0=앞왼쪽(FL), 1=앞오른쪽(FR), 2=뒤왼쪽(RL), 3=뒤오른쪽(RR)
-        const carWheelNodes = [null, null, null, null];
+        carWheelNodes = [null, null, null, null];
         car.traverse((child) => {
           if (child.isMesh) {
             // 대소문자 실수를 방지하기 위해 텍스트 그대로 비교하거나 포함 여부를 체크합니다.
