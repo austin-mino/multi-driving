@@ -1311,11 +1311,13 @@ async function createPontiacFirebird(color = '#ffffff') {
         wheelNodes.forEach((node) => {
           if (node) {
             node.userData.baseQuaternion = node.quaternion.clone();
+            node.matrixAutoUpdate = true;
           }
         });
 
         // 4. 차량 데이터 저장
         carGroup.userData.wheelNodes = wheelNodes;
+        carWheelNodes = wheelNodes; // 전역 변수 즉시 업데이트
         carGroup.userData.modelName = 'PontiacFirebird';
         carGroup.userData.visualOffsetY = -0.5; 
 
@@ -2360,7 +2362,12 @@ if (cameraMode === 'third') {
   }
 
   scene.add(carModel);
-  carModel.userData.wheelNodes = carWheelNodes; 
+  // carModel.userData.wheelNodes가 이미 설정되어 있다면 전역 변수 carWheelNodes를 업데이트합니다.
+  if (carModel.userData.wheelNodes) {
+    carWheelNodes = carModel.userData.wheelNodes;
+  } else {
+    carModel.userData.wheelNodes = carWheelNodes;
+  }
   carModel.userData.modelName = currentCarModel;
   wheelHolders.forEach(h => scene.add(h));
   carModel.userData.steeringNode = steeringWheelNode;
