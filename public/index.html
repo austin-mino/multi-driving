@@ -1297,23 +1297,59 @@ async function createPontiacFirebird(color = '#ffffff') {
 
         const carGroup = new THREE.Group();
         carGroup.add(car);
+        
+        // 전역 매트릭스 업데이트 (바퀴 중심점 계산을 위해 필수)
+        car.updateMatrixWorld(true);
 
-        // 3. 바퀴 노드 추출 및 설정 (CANNON 인덱스: 0=FL, 1=FR, 2=RL, 3=RR)
-        const wheelNodes = [null, null, null, null];
+        // 3. 바퀴 노드 추출 및 피벗(Pivot) 재조정 
+        // (CANNON 인덱스: 0=FL, 1=FR, 2=RL, 3=RR)
+        const wheelNodes = [new THREE.Group(), new THREE.Group(), new THREE.Group(), new THREE.Group()];
+        const tempWheels = [null, null, null, null];
+
         car.traverse((child) => {
           const n = child.name;
-          if (n === 'Wheel_FL') { wheelNodes[0] = child; child.userData.side = 'L'; }
-          else if (n === 'Wheel_FR') { wheelNodes[1] = child; child.userData.side = 'R'; }
-          else if (n === 'Wheel_RL') { wheelNodes[2] = child; child.userData.side = 'L'; }
-          else if (n === 'Wheel_RR') { wheelNodes[3] = child; child.userData.side = 'R'; }
+          if (n === 'Wheel_FL') { tempWheels[0] = child; }
+          else if (n === 'Wheel_FR') { tempWheels[1] = child; }
+          else if (n === 'Wheel_RL') { tempWheels[2] = child; }
+          else if (n === 'Wheel_RR') { tempWheels[3] = child; }
         });
 
-        wheelNodes.forEach((node) => {
-          if (node) {
-            node.userData.baseQuaternion = node.quaternion.clone();
-            node.matrixAutoUpdate = true;
+        for (let i = 0; i < 4; i++) {
+          const wheelMesh = tempWheels[i];
+          const group = wheelNodes[i];
+          
+          if (wheelMesh) {
+            // 원본 메쉬를 새로운 그룹에 부착
+            car.add(group);
+            group.attach(wheelMesh);
+            group.updateMatrixWorld(true);
+
+            // 바퀴의 실제 기하학적 중심점 계산
+            const wheelBox = new THREE.Box3().setFromObject(group);
+            const worldCenter = new THREE.Vector3();
+            wheelBox.getCenter(worldCenter);
+            
+            // 차체 기준 로컬 좌표로 변환
+            const localCenter = car.worldToLocal(worldCenter.clone());
+            
+            // 그룹의 위치를 바퀴 정중앙으로 이동
+            group.position.copy(localCenter);
+            
+            // 그룹 내부에 있는 메쉬의 위치를 반대로 밀어서 회전축 보정
+            group.children.forEach(child => {
+              child.position.x -= localCenter.x;
+              child.position.y -= localCenter.y;
+              child.position.z -= localCenter.z;
+            });
+
+            // 좌우측 판별 (조향 반전 등을 위한 데이터)
+            if (i === 0 || i === 2) group.userData.side = 'L';
+            else group.userData.side = 'R';
+
+            group.userData.baseQuaternion = group.quaternion.clone();
+            group.matrixAutoUpdate = true;
           }
-        });
+        }
 
         // 4. 차량 데이터 저장
         carGroup.userData.wheelNodes = wheelNodes;
