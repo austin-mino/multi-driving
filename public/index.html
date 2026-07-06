@@ -2188,10 +2188,9 @@ const myWheels = carModel ? carModel.userData.wheelNodes : null;
   let correctionQuat = new THREE.Quaternion();
 if (currentCarModel.includes('SportsCar') || currentCarModel.includes('SUV') || currentCarModel.includes('McLarenP1')) {
     correctionQuat.setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0));
-  } else if (currentCarModel.includes('PontiacPhoenix')) {
-    // 폰티악 축 보정: 모델 기본 회전(90,0,90)을 상쇄하고 물리 축과 일치시킵니다.
-    correctionQuat.setFromEuler(new THREE.Euler(-Math.PI / 2, 0, -Math.PI / 2));
-  }
+ } else if (currentCarModel.includes('PontiacPhoenix')) {
+  correctionQuat.setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0));
+}
 
   const finalQuat = localQuat.clone().multiply(correctionQuat);
   const euler = new THREE.Euler().setFromQuaternion(finalQuat, 'YXZ');
@@ -2333,21 +2332,17 @@ if (currentCarModel.includes('SportsCar') || currentCarModel.includes('SUV') || 
                 }
                 wheel.quaternion.copy(finalTransform);
 
-                        } else if (remoteModelName.includes('PontiacPhoenix')) {
-                // ─── [3] 폰티악 전용 바퀴 정렬 로직 (수정됨) ───
+                        } else if (remoteModelName.includes('PontiacFirebird')) {
+                // ─── [3] 폰티악 전용 바퀴 정렬 로직 (깔끔해짐) ───
                 const finalSteer = (i === 0 || i === 1) ? steerAngle * 2.6 : 0;
                 
-                // 1. 무식하게 0,0,0으로 초기화하지 않고, 처음에 저장해둔 완벽한 기본축을 불러옵니다.
                 if (wheel.userData.baseQuaternion) {
                     wheel.quaternion.copy(wheel.userData.baseQuaternion);
                 }
                 
-                // 2. 좌우 조향(핸들) 회전 적용
                 wheel.rotateY(-finalSteer);
-                
-                // 3. 앞으로 굴러가는 회전 적용
                 wheel.rotateX(pData.accumulatedRoll);
-            } else {
+            }else {
                 // ─── [3] 일반 차량 로직 (그랜저, 스포츠카 등) ───
                 const finalSteer = (i === 0 || i === 1) ? steerAngle * 2.6 : 0;
                 const steerQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), -finalSteer);
