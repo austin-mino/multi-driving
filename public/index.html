@@ -1249,7 +1249,7 @@ for (let i = 0; i < 4; i++) {
 }
 
 
- async function createPontiacFirebird(color = '#ffffff') {
+async function createPontiacFirebird(color = '#ffffff') {
   return new Promise((resolve) => {
     const loader = new GLTFLoader();
     
@@ -1258,21 +1258,34 @@ for (let i = 0; i < 4; i++) {
       (gltf) => {
         const car = gltf.scene;
 
-        // 1. 불필요한 바닥(Plane) 숨기기
+        // 1. 불필요한 바닥(Plane) 숨기기 및 그림자 설정
         car.traverse((child) => {
           if (child.name.toLowerCase().includes('plane')) {
             child.visible = false; 
+            return;
+          }
+
+          if (child.isMesh && child.material) {
+            child.castShadow = true;
+            child.receiveShadow = true;
+
+            // 차체(Body) 색상 변경 로직
+            if (child.name.toLowerCase().includes('body')) {
+              child.material = child.material.clone();
+              child.material.color.set(color);
+              child.name = 'MainBody'; 
+            }
           }
         });
 
-        // 2. 차량 회전(앞뒤 반전) 및 크기 키우기
-        // 기본 1.0 상태에서 앞뒤가 반대라면 Y축 기준으로 180도(Math.PI)를 돌려줍니다.
+        // 2. ⭐ 차량 앞뒤 반전 및 크기 키우기 (최적화 세팅)
+        // 이 모델은 축이 반대이므로 Y축 기준으로 180도(Math.PI) 회전하여 앞뒤를 맞춰줍니다.
         car.rotation.y = Math.PI; 
         
-        // 💡 [크기 조정] 차가 너무 작다면 2.5 ~ 4.0 사이의 값으로 키워주세요. (우선 3.0 세팅)
-        car.scale.set(3.0, 3.0, 3.0); 
+        // 차 크기가 작으므로 스케일을 3.5배로 키웁니다. (인게임 상황을 보고 3.0 ~ 4.5 사이로 조절 가능)
+        car.scale.set(3.5, 3.5, 3.5); 
 
-        // 회전과 크기가 적용된 상태에서 중심점 정렬
+        // 크기와 회전이 반영된 상태에서 중심점(Center) 재정렬
         const box = new THREE.Box3().setFromObject(car);
         const center = box.getCenter(new THREE.Vector3());
         
@@ -1284,42 +1297,34 @@ for (let i = 0; i < 4; i++) {
         const carGroup = new THREE.Group();
         carGroup.add(car);
 
-        // 4. ⭐ [바퀴 노드 수정] 이 모델의 실제 바퀴 메쉬 키워드 매칭
-        // 이 모델은 바퀴 부품 이름에 Wheel이 아니라 'tyre' 또는 'tire'가 들어갑니다.
+        // 4. ⭐ [바퀴 노드 완벽 반영] 실제 GLB 내부의 메쉬 이름 매칭
+        // CANNON 인덱스 순서: 0=앞왼쪽(FL), 1=앞오른쪽(FR), 2=뒤왼쪽(RL), 3=뒤오른쪽(RR)
         const carWheelNodes = [null, null, null, null];
         car.traverse((child) => {
           if (child.isMesh) {
-            const n = child.name.toLowerCase();
-            
-            // 앞왼쪽 (Front Left)
-            if (n.includes('tyre_fl') || n.includes('tire_fl') || (n.includes('front') && n.includes('left'))) {
+            // 대소문자 실수를 방지하기 위해 텍스트 그대로 비교하거나 포함 여부를 체크합니다.
+            if (child.name.includes('Wheel_FL')) {
               carWheelNodes[0] = child;
-            }
-            // 앞오른쪽 (Front Right)
-            else if (n.includes('tyre_fr') || n.includes('tire_fr') || (n.includes('front') && n.includes('right'))) {
+            } else if (child.name.includes('Wheel_FR')) {
               carWheelNodes[1] = child;
-            }
-            // 뒤왼쪽 (Rear Left)
-            else if (n.includes('tyre_rl') || n.includes('tire_rl') || (n.includes('rear') && n.includes('left'))) {
+            } else if (child.name.includes('Wheel_RL')) {
               carWheelNodes[2] = child;
-            }
-            // 뒤오른쪽 (Rear Right)
-            else if (n.includes('tyre_rr') || n.includes('tire_rr') || (n.includes('rear') && n.includes('right'))) {
+            } else if (child.name.includes('Wheel_RR')) {
               carWheelNodes[3] = child;
             }
           }
         });
 
-        // 바퀴 회전 기준점 저장
+        // 바퀴 회전 기준점 저장 (이 작업이 없으면 굴러갈 때 축이 뒤틀립니다)
         carWheelNodes.forEach((node) => {
           if (node) node.userData.baseQuaternion = node.quaternion.clone();
         });
 
-        // 5. 필수 데이터 연동
+        // 5. 게임 엔진에 필수 데이터 전달
         carGroup.userData.wheelNodes = carWheelNodes;
         carGroup.userData.modelName = 'PontiacFirebird';
         
-        // 💡 [높이 조절] 차가 공중에 붕 뜨면 -1.0 등으로 더 내리고, 땅에 묻히면 0.0 쪽으로 올려주세요.
+        // 차체가 공중에 뜨거나 파묻히면 이 오프셋 값을 조절하세요 (-0.3 ~ -0.8 사이 추천)
         carGroup.userData.visualOffsetY = -0.5; 
 
         resolve(carGroup);
