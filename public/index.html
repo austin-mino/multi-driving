@@ -1249,6 +1249,7 @@ for (let i = 0; i < 4; i++) {
 }
 
 
+/* 폰티악(Pontiac Firebird) 생성 함수 */
 async function createPontiacFirebird(color = '#ffffff') {
   return new Promise((resolve) => {
     const loader = new GLTFLoader();
@@ -1258,10 +1259,12 @@ async function createPontiacFirebird(color = '#ffffff') {
       (gltf) => {
         const car = gltf.scene;
 
-        // 1. 불필요한 바닥(Plane) 숨기기 및 그림자 설정
+        // 1. 불필요한 노드(Plane) 제거 및 그림자/색상 설정
         car.traverse((child) => {
+          // 바닥(Plane) 제거
           if (child.name.toLowerCase().includes('plane')) {
             child.visible = false; 
+            if (child.parent) child.parent.remove(child);
             return;
           }
 
@@ -1270,55 +1273,50 @@ async function createPontiacFirebird(color = '#ffffff') {
             child.receiveShadow = true;
 
             // 차체(Body) 색상 변경 로직
-            if (child.name.toLowerCase().includes('body')) {
+            const matName = child.material.name.toLowerCase();
+            if (child.name.toLowerCase().includes('body') || matName.includes('body') || matName.includes('paint')) {
               child.material = child.material.clone();
               child.material.color.set(color);
+              child.material.metalness = 0.8;
+              child.material.roughness = 0.2;
               child.name = 'MainBody'; 
             }
           }
         });
 
-        // 2. ⭐ 차량 앞뒤 반전 및 크기 키우기 (최적화 세팅)
-        // 이 모델은 축이 반대이므로 Y축 기준으로 180도(Math.PI) 회전하여 앞뒤를 맞춰줍니다.
-        car.rotation.y = Math.PI; 
-        
-        // 차 크기가 작으므로 스케일을 3.5배로 키웁니다. (인게임 상황을 보고 3.0 ~ 4.5 사이로 조절 가능)
+        // 2. 크기 및 기본 방향 설정
         car.scale.set(3, 3, 3); 
+        car.rotation.y = Math.PI; 
 
-        // 크기와 회전이 반영된 상태에서 중심점(Center) 재정렬
+        // 중심점 재정렬
         const box = new THREE.Box3().setFromObject(car);
         const center = box.getCenter(new THREE.Vector3());
-        
         car.position.x -= center.x;
         car.position.z -= center.z;
         car.position.y -= box.min.y;
 
-        // 3. 컨테이너 그룹 생성
         const carGroup = new THREE.Group();
         carGroup.add(car);
 
-        // 4. ⭐ [바퀴 노드 완벽 반영] 실제 GLB 내부의 메쉬 이름 매칭
-        // CANNON 인덱스 순서: 0=앞왼쪽(FL), 1=앞오른쪽(FR), 2=뒤왼쪽(RL), 3=뒤오른쪽(RR)
+        // 3. 바퀴 노드 추출 및 설정 (CANNON 인덱스: 0=FL, 1=FR, 2=RL, 3=RR)
         const wheelNodes = [null, null, null, null];
         car.traverse((child) => {
-          // Pontiac 모델은 Wheel_FL 등의 노드가 메쉬가 아닌 그룹일 수 있으므로 name으로 직접 찾습니다.
-          if (child.name === 'Wheel_FL') { wheelNodes[0] = child; child.userData.side = 'L'; }
-          else if (child.name === 'Wheel_FR') { wheelNodes[1] = child; child.userData.side = 'R'; }
-          else if (child.name === 'Wheel_RL') { wheelNodes[2] = child; child.userData.side = 'L'; }
-          else if (child.name === 'Wheel_RR') { wheelNodes[3] = child; child.userData.side = 'R'; }
-        });
-        carWheelNodes = wheelNodes;
-
-        // 바퀴 회전 기준점 저장 (이 작업이 없으면 굴러갈 때 축이 뒤틀립니다)
-        carWheelNodes.forEach((node) => {
-          if (node) node.userData.baseQuaternion = node.quaternion.clone();
+          const n = child.name;
+          if (n === 'Wheel_FL') { wheelNodes[0] = child; child.userData.side = 'L'; }
+          else if (n === 'Wheel_FR') { wheelNodes[1] = child; child.userData.side = 'R'; }
+          else if (n === 'Wheel_RL') { wheelNodes[2] = child; child.userData.side = 'L'; }
+          else if (n === 'Wheel_RR') { wheelNodes[3] = child; child.userData.side = 'R'; }
         });
 
-        // 5. 게임 엔진에 필수 데이터 전달
-        carGroup.userData.wheelNodes = carWheelNodes;
+        wheelNodes.forEach((node) => {
+          if (node) {
+            node.userData.baseQuaternion = node.quaternion.clone();
+          }
+        });
+
+        // 4. 차량 데이터 저장
+        carGroup.userData.wheelNodes = wheelNodes;
         carGroup.userData.modelName = 'PontiacFirebird';
-        
-        // 차체가 공중에 뜨거나 파묻히면 이 오프셋 값을 조절하세요 (-0.3 ~ -0.8 사이 추천)
         carGroup.userData.visualOffsetY = -0.5; 
 
         resolve(carGroup);
@@ -1331,6 +1329,7 @@ async function createPontiacFirebird(color = '#ffffff') {
     );
   });
 }
+
       
     // 차량용 RaycastVehicle 설정
     const vehicle = new CANNON.RaycastVehicle({
@@ -2145,18 +2144,11 @@ const myWheels = carModel ? carModel.userData.wheelNodes : null;
   
   // ─── 모델별 맞춤형 축 보정 ─────────────────────────────
   let correctionQuat = new THREE.Quaternion();
-  if (currentCarModel.includes('SportsCar')) {
-    correctionQuat.setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0));
-  } else if (currentCarModel.includes('SUV')) {
-    correctionQuat.setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0));
-  } else if (currentCarModel.includes('McLarenP1')) {
-    // ✨ McLaren 축 보정
+if (currentCarModel.includes('SportsCar') || currentCarModel.includes('SUV') || currentCarModel.includes('McLarenP1')) {
     correctionQuat.setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0));
   } else if (currentCarModel.includes('PontiacFirebird')) {
-    // ✨ Pontiac 축 보정: 90도 돌아가 있는 현상 수정
-    // 모델의 기본 회전이 (90, 0, 90)이므로 이를 상쇄하고 물리 엔진의 회전과 맞춥니다.
+    // 폰티악 전용 축 보정: Y축 기준 -90도 회전
     correctionQuat.setFromEuler(new THREE.Euler(0, -Math.PI / 2, 0));
-  }
 
   const finalQuat = localQuat.clone().multiply(correctionQuat);
   const euler = new THREE.Euler().setFromQuaternion(finalQuat, 'YXZ');
@@ -2277,24 +2269,22 @@ const myWheels = carModel ? carModel.userData.wheelNodes : null;
                 }
                 wheel.quaternion.copy(finalTransform);
 
-            } else if (remoteModelName.includes('PontiacFirebird')) {
-                // ─── [3] 폰티악 전용 바퀴 정렬 로직 (90도 회전 수정) ───
-                const visualSteering = (i === 0 || i === 1) ? -steerAngle * 2.6 : 0;
-                const steerQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), visualSteering);
-                const rollQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), pData.accumulatedRoll);
-                
-                const localTransform = new THREE.Quaternion().copy(steerQuat).multiply(rollQuat);
-                // 폰티악은 Y축 기준 -90도 보정이 필요함
-                const correctionQuat = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, -Math.PI / 2, 0));
-                let finalTransform = localTransform.clone().multiply(correctionQuat);
-                
-                if (wheel.userData.side === 'L') {
-                    const LEFT_SIDE_INVERSION = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI);
-                    finalTransform.multiply(LEFT_SIDE_INVERSION);
-                }
-                wheel.quaternion.copy(finalTransform);
-
-            } else {
+            } } else if (remoteModelName.includes('PontiacFirebird')) {
+      const visualSteering = (i === 0 || i === 1) ? -steerAngle * 2.6 : 0;
+      const steerQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), visualSteering);
+      const rollQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), pData.accumulatedRoll);
+      const localTransform = new THREE.Quaternion().copy(steerQuat).multiply(rollQuat);
+      
+      // 폰티악 전용 Y축 -90도 보정
+      const correctionQuat = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, -Math.PI / 2, 0));
+      let finalTransform = localTransform.clone().multiply(correctionQuat);
+      
+      if (wheel.userData.side === 'L') {
+          const LEFT_SIDE_INVERSION = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI);
+          finalTransform.multiply(LEFT_SIDE_INVERSION);
+      }
+      wheel.quaternion.copy(finalTransform);
+  } else {
                 // ─── [3] 일반 차량 로직 (그랜저, 스포츠카 등) ───
                 const finalSteer = (i === 0 || i === 1) ? steerAngle * 2.6 : 0;
                 const steerQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), -finalSteer);
