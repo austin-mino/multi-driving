@@ -145,7 +145,7 @@
 <select id="modelSelect"> 
   <option value="SportsCar">Ferrari 458 Italia</option>
   <option value="SUV">Range Rover Sport</option>
-  <option value="PontiacFirebird">Pontiac Firebird</option>
+  <option value="PontiacPhoenix">Pontiac Phoenix</option>
   <option value="McLarenP1">McLaren P1</option>
   <option value="GrandeurIG">box car</option>
 
@@ -1249,8 +1249,8 @@ for (let i = 0; i < 4; i++) {
 }
 
 
-/* 폰티악(Pontiac Firebird) 생성 함수 */
-async function createPontiacFirebird(color = '#ffffff') {
+/* 폰티악(Pontiac Phoenix) 생성 함수 */
+async function createPontiacPhoenix(color = '#ffffff') {
   return new Promise((resolve) => {
     const loader = new GLTFLoader();
     
@@ -1319,23 +1319,35 @@ async function createPontiacFirebird(color = '#ffffff') {
           const group = wheelNodes[i];
           
           if (wheelMesh) {
-            // 1. 바퀴 메쉬의 원래 중심(Center)을 구함 (이동하기 전에 먼저 계산!)
-            const wheelBox = new THREE.Box3().setFromObject(wheelMesh);
-            const center = wheelBox.getCenter(new THREE.Vector3());
-            
-            // 2. 그룹을 바퀴의 실제 중심 위치로 이동
-            group.position.copy(center);
-            
-            // 3. 바퀴 메쉬를 그룹의 자식으로 넣음 (이때 로컬 좌표를 빼줌)
-            group.add(wheelMesh);
-            wheelMesh.position.x -= center.x;
-            wheelMesh.position.y -= center.y;
-            wheelMesh.position.z -= center.z;
+            car.updateMatrixWorld(true);
 
-            // 4. 완성된 바퀴 그룹을 차체(car)에 추가
+            // 1. 월드 좌표에서 바퀴 중심점 계산
+            const box = new THREE.Box3().setFromObject(wheelMesh);
+            const worldCenter = box.getCenter(new THREE.Vector3());
+            
+            // 2. 차체(car) 기준 로컬 좌표로 변환
+            const localCenter = car.worldToLocal(worldCenter.clone());
+
+            // 3. 차체에 바퀴 그룹을 추가하고 위치를 중심점으로 이동
             car.add(group);
+            group.position.copy(localCenter);
 
-            // 좌우측 판별 (조향 반전 등을 위한 데이터)
+            // 4. 안전하게 바퀴 메쉬를 껍데기(wrapper)에 담아 그룹에 추가합니다.
+            // (이 방식을 쓰면 에러로 바퀴가 증발하는 현상을 100% 막습니다)
+            const wrapper = new THREE.Group();
+            group.add(wrapper);
+            wrapper.attach(wheelMesh);
+
+            // 5. 폰티악 특유의 누워있는 바퀴(호버보드 현상) 강제 보정
+            // wrapper 자체를 돌려서 시각적으로만 바퀴를 똑바로 세웁니다.
+            wrapper.rotation.set(0, 0, 0); 
+            wrapper.rotateZ(Math.PI / 2);
+            wrapper.rotateY(Math.PI / 2);
+            if (i === 0 || i === 2) {
+                wrapper.rotateY(Math.PI); // 왼쪽 바퀴면 뒤집기
+            }
+
+            // 6. 물리 엔진 연동용 데이터
             if (i === 0 || i === 2) group.userData.side = 'L';
             else group.userData.side = 'R';
 
@@ -1347,14 +1359,14 @@ async function createPontiacFirebird(color = '#ffffff') {
         // 4. 차량 데이터 저장
         carGroup.userData.wheelNodes = wheelNodes;
         carWheelNodes = wheelNodes; // 전역 변수 즉시 업데이트
-        carGroup.userData.modelName = 'PontiacFirebird';
+        carGroup.userData.modelName = 'PontiacPhoenix';
         carGroup.userData.visualOffsetY = -0.5; 
 
         resolve(carGroup);
       },
       undefined,
       (error) => {
-        console.error('Pontiac Firebird 로드 실패:', error);
+        console.error('Pontiac Phoenix 로드 실패:', error);
         resolve(createGrandeurIGCarDetailed(color)); 
       }
     );
@@ -1772,8 +1784,8 @@ if (input.handbrake) {
     offset = new THREE.Vector3(-0.85, 2.5, -0.25); // Ferrari
   } else if (currentCarModel === 'McLarenP1') {
     offset = new THREE.Vector3(0, 0.5, -4); // mclaren
-  } else if (currentCarModel === 'PontiacFirebird') {
-    offset = new THREE.Vector3(-0.85, 2.5, 0.5); // PontiacFirebird
+  } else if (currentCarModel === 'PontiacPhoenix') {
+    offset = new THREE.Vector3(-0.85, 2.5, 0.5); // PontiacPhoenix
   } else {
     offset = new THREE.Vector3(-0.85, 2.5, -0.4); // 그랜저 기본
   }
@@ -1950,8 +1962,8 @@ socket.on('updatePlayers', async (players) => {
         case 'McLarenP1':
           otherCar = await createMcLarenP1(player.carColor || '#aaaaaa');
           break;
-        case 'PontiacFirebird':
-          otherCar = await createPontiacFirebird(player.carColor || '#aaaaaa');
+        case 'PontiacPhoenix':
+          otherCar = await createPontiacPhoenix(player.carColor || '#aaaaaa');
           break;
         default:
           otherCar = createGrandeurIGCarDetailed(player.carColor || '#aaaaaa');
@@ -2176,7 +2188,7 @@ const myWheels = carModel ? carModel.userData.wheelNodes : null;
   let correctionQuat = new THREE.Quaternion();
 if (currentCarModel.includes('SportsCar') || currentCarModel.includes('SUV') || currentCarModel.includes('McLarenP1')) {
     correctionQuat.setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0));
-  } else if (currentCarModel.includes('PontiacFirebird')) {
+  } else if (currentCarModel.includes('PontiacPhoenix')) {
     // 폰티악 축 보정: 모델 기본 회전(90,0,90)을 상쇄하고 물리 축과 일치시킵니다.
     correctionQuat.setFromEuler(new THREE.Euler(-Math.PI / 2, 0, -Math.PI / 2));
   }
@@ -2201,7 +2213,7 @@ if (currentCarModel.includes('SportsCar') || currentCarModel.includes('SUV') || 
     }
     node.quaternion.copy(finalModelQuat);
   } 
-       else if (currentCarModel.includes('PontiacFirebird')) {
+       else if (currentCarModel.includes('PontiacPhoenix')) {
     // ✨ Pontiac: 오일러 각도를 직접 제어하여 축 뒤틀림을 원천 차단합니다.
     const finalSteer = (i === 0 || i === 1) ? visualSteering : 0;
     const rollAngle = vehicle.wheelInfos[i].rollAngle;
@@ -2321,7 +2333,7 @@ if (currentCarModel.includes('SportsCar') || currentCarModel.includes('SUV') || 
                 }
                 wheel.quaternion.copy(finalTransform);
 
-                        } else if (remoteModelName.includes('PontiacFirebird')) {
+                        } else if (remoteModelName.includes('PontiacPhoenix')) {
                 // ─── [3] 폰티악 전용 바퀴 정렬 로직 (수정됨) ───
                 const finalSteer = (i === 0 || i === 1) ? steerAngle * 2.6 : 0;
                 
@@ -2403,8 +2415,8 @@ if (cameraMode === 'third') {
     case 'McLarenP1':
       carModel = await createMcLarenP1(color);
       break;
-    case 'PontiacFirebird':
-      carModel = await createPontiacFirebird(color);
+    case 'PontiacPhoenix':
+      carModel = await createPontiacPhoenix(color);
       break;
     default:
       carModel = createGrandeurIGCarDetailed(color);
