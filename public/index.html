@@ -1302,17 +1302,22 @@ async function createPontiacPhoenix(color = '#ffffff') {
         car.updateMatrixWorld(true);
 
         // 3. 바퀴 노드 추출 및 피벗(Pivot) 재조정 
-        // (CANNON 인덱스: 0=FL, 1=FR, 2=RL, 3=RR)
         const wheelNodes = [new THREE.Group(), new THREE.Group(), new THREE.Group(), new THREE.Group()];
         const tempWheels = [null, null, null, null];
 
+        // [수정] 대소문자 구분 없이 유연하게 바퀴 이름을 찾도록 변경
         car.traverse((child) => {
-          const n = child.name;
-          if (n === 'Wheel_FL') { tempWheels[0] = child; }
-          else if (n === 'Wheel_FR') { tempWheels[1] = child; }
-          else if (n === 'Wheel_RL') { tempWheels[2] = child; }
-          else if (n === 'Wheel_RR') { tempWheels[3] = child; }
+          const n = child.name.toLowerCase();
+          if (n.includes('Wheel')) {
+            if (n.includes('FL') || (n.includes('front') && n.includes('l'))) { tempWheels[0] = child; }
+            else if (n.includes('FR') || (n.includes('front') && n.includes('r'))) { tempWheels[1] = child; }
+            else if (n.includes('RL') || n.includes('bl') || (n.includes('rear') && n.includes('l'))) { tempWheels[2] = child; }
+            else if (n.includes('RR') || n.includes('br') || (n.includes('rear') && n.includes('r'))) { tempWheels[3] = child; }
+          }
         });
+
+        // 브라우저 콘솔에서 바퀴가 잘 찾아졌는지 확인하기 위한 로그
+        console.log("폰티악 바퀴 검색 결과:", tempWheels.map(w => w ? w.name : "못찾음"));
 
         for (let i = 0; i < 4; i++) {
           const wheelMesh = tempWheels[i];
@@ -1332,23 +1337,37 @@ async function createPontiacPhoenix(color = '#ffffff') {
             car.add(group);
             group.position.copy(localCenter);
 
-            // 4. 통 안에 바퀴를 쏙 넣습니다. (attach를 쓰면 원래 모습이 보존됩니다)
+            // ★ [핵심 수정 1] group의 전역 행렬을 강제로 업데이트합니다.
+            // 이게 없으면 attach 시점에 바퀴가 엉뚱한 곳으로 튕겨나가 사라집니다.
+            group.updateMatrixWorld(true);
+
+            // 4. 통 안에 바퀴를 넣습니다.
             group.attach(wheelMesh);
 
-            // 5. ✨ 호버보드(눕는 현상) 1회 영구 보정 ✨
-            // 통(group)이 아닌 알맹이(wheelMesh) 자체를 여기서 딱 한 번 돌려 세웁니다.
+            // ★ [핵심 수정 2] 만약 바퀴가 정상 위치에 생겼는데 90도 누워있거나 뒤집혀있다면 
+            // 아래 주석(//)을 해제하여 조절하세요. 모델에 따라 필요 없을 수 있습니다.
+            /*
             wheelMesh.rotateZ(Math.PI / 2);
             wheelMesh.rotateY(Math.PI / 2);
             if (i === 0 || i === 2) {
-                wheelMesh.rotateY(Math.PI); // 왼쪽 바퀴면 한 번 더 뒤집기
+                wheelMesh.rotateY(Math.PI); 
             }
+            */
 
-            // 6. 물리 엔진 연동용 데이터
+            // 5. 물리 엔진 연동용 데이터
             if (i === 0 || i === 2) group.userData.side = 'L';
             else group.userData.side = 'R';
 
             group.userData.baseQuaternion = group.quaternion.clone();
             group.matrixAutoUpdate = true;
+          } else {
+            // 바퀴 메쉬를 아예 못 찾았을 때 게임이 튕기는 것을 방지하기 위한 임시 가상 그룹 생성
+            car.add(group);
+            if (i === 0) group.position.set(-1, 0.4, 1.5);
+            if (i === 1) group.position.set(1, 0.4, 1.5);
+            if (i === 2) group.position.set(-1, 0.4, -1.5);
+            if (i === 3) group.position.set(1, 0.4, -1.5);
+            group.updateMatrixWorld(true);
           }
         }
 
