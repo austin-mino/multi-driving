@@ -1249,7 +1249,7 @@ for (let i = 0; i < 4; i++) {
 }
 
 
-/* 폰티악(Pontiac Phoenix) 생성 함수 */
+/* 폰티악(Pontiac Phoenix) 생성 함수 - 100% 심플/안전 버전 */
 async function createPontiacPhoenix(color = '#ffffff') {
   return new Promise((resolve) => {
     const loader = new GLTFLoader();
@@ -1258,21 +1258,10 @@ async function createPontiacPhoenix(color = '#ffffff') {
       'https://raw.githubusercontent.com/austin-mino/multi-driving/main/models/Pontiac%20Firebird/uploads_files_6012214_American+Muscle.glb', 
       (gltf) => {
         const car = gltf.scene;
-        const carGroup = new THREE.Group(); 
 
-        const tempWheels = [null, null, null, null];
-        const nodesToRemove = []; 
-
-        // 1. Plane 제거 및 바퀴(Mesh) 매칭
+        // 1. ⚠️ 바퀴가 사라질 위험이 있는 삭제(remove) 코드를 모두 없앴습니다. 
+        // 순수하게 색상 변경만 진행합니다.
         car.traverse((child) => {
-          const nameLower = child.name.toLowerCase();
-
-          if (nameLower.includes('plane')) {
-            child.visible = false; 
-            nodesToRemove.push(child);
-            return;
-          }
-
           if (child.isMesh && child.material) {
             child.castShadow = true;
             child.receiveShadow = true;
@@ -1286,95 +1275,56 @@ async function createPontiacPhoenix(color = '#ffffff') {
               child.name = 'MainBody'; 
             }
           }
-
-          const trimmedName = child.name.trim();
-          if (trimmedName === 'Wheel_FL') { tempWheels[0] = child; }
-          else if (trimmedName === 'Wheel_FR') { tempWheels[1] = child; }
-          else if (trimmedName === 'Wheel_RL') { tempWheels[2] = child; }
-          else if (trimmedName === 'Wheel_RR') { tempWheels[3] = child; }
         });
 
-        // 불필요 노드 삭제
-        nodesToRemove.forEach((child) => {
-          if (child.parent) child.parent.remove(child);
-        });
-
-        // 2. 차체 설정
+        // 2. 차체 스케일 및 회전 설정
         car.scale.set(3, 3, 3); 
         car.rotation.y = Math.PI; 
 
-        // 차체 중심점 정렬
+        // 3. 차체 중심점 정렬
         const box = new THREE.Box3().setFromObject(car);
         const center = box.getCenter(new THREE.Vector3());
         car.position.x -= center.x;
         car.position.z -= center.z;
         car.position.y -= box.min.y;
 
+        const carGroup = new THREE.Group();
         carGroup.add(car);
-        carGroup.updateMatrixWorld(true);
+        carGroup.updateMatrixWorld(true); // 행렬 강제 업데이트
+
+        // 4. 바퀴 매칭
+        const tempWheels = [null, null, null, null];
+        car.traverse((child) => {
+          const trimmedName = child.name.trim();
+          if (trimmedName === 'Wheel_FL') tempWheels[0] = child;
+          else if (trimmedName === 'Wheel_FR') tempWheels[1] = child;
+          else if (trimmedName === 'Wheel_RL') tempWheels[2] = child;
+          else if (trimmedName === 'Wheel_RR') tempWheels[3] = child;
+        });
 
         const wheelNodes = [null, null, null, null];
 
-        // 3. 궁극의 바퀴 피벗 강제 리셋 로직
+        // 5. 궁극의 바퀴 렌더링 해결책 (Scene 강제 이식)
         for (let i = 0; i < 4; i++) {
-          const wheelObj = tempWheels[i];
-          
-          if (wheelObj) {
-            // [A] 원본 바퀴가 현재 위치한 '진짜 월드 좌표 중심점'을 구합니다.
-            car.updateMatrixWorld(true);
-            const originalBox = new THREE.Box3().setFromObject(wheelObj);
-            const worldCenter = originalBox.getCenter(new THREE.Vector3());
+          if (tempWheels[i]) {
+            const w = tempWheels[i];
 
-            // [B] 물리 엔진이 제어할 빈 통(pivotGroup)을 차체에 달고 중심점으로 이동시킵니다.
-            const pivotGroup = new THREE.Group();
-            scene.add(pivotGroup)            
-            pivotGroup.scale.set(3, 3, 3);
-            carGroup.updateMatrixWorld(true);
-            pivotGroup.position.copy(carGroup.worldToLocal(worldCenter.clone()));
-
-            // [C] 회전을 담당할 보조 그룹 생성
-            const rotationGroup = new THREE.Group();
-            pivotGroup.add(rotationGroup);
-
-            // [D] 꼬여있는 원본 바퀴 대신, 순수한 '복제본'을 만들어서 통 안에 집어넣습니다.
-            const clonedWheel = wheelObj.clone();
-            clonedWheel.position.set(0, 0, 0);
-            clonedWheel.rotation.set(0, 0, 0);
-            rotationGroup.add(clonedWheel);
-
-            // [E] 복제된 바퀴의 내부 기하학적 오차(어긋남)를 계산하여 역으로 당겨줍니다.
-            carGroup.updateMatrixWorld(true);
-            const newBox = new THREE.Box3().setFromObject(clonedWheel);
-            const newCenter = newBox.getCenter(new THREE.Vector3());
-            
-            // 바퀴 메쉬를 오차만큼 반대로 이동시켜 정중앙(0,0,0)에 완벽히 꽂습니다.
-            const offset = rotationGroup.worldToLocal(newCenter.clone());
-            clonedWheel.position.sub(offset);
-
-            // [F] 물리 엔진의 억지 회전(-90도)을 상쇄하기 위해 +90도 회전
-            rotationGroup.rotation.x = Math.PI / 2;
-
-            // 만약 왼쪽이나 오른쪽 바퀴가 뒤집혀 보인다면 아래 주석을 풀어주세요!
-            /*
-            if (i === 0 || i === 2) {
-               rotationGroup.rotation.z = Math.PI;
+            // ★ 핵심 1: 바퀴를 차체(car)에서 뜯어내서 최상위 맵(scene)에 직접 붙입니다.
+            // scene.attach를 사용하면 기존에 커진 3배 크기나 위치를 완벽히 유지한 채 뜯어냅니다.
+            // 물리 엔진 좌표와 절대 충돌(증발)하지 않습니다.
+            if (typeof scene !== 'undefined') {
+              scene.attach(w);
             }
-            */
 
-            // 원본 바퀴는 숨김 처리
-            wheelObj.visible = false;
+            // ★ 핵심 2: 물리 엔진에서 바퀴를 -90도로 꺾어버리는 현상을 상쇄하기 위해 +90도 미리 꺾기
+            w.rotateX(Math.PI / 2);
 
-            // [G] 물리 엔진 참조 데이터 저장
-            if (i === 0 || i === 2) pivotGroup.userData.side = 'L';
-            else pivotGroup.userData.side = 'R';
-
-            pivotGroup.userData.baseQuaternion = pivotGroup.quaternion.clone();
-            pivotGroup.matrixAutoUpdate = true;
-            
-            wheelNodes[i] = pivotGroup;
+            // 물리 엔진이 참조할 수 있게 배열에 담기
+            wheelNodes[i] = w;
           }
         }
 
+        // 차량 전역 데이터 설정
         carGroup.userData.wheelNodes = wheelNodes;
         carGroup.userData.modelName = 'PontiacPhoenix';
         carGroup.userData.visualOffsetY = -0.5; 
