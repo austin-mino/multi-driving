@@ -1249,7 +1249,7 @@ for (let i = 0; i < 4; i++) {
 }
 
 
-/* 폰티악(Pontiac Phoenix) 생성 함수 - 100% 심플/안전 버전 */
+/* 폰티악(Pontiac Phoenix) 생성 함수 - 바퀴 생존 보장 버전 */
 async function createPontiacPhoenix(color = '#ffffff') {
   return new Promise((resolve) => {
     const loader = new GLTFLoader();
@@ -1259,15 +1259,23 @@ async function createPontiacPhoenix(color = '#ffffff') {
       (gltf) => {
         const car = gltf.scene;
 
-        // 1. ⚠️ 바퀴가 사라질 위험이 있는 삭제(remove) 코드를 모두 없앴습니다. 
-        // 순수하게 색상 변경만 진행합니다.
+        // 1. Plane 그림자 숨기기 & 색상 입히기
         car.traverse((child) => {
+          const nameLower = child.name.toLowerCase();
+
+          // ★ [핵심 수정] 부모를 삭제(remove)하지 않고, 투명하게(visible = false)만 만듭니다!
+          // 단, 바퀴(wheel)가 포함된 이름이라면 건드리지 않습니다.
+          if (nameLower.includes('plane') && !nameLower.includes('wheel')) {
+            child.visible = false; 
+            // 삭제(remove) 코드는 절대 넣지 않습니다.
+          }
+
           if (child.isMesh && child.material) {
             child.castShadow = true;
             child.receiveShadow = true;
             
             const matName = child.material.name.toLowerCase();
-            if (child.name.toLowerCase().includes('body') || matName.includes('body') || matName.includes('paint')) {
+            if (nameLower.includes('body') || matName.includes('body') || matName.includes('paint')) {
               child.material = child.material.clone();
               child.material.color.set(color);
               child.material.metalness = 0.8;
@@ -1290,7 +1298,7 @@ async function createPontiacPhoenix(color = '#ffffff') {
 
         const carGroup = new THREE.Group();
         carGroup.add(car);
-        carGroup.updateMatrixWorld(true); // 행렬 강제 업데이트
+        carGroup.updateMatrixWorld(true);
 
         // 4. 바퀴 매칭
         const tempWheels = [null, null, null, null];
@@ -1304,22 +1312,19 @@ async function createPontiacPhoenix(color = '#ffffff') {
 
         const wheelNodes = [null, null, null, null];
 
-        // 5. 궁극의 바퀴 렌더링 해결책 (Scene 강제 이식)
+        // 5. 바퀴를 게임 씬(scene)으로 안전하게 분리
         for (let i = 0; i < 4; i++) {
           if (tempWheels[i]) {
             const w = tempWheels[i];
 
-            // ★ 핵심 1: 바퀴를 차체(car)에서 뜯어내서 최상위 맵(scene)에 직접 붙입니다.
-            // scene.attach를 사용하면 기존에 커진 3배 크기나 위치를 완벽히 유지한 채 뜯어냅니다.
-            // 물리 엔진 좌표와 절대 충돌(증발)하지 않습니다.
+            // 바퀴를 부모(Plane 등)로부터 뜯어내서 최상위 scene에 직속으로 붙입니다.
             if (typeof scene !== 'undefined') {
               scene.attach(w);
             }
 
-            // ★ 핵심 2: 물리 엔진에서 바퀴를 -90도로 꺾어버리는 현상을 상쇄하기 위해 +90도 미리 꺾기
+            // 물리 엔진의 강제 회전 보정
             w.rotateX(Math.PI / 2);
 
-            // 물리 엔진이 참조할 수 있게 배열에 담기
             wheelNodes[i] = w;
           }
         }
