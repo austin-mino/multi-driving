@@ -1248,7 +1248,6 @@ for (let i = 0; i < 4; i++) {
     });
 }
 
-/* 폰티악(Pontiac Phoenix) 생성 함수 - 완전 정석 버전 */
 async function createPontiacPhoenix(color = '#ffffff') {
   return new Promise((resolve) => {
     const loader = new GLTFLoader();
@@ -1256,89 +1255,49 @@ async function createPontiacPhoenix(color = '#ffffff') {
     loader.load(
       'https://raw.githubusercontent.com/austin-mino/multi-driving/main/models/Pontiac%20Firebird/uploads_files_6012214_American+Muscle.glb', 
       (gltf) => {
-        const carGroup = new THREE.Group();
         const car = gltf.scene;
 
-        // 1. 색깔 문제 완벽 해결 (탁한 텍스처 무시하고 새 재질로 교체)
+        car.scale.set(3, 3, 3);
+        car.rotation.y = Math.PI;
+
+        const wheelNodes = [null, null, null, null];
+
         car.traverse((child) => {
           if (child.isMesh) {
             child.castShadow = true;
             child.receiveShadow = true;
             
-            const name = child.name.toLowerCase();
-            const matName = child.material ? child.material.name.toLowerCase() : '';
-            
-            if (name.includes('body') || matName.includes('body') || matName.includes('paint')) {
-              // 기존 재질을 버리고 뽀송뽀송한 새 재질로 색상을 확실하게 입힙니다.
-              child.material = new THREE.MeshStandardMaterial({
-                color: color,
-                metalness: 0.7,
-                roughness: 0.3
-              });
+            if (child.material) {
+              const name = child.name.toLowerCase();
+              const matName = child.material.name ? child.material.name.toLowerCase() : '';
+              
+              if (name.includes('body') || matName.includes('body') || matName.includes('paint')) {
+                // 기존 재질을 복제하여 텍스처 퀄리티를 유지하면서 색상만 강제 주입
+                child.material = child.material.clone();
+                child.material.color.set(color);
+              }
             }
           }
-        });
 
-        // 2. 바퀴 노드 생성 (다른 자동차 함수들과 완벽히 똑같은 구조)
-        const wheelNodes = [
-          new THREE.Group(),
-          new THREE.Group(),
-          new THREE.Group(),
-          new THREE.Group()
-        ];
-
-        const wheels = [null, null, null, null];
-        
-        car.traverse((child) => {
           const name = child.name.trim();
-          if (name === 'Wheel_FL') wheels[0] = child;
-          else if (name === 'Wheel_FR') wheels[1] = child;
-          else if (name === 'Wheel_RL') wheels[2] = child;
-          else if (name === 'Wheel_RR') wheels[3] = child;
-        });
+          // ✨ [해결책] 업데이트 루프에서 인식할 수 있도록 좌/우(L/R) 사이드를 확실하게 주입합니다.
+          if (name === 'Wheel_FL') { wheelNodes[0] = child; child.userData.side = 'L'; }
+          else if (name === 'Wheel_FR') { wheelNodes[1] = child; child.userData.side = 'R'; }
+          else if (name === 'Wheel_RL') { wheelNodes[2] = child; child.userData.side = 'L'; }
+          else if (name === 'Wheel_RR') { wheelNodes[3] = child; child.userData.side = 'R'; }
 
-        for (let i = 0; i < 4; i++) {
-          if (wheels[i]) {
-            const w = wheels[i];
-            
-            // 바퀴를 원래 위치에서 뜯어서 각각의 빈 그룹에 담기
-            wheelNodes[i].add(w);
-            
-            // 바퀴 메쉬 기본 좌표 초기화
-            w.position.set(0, 0, 0);
-            w.rotation.set(0, 0, 0);
-            w.scale.set(1, 1, 1);
-
-            // 물리 엔진 방향에 맞춰 바퀴를 90도 돌려주기 (눕는 현상 방지)
-            w.rotation.x = Math.PI / 2;
-            
-            // 물리 엔진용 데이터
-            wheelNodes[i].userData.side = (i === 0 || i === 2) ? 'L' : 'R';
-            wheelNodes[i].userData.baseQuaternion = wheelNodes[i].quaternion.clone();
-          }
-          
-          // 다른 자동차들처럼 바퀴 그룹을 최상위 carGroup에 추가합니다.
-          carGroup.add(wheelNodes[i]);
-        }
-
-        // 3. 차체 크기 조절 및 불필요한 바닥(Plane) 숨기기
-        car.scale.set(3, 3, 3);
-        car.rotation.y = Math.PI;
-
-        car.traverse((child) => {
           if (child.name.toLowerCase().includes('plane')) {
-             child.visible = false; 
+            child.visible = false;
           }
         });
 
-        // 4. 차체 중심점(0,0,0) 바닥에 딱 맞게 정렬
         const box = new THREE.Box3().setFromObject(car);
         const center = box.getCenter(new THREE.Vector3());
-        
         car.position.set(-center.x, -box.min.y, -center.z);
+
+        const carGroup = new THREE.Group();
         carGroup.add(car);
 
-        // 5. 최종 데이터 묶어서 반환
         carGroup.userData.wheelNodes = wheelNodes;
         carGroup.userData.modelName = 'PontiacPhoenix';
         carGroup.userData.visualOffsetY = -0.5; 
@@ -2125,7 +2084,9 @@ const myWheels = carModel ? carModel.userData.wheelNodes : null;
 
   vehicle.updateWheelTransform(i);
   const wt = vehicle.wheelInfos[i].worldTransform;
-
+const localPos = new THREE.Vector3(wt.position.x, wt.position.y, wt.position.z);
+    carModel.worldToLocal(localPos);
+    node.position.copy(localPos);
   // 세계 쿼터니언에서 차체 회전 제거 -> 로컬 회전
   const localQuat = carInvQuat.clone().multiply(
     new THREE.Quaternion(wt.quaternion.x, wt.quaternion.y, wt.quaternion.z, wt.quaternion.w)
@@ -2192,32 +2153,27 @@ if (currentCarModel.includes('SportsCar') || currentCarModel.includes('SUV') || 
     }
     node.quaternion.copy(finalModelQuat);
   } 
-       else if (currentCarModel.includes('PontiacPhoenix')) {
-    // ✨ Pontiac: 오일러 각도를 직접 제어하여 축 뒤틀림을 원천 차단합니다.
-    const finalSteer = (i === 0 || i === 1) ? visualSteering : 0;
-    const rollAngle = vehicle.wheelInfos[i].rollAngle;
+      else if (currentCarModel.includes('PontiacPhoenix')) {
+      // ✨ [정상 작동] 이제 로더에서 side를 주입하므로 축 뒤틀림 제어가 완벽하게 먹힙니다.
+      const finalSteer = (i === 0 || i === 1) ? visualSteering : 0;
+      const rollAngle = vehicle.wheelInfos[i].rollAngle;
 
-    // 1. 기본 축 정렬 (모델의 뒤틀린 기본 회전 상쇄)
-    node.quaternion.setFromEuler(new THREE.Euler(0, 0, 0)); 
-    
-    // 2. 조향(Y) -> 구름(X) 순서로 회전 적용
-    node.rotateY(-finalSteer);
-    node.rotateX(rollAngle);
-    
-    // 3. 왼쪽 바퀴 180도 반전 대칭 처리
-    if (node.userData.side === 'L') {
-      node.rotateY(Math.PI);
+      node.quaternion.setFromEuler(new THREE.Euler(0, 0, 0)); 
+      node.rotateY(-finalSteer);
+      node.rotateX(rollAngle);
+      
+      if (node.userData.side === 'L') {
+        node.rotateY(Math.PI);
+      }
+      
+      node.rotateZ(Math.PI / 2);
+      node.rotateY(Math.PI / 2);
+
+    } else if (currentCarModel.includes('SUV')) {
+      node.quaternion.copy(node.userData.baseQuaternion.clone().multiply(finalQuat));
+    } else {
+      node.quaternion.setFromEuler(euler);
     }
-    
-    // 4. 모델 고유의 시각적 보정 (바퀴가 서 있게 만듦)
-    node.rotateZ(Math.PI / 2);
-    node.rotateY(Math.PI / 2);
-
-  } else if (currentCarModel.includes('SUV')) {
-    node.quaternion.copy(node.userData.baseQuaternion.clone().multiply(finalQuat));
-  } else {
-    node.quaternion.setFromEuler(euler);
-  }
   
   // 강제 행렬 업데이트
   node.updateMatrix();
