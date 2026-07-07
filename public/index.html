@@ -1327,7 +1327,8 @@ async function createPontiacPhoenix(color = '#ffffff') {
 
             // [B] 물리 엔진이 제어할 빈 통(pivotGroup)을 차체에 달고 중심점으로 이동시킵니다.
             const pivotGroup = new THREE.Group();
-            carGroup.add(pivotGroup);
+            scene.add(pivotGroup)            
+            pivotGroup.scale.set(3, 3, 3);
             carGroup.updateMatrixWorld(true);
             pivotGroup.position.copy(carGroup.worldToLocal(worldCenter.clone()));
 
@@ -1339,7 +1340,6 @@ async function createPontiacPhoenix(color = '#ffffff') {
             const clonedWheel = wheelObj.clone();
             clonedWheel.position.set(0, 0, 0);
             clonedWheel.rotation.set(0, 0, 0);
-            clonedWheel.scale.set(3, 3, 3); // 차체 크기에 맞게 3배 확장
             rotationGroup.add(clonedWheel);
 
             // [E] 복제된 바퀴의 내부 기하학적 오차(어긋남)를 계산하여 역으로 당겨줍니다.
