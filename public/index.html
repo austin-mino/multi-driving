@@ -1248,7 +1248,7 @@ for (let i = 0; i < 4; i++) {
     });
 }
 
-/* 폰티악(Pontiac Phoenix) 생성 함수 */
+/* 폰티악(Pontiac Phoenix) 바퀴 절대 생존 보장 함수 */
 async function createPontiacPhoenix(color = '#ffffff') {
   return new Promise((resolve) => {
     const loader = new GLTFLoader();
@@ -1258,11 +1258,7 @@ async function createPontiacPhoenix(color = '#ffffff') {
       (gltf) => {
         const car = gltf.scene;
 
-        // 1. 차체 크기 및 회전 (가장 먼저 적용)
-        car.scale.set(3, 3, 3); 
-        car.rotation.y = Math.PI; 
-
-        // 2. 바퀴 매칭
+        // 1. 바퀴 매칭
         const tempWheels = [null, null, null, null];
         car.traverse((child) => {
           const name = child.name.trim();
@@ -1274,41 +1270,60 @@ async function createPontiacPhoenix(color = '#ffffff') {
 
         const wheelNodes = [null, null, null, null];
 
-        // 3. ★ 핵심: 바퀴의 중심점을 억지로 정중앙으로 맞추고 맵에 직접 추가 ★
+        // 2. ★ 어떤 기괴한 3D 모델이라도 정중앙으로 끌고 오는 수학적 박스 계산법 ★
         for (let i = 0; i < 4; i++) {
           if (tempWheels[i]) {
-            const w = tempWheels[i];
+            const originalWheel = tempWheels[i];
+            
+            // 뼈대가 꼬이는 것을 방지하기 위해 겉모습만 복제
+            const visualWheel = originalWheel.clone();
+            visualWheel.visible = true; // 혹시라도 투명할까봐 강제 활성화
+            
+            // 제작자가 설정한 더러운 좌표값을 다 0으로 초기화
+            visualWheel.position.set(0, 0, 0);
+            visualWheel.rotation.set(0, 0, 0);
+            visualWheel.scale.set(1, 1, 1);
+            
+            // 바퀴의 "진짜 전체 부피 중심"을 수학적으로 찾아내기
+            const tempBox = new THREE.Box3().setFromObject(visualWheel);
+            const center = tempBox.getCenter(new THREE.Vector3());
+            
+            // 찾아낸 오차만큼 뒤로 땡겨서 완벽한 0,0,0으로 리셋
+            visualWheel.position.sub(center);
 
-            // 3D 모델 제작자가 망쳐놓은 중심점(Pivot)을 바퀴 한가운데로 리셋합니다.
-            if (w.geometry) {
-                w.geometry.center();
-            }
+            // 회전만 담당하는 껍데기 추가
+            const rotationWrapper = new THREE.Group();
+            rotationWrapper.add(visualWheel);
+            
+            // 물리 엔진 보정을 위해 90도 눕히기 (바퀴가 세워져 있으면 이 부분을 조절)
+            rotationWrapper.rotation.x = Math.PI / 2;
 
-            // 물리 엔진이 제어할 빈 그룹 생성 후 게임 맵(scene)에 직속 추가
-            const wheelGroup = new THREE.Group();
+            // 최종적으로 물리 엔진이 움직일 거대한 통 추가
+            const physicsGroup = new THREE.Group();
+            physicsGroup.add(rotationWrapper);
+            
+            // 차체를 3배 키울 거니까 바퀴도 3배 뻥튀기
+            physicsGroup.scale.set(3, 3, 3);
+            
+            // 게임 월드(scene)에 직접 이식! 절대 안 날아감
             if (typeof scene !== 'undefined') {
-                scene.add(wheelGroup);
+              scene.add(physicsGroup);
             }
-
-            // 바퀴를 그룹(통) 안에 넣기 (차체에서는 자동 분리됨)
-            wheelGroup.add(w);
-
-            // 위치와 회전을 0으로 초기화하고, 차체처럼 3배로 키움
-            w.position.set(0, 0, 0);
-            w.rotation.set(0, 0, 0);
-            w.scale.set(3, 3, 3);
-
-            // 물리 엔진 강제 회전 보정 (눕는 현상 방지)
-            w.rotateX(Math.PI / 2);
-
-            wheelNodes[i] = wheelGroup;
+            
+            wheelNodes[i] = physicsGroup;
+            
+            // 원본 꼬인 바퀴는 조용히 숨김 처리
+            originalWheel.visible = false;
           }
         }
 
-        // 4. 차체 부품 색상 입히기 & Plane 숨기기
+        // 3. 차체 세팅 (이제 맘 놓고 크기 3배 키우고 Plane 지워도 됨)
+        car.scale.set(3, 3, 3); 
+        car.rotation.y = Math.PI; 
+
         car.traverse((child) => {
           if (child.name.toLowerCase().includes('plane')) {
-             child.visible = false; // 삭제 안 함
+             child.visible = false; // 바닥 숨김
           }
           if (child.isMesh && child.material) {
             child.castShadow = true;
@@ -1323,17 +1338,17 @@ async function createPontiacPhoenix(color = '#ffffff') {
           }
         });
 
-        // 5. 차체 중심점 정렬
+        // 4. 차체 중심점 정렬
         const box = new THREE.Box3().setFromObject(car);
-        const center = box.getCenter(new THREE.Vector3());
-        car.position.x -= center.x;
-        car.position.z -= center.z;
+        const carCenter = box.getCenter(new THREE.Vector3());
+        car.position.x -= carCenter.x;
+        car.position.z -= carCenter.z;
         car.position.y -= box.min.y;
 
         const carGroup = new THREE.Group();
         carGroup.add(car);
 
-        // 6. 차량 전역 데이터 설정
+        // 5. 게임에 바퀴 데이터 넘겨주기
         carGroup.userData.wheelNodes = wheelNodes;
         carGroup.userData.modelName = 'PontiacPhoenix';
         carGroup.userData.visualOffsetY = -0.5; 
