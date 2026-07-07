@@ -1287,7 +1287,6 @@ async function createPontiacPhoenix(color = '#ffffff') {
             }
           }
 
-          // 이름 공백 제거 후 정확히 매칭
           const trimmedName = child.name.trim();
           if (trimmedName === 'Wheel_FL') { tempWheels[0] = child; }
           else if (trimmedName === 'Wheel_FR') { tempWheels[1] = child; }
@@ -1295,62 +1294,77 @@ async function createPontiacPhoenix(color = '#ffffff') {
           else if (trimmedName === 'Wheel_RR') { tempWheels[3] = child; }
         });
 
-        // 탐색 완료 후 안전하게 불필요 노드 삭제
+        // 불필요 노드 삭제
         nodesToRemove.forEach((child) => {
           if (child.parent) child.parent.remove(child);
         });
 
-        // 2. 차체 설정 (스케일 및 회전)
+        // 2. 차체 설정
         car.scale.set(3, 3, 3); 
         car.rotation.y = Math.PI; 
 
-        // 3. 차체 중심점 정렬
+        // 차체 중심점 정렬
         const box = new THREE.Box3().setFromObject(car);
         const center = box.getCenter(new THREE.Vector3());
         car.position.x -= center.x;
         car.position.z -= center.z;
         car.position.y -= box.min.y;
 
-        // 메인 그룹에 차체 추가
         carGroup.add(car);
         carGroup.updateMatrixWorld(true);
 
         const wheelNodes = [null, null, null, null];
 
-        // 4. 바퀴 피벗 재설정 및 강제 회전 상쇄 로직
+        // 3. 궁극의 바퀴 피벗 강제 리셋 로직
         for (let i = 0; i < 4; i++) {
-          const wheelMesh = tempWheels[i];
+          const wheelObj = tempWheels[i];
           
-          if (wheelMesh) {
+          if (wheelObj) {
+            // [A] 원본 바퀴가 현재 위치한 '진짜 월드 좌표 중심점'을 구합니다.
             car.updateMatrixWorld(true);
-            
-            // 진짜 기하학적 중심(World) 구하기
-            const wheelBox = new THREE.Box3().setFromObject(wheelMesh);
-            const worldCenter = wheelBox.getCenter(new THREE.Vector3());
-            
-            // 물리 엔진이 제어할 빈 통(pivotGroup) 생성
+            const originalBox = new THREE.Box3().setFromObject(wheelObj);
+            const worldCenter = originalBox.getCenter(new THREE.Vector3());
+
+            // [B] 물리 엔진이 제어할 빈 통(pivotGroup)을 차체에 달고 중심점으로 이동시킵니다.
             const pivotGroup = new THREE.Group();
             carGroup.add(pivotGroup);
-            
-            // 통의 위치를 바퀴의 정중앙으로 이동시켜 피벗(Pivot)을 완벽히 맞춤
-            const localCenter = carGroup.worldToLocal(worldCenter.clone());
-            pivotGroup.position.copy(localCenter);
-            pivotGroup.updateMatrixWorld(true);
+            carGroup.updateMatrixWorld(true);
+            pivotGroup.position.copy(carGroup.worldToLocal(worldCenter.clone()));
 
-            // Three.js의 attach 기능을 사용해 바퀴를 통 안에 종속 (시각적 위치/크기는 자동 보존됨)
-            pivotGroup.attach(wheelMesh);
+            // [C] 회전을 담당할 보조 그룹 생성
+            const rotationGroup = new THREE.Group();
+            pivotGroup.add(rotationGroup);
 
-            // ★★★ 물리 엔진의 강제 -90도 회전을 상쇄(+90도)시키는 핵심 보정 ★★★
-            wheelMesh.rotateX(Math.PI / 2);
+            // [D] 꼬여있는 원본 바퀴 대신, 순수한 '복제본'을 만들어서 통 안에 집어넣습니다.
+            const clonedWheel = wheelObj.clone();
+            clonedWheel.position.set(0, 0, 0);
+            clonedWheel.rotation.set(0, 0, 0);
+            clonedWheel.scale.set(3, 3, 3); // 차체 크기에 맞게 3배 확장
+            rotationGroup.add(clonedWheel);
+
+            // [E] 복제된 바퀴의 내부 기하학적 오차(어긋남)를 계산하여 역으로 당겨줍니다.
+            carGroup.updateMatrixWorld(true);
+            const newBox = new THREE.Box3().setFromObject(clonedWheel);
+            const newCenter = newBox.getCenter(new THREE.Vector3());
             
-            // (선택) 왼쪽 휠이나 오른쪽 휠이 뒤집혀 보인다면 아래 주석을 푸세요
+            // 바퀴 메쉬를 오차만큼 반대로 이동시켜 정중앙(0,0,0)에 완벽히 꽂습니다.
+            const offset = rotationGroup.worldToLocal(newCenter.clone());
+            clonedWheel.position.sub(offset);
+
+            // [F] 물리 엔진의 억지 회전(-90도)을 상쇄하기 위해 +90도 회전
+            rotationGroup.rotation.x = Math.PI / 2;
+
+            // 만약 왼쪽이나 오른쪽 바퀴가 뒤집혀 보인다면 아래 주석을 풀어주세요!
             /*
             if (i === 0 || i === 2) {
-                wheelMesh.rotateY(Math.PI);
+               rotationGroup.rotation.z = Math.PI;
             }
             */
 
-            // 물리 엔진 참조 데이터 저장
+            // 원본 바퀴는 숨김 처리
+            wheelObj.visible = false;
+
+            // [G] 물리 엔진 참조 데이터 저장
             if (i === 0 || i === 2) pivotGroup.userData.side = 'L';
             else pivotGroup.userData.side = 'R';
 
@@ -1361,7 +1375,6 @@ async function createPontiacPhoenix(color = '#ffffff') {
           }
         }
 
-        // 최종 데이터 바인딩
         carGroup.userData.wheelNodes = wheelNodes;
         carGroup.userData.modelName = 'PontiacPhoenix';
         carGroup.userData.visualOffsetY = -0.5; 
