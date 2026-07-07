@@ -1249,22 +1249,26 @@ for (let i = 0; i < 4; i++) {
 }
 
 
-/* 폰티악(Pontiac Phoenix) 생성 함수 - 파일 구조(model/Plane) 맞춤형 */
+/* 폰티악(Pontiac Phoenix) 초정밀 디버깅 전용 함수 */
 async function createPontiacPhoenix(color = '#ffffff') {
   return new Promise((resolve) => {
     const loader = new GLTFLoader();
-    
+    console.log("🚗 [디버그 1단계] 폰티악 모델 다운로드 시작...");
+
     loader.load(
       'https://raw.githubusercontent.com/austin-mino/multi-driving/main/models/Pontiac%20Firebird/uploads_files_6012214_American+Muscle.glb', 
       (gltf) => {
         const car = gltf.scene;
+        console.log("✅ [디버그 2단계] 폰티악 모델 로드 완료! 내부 구조를 해부합니다.");
 
-        // 1. 차체 기본 스케일 및 회전 (가장 먼저 적용하여 바퀴 빼낼 때 크기 유지)
-        car.scale.set(3, 3, 3); 
-        car.rotation.y = Math.PI;
-        car.updateMatrixWorld(true);
+        // 1. 전체 노드 뼈대 구조를 콘솔에 쫙 펼쳐서 보여줍니다.
+        console.groupCollapsed("🔍 [클릭해서 펼치기] 폰티악 3D 모델 전체 뼈대 구조");
+        car.traverse((child) => {
+          console.log(`- 이름: [${child.name}] | 종류: ${child.type} | 부모: ${child.parent ? child.parent.name : '없음'} | 보임: ${child.visible}`);
+        });
+        console.groupEnd();
 
-        // 2. 바퀴 먼저 안전하게 찾기 (어떤 노드도 아직 삭제하지 않음)
+        // 2. 바퀴 찾기
         const tempWheels = [null, null, null, null];
         car.traverse((child) => {
           const trimmedName = child.name.trim();
@@ -1272,55 +1276,38 @@ async function createPontiacPhoenix(color = '#ffffff') {
           else if (trimmedName === 'Wheel_FR') tempWheels[1] = child;
           else if (trimmedName === 'Wheel_RL') tempWheels[2] = child;
           else if (trimmedName === 'Wheel_RR') tempWheels[3] = child;
-        });
-
-        // 3. 바퀴를 차체(model)에서 뜯어내서 게임 맵(scene)으로 이식
-        // 이렇게 하면 이후에 차체에서 무슨 짓을 하든 바퀴는 절대 사라지지 않습니다.
-        const wheelNodes = [null, null, null, null];
-        for (let i = 0; i < 4; i++) {
-          if (tempWheels[i]) {
-            const w = tempWheels[i];
-            
-            if (typeof scene !== 'undefined') {
-              // attach를 쓰면 커진 크기(x3)와 위치를 유지한 채로 scene으로 이동됩니다.
-              scene.attach(w);
-            }
-
-            // 물리 엔진 강제 회전 보정
-            w.rotateX(Math.PI / 2);
-            wheelNodes[i] = w;
-          }
-        }
-
-        // 4. 바퀴를 대피시켰으니, 이제 안심하고 'Plane'을 찾아서 완전히 박살(remove)냅니다.
-        const nodesToRemove = [];
-        car.traverse((child) => {
-          if (child.name === 'Plane' || child.name.toLowerCase().includes('plane')) {
-            nodesToRemove.push(child);
-          }
-        });
-        nodesToRemove.forEach(node => {
-          if (node.parent) node.parent.remove(node);
-        });
-
-        // 5. 남은 진짜 차체(model)에 그림자 켜기 및 색칠하기
-        car.traverse((child) => {
+          
           if (child.isMesh && child.material) {
             child.castShadow = true;
             child.receiveShadow = true;
-            
             const matName = child.material.name.toLowerCase();
             if (child.name.toLowerCase().includes('body') || matName.includes('body') || matName.includes('paint')) {
               child.material = child.material.clone();
               child.material.color.set(color);
-              child.material.metalness = 0.8;
-              child.material.roughness = 0.2;
-              child.name = 'MainBody'; 
             }
           }
         });
 
-        // 6. 차체 중심점 정렬 (바닥에 딱 붙게)
+        // 바퀴를 제대로 찾았는지 콘솔에 출력
+        console.group("🎯 [디버그 3단계] 바퀴 매칭 결과 확인");
+        console.log("앞-왼쪽(FL) :", tempWheels[0] ? `✅ 찾음 (${tempWheels[0].name})` : "❌ 못찾음");
+        console.log("앞-오른쪽(FR):", tempWheels[1] ? `✅ 찾음 (${tempWheels[1].name})` : "❌ 못찾음");
+        console.log("뒤-왼쪽(RL) :", tempWheels[2] ? `✅ 찾음 (${tempWheels[2].name})` : "❌ 못찾음");
+        console.log("뒤-오른쪽(RR):", tempWheels[3] ? `✅ 찾음 (${tempWheels[3].name})` : "❌ 못찾음");
+        console.groupEnd();
+
+        // 3. Plane 숨기기 (절대 삭제 안함)
+        car.traverse((child) => {
+          if (child.name.toLowerCase().includes('plane')) {
+            console.log(`⚠️ [디버그 4단계] 이름에 'plane'이 포함된 노드 발견! -> 투명하게(visible=false) 변경: [${child.name}]`);
+            child.visible = false;
+          }
+        });
+
+        // 4. 차체 조절
+        car.scale.set(3, 3, 3); 
+        car.rotation.y = Math.PI; 
+
         const box = new THREE.Box3().setFromObject(car);
         const center = box.getCenter(new THREE.Vector3());
         car.position.x -= center.x;
@@ -1329,17 +1316,41 @@ async function createPontiacPhoenix(color = '#ffffff') {
 
         const carGroup = new THREE.Group();
         carGroup.add(car);
+        carGroup.updateMatrixWorld(true);
 
-        // 차량 전역 데이터 설정
+        // 5. 바퀴를 scene으로 빼내기
+        const wheelNodes = [null, null, null, null];
+        console.group("⚙️ [디버그 5단계] 바퀴 추출 및 좌표 추적");
+        for (let i = 0; i < 4; i++) {
+          if (tempWheels[i]) {
+            const w = tempWheels[i];
+            
+            // 바퀴를 뜯어내기 직전의 위치를 출력
+            const beforeBox = new THREE.Box3().setFromObject(w);
+            console.log(`-> 뜯어내기 전 [바퀴 ${i}] 월드 좌표:`, beforeBox.getCenter(new THREE.Vector3()));
+            
+            if (typeof scene !== 'undefined') {
+              scene.attach(w);
+              w.rotateX(Math.PI / 2);
+              wheelNodes[i] = w;
+              console.log(`   ✅ [바퀴 ${i}] 게임 맵(scene)으로 안전하게 적출 성공!`);
+            } else {
+              console.error(`   ❌ 심각한 에러: scene 객체가 존재하지 않아 [바퀴 ${i}]를 맵에 붙일 수 없습니다!`);
+            }
+          }
+        }
+        console.groupEnd();
+
         carGroup.userData.wheelNodes = wheelNodes;
         carGroup.userData.modelName = 'PontiacPhoenix';
         carGroup.userData.visualOffsetY = -0.5; 
 
+        console.log("🎉 [최종] 폰티악 생성 완료! 데이터 반환됨", carGroup);
         resolve(carGroup);
       },
       undefined,
       (error) => {
-        console.error('Pontiac Phoenix 로드 실패:', error);
+        console.error('❌ Pontiac Phoenix 로드 실패:', error);
         resolve(new THREE.Group()); 
       }
     );
