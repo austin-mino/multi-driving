@@ -1319,29 +1319,31 @@ async function createPontiacPhoenix(color = '#ffffff') {
           const group = wheelNodes[i];
           
           if (wheelMesh) {
-            // 1. 바퀴 메쉬 자체를 물리 바퀴 노드(group)로 바로 사용
-            // 기존의 위치(position)를 전혀 건드리지 않고 그대로 유지합니다.
-            group.position.copy(wheelMesh.position);
+            car.updateMatrixWorld(true);
+
+            // 1. Box3로 바퀴의 '진짜' 중심 좌표를 찾습니다.
+            const box = new THREE.Box3().setFromObject(wheelMesh);
+            const worldCenter = box.getCenter(new THREE.Vector3());
             
-            // 2. 바퀴를 원본 차체(car)에서 빼서 새로 만든 group 안에 넣음
-            // (좌표 원점을 0,0,0으로 강제 초기화하여 자체 축 회전이 가능하게 만듦)
-            group.add(wheelMesh);
-            wheelMesh.position.set(0, 0, 0);
+            // 2. 그 중심 좌표를 차체(car) 기준의 좌표로 변환합니다.
+            const localCenter = car.worldToLocal(worldCenter.clone());
 
-            // 3. 차체에 바퀴 그룹 부착
+            // 3. 차체에 빈 통(group)을 달고, 바퀴의 진짜 위치로 옮겨줍니다.
             car.add(group);
+            group.position.copy(localCenter);
 
-            // 4. 누워있는 바퀴를 똑바로 세우기 위한 껍데기(래퍼) 회전
-            // wheelMesh 자체를 돌려서 시각적으로 90도 세워줍니다.
-            wheelMesh.rotation.set(0, 0, 0);
+            // 4. 통 안에 바퀴를 쏙 넣습니다. (attach를 쓰면 원래 모습이 보존됩니다)
+            group.attach(wheelMesh);
+
+            // 5. ✨ 호버보드(눕는 현상) 1회 영구 보정 ✨
+            // 통(group)이 아닌 알맹이(wheelMesh) 자체를 여기서 딱 한 번 돌려 세웁니다.
             wheelMesh.rotateZ(Math.PI / 2);
             wheelMesh.rotateY(Math.PI / 2);
-            
             if (i === 0 || i === 2) {
-                wheelMesh.rotateY(Math.PI); // 왼쪽 바퀴 뒤집기
+                wheelMesh.rotateY(Math.PI); // 왼쪽 바퀴면 한 번 더 뒤집기
             }
 
-            // 5. 물리 엔진 데이터 기록
+            // 6. 물리 엔진 연동용 데이터
             if (i === 0 || i === 2) group.userData.side = 'L';
             else group.userData.side = 'R';
 
@@ -2326,7 +2328,7 @@ if (currentCarModel.includes('SportsCar') || currentCarModel.includes('SUV') || 
                 }
                 wheel.quaternion.copy(finalTransform);
 
-                        } else if (remoteModelName.includes('PontiacFirebird')) {
+                        } else if (remoteModelName.includes('PontiacPhoenix')) {
                 // ─── [3] 폰티악 전용 바퀴 정렬 로직 (깔끔해짐) ───
                 const finalSteer = (i === 0 || i === 1) ? steerAngle * 2.6 : 0;
                 
