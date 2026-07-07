@@ -1259,12 +1259,17 @@ async function createPontiacPhoenix(color = '#ffffff') {
       (gltf) => {
         const car = gltf.scene;
 
-        // 1. 불필요한 노드(Plane) 제거 및 그림자/색상 설정
+        const tempWheels = [null, null, null, null];
+        const nodesToRemove = []; // 제거할 노드들을 안전하게 모아둘 배열
+
+        // 1. 하나의 루프에서 안전하게 Plane 제거 수집 및 바퀴 매칭 진행
         car.traverse((child) => {
-          // 바닥(Plane) 제거
-          if (child.name.toLowerCase().includes('plane')) {
+          const nameLower = child.name.toLowerCase();
+
+          // [버그 수정] 루프 안에서 바로 remove하지 않고 배열에 기록만 해둡니다.
+          if (nameLower.includes('plane')) {
             child.visible = false; 
-            if (child.parent) child.parent.remove(child);
+            nodesToRemove.push(child);
             return;
           }
 
@@ -1282,7 +1287,22 @@ async function createPontiacPhoenix(color = '#ffffff') {
               child.name = 'MainBody'; 
             }
           }
+
+          // [수정] 공백을 제거한 정확한 이름 매칭 (이제 정상적으로 찾아집니다)
+          const trimmedName = child.name.trim();
+          if (trimmedName === 'Wheel_FL') { tempWheels[0] = child; }
+          else if (trimmedName === 'Wheel_FR') { tempWheels[1] = child; }
+          else if (trimmedName === 'Wheel_RL') { tempWheels[2] = child; }
+          else if (trimmedName === 'Wheel_RR') { tempWheels[3] = child; }
         });
+
+        // 탐색(traverse)이 완전히 끝난 후, 모아둔 Plane 노드들을 안전하게 삭제합니다.
+        nodesToRemove.forEach((child) => {
+          if (child.parent) child.parent.remove(child);
+        });
+
+        // 브라우저 콘솔에서 정상적으로 찾았는지 확인
+        console.log("폰티악 바퀴 매칭 결과 (성공):", tempWheels.map(w => w ? w.name : "못찾음"));
 
         // 2. 크기 및 기본 방향 설정
         car.scale.set(3, 3, 3); 
@@ -1298,26 +1318,11 @@ async function createPontiacPhoenix(color = '#ffffff') {
         const carGroup = new THREE.Group();
         carGroup.add(car);
         
-        // 전역 매트릭스 업데이트 (바퀴 중심점 계산을 위해 필수)
+        // 전역 매트릭스 업데이트
         car.updateMatrixWorld(true);
 
         // 3. 바퀴 노드 추출 및 피벗(Pivot) 재조정 
         const wheelNodes = [new THREE.Group(), new THREE.Group(), new THREE.Group(), new THREE.Group()];
-        const tempWheels = [null, null, null, null];
-
-        // [수정] 대소문자 구분 없이 유연하게 바퀴 이름을 찾도록 변경
-        car.traverse((child) => {
-          const n = child.name.toLowerCase();
-          if (n.includes('Wheel')) {
-            if (n.includes('FL') || (n.includes('front') && n.includes('l'))) { tempWheels[0] = child; }
-            else if (n.includes('FR') || (n.includes('front') && n.includes('r'))) { tempWheels[1] = child; }
-            else if (n.includes('RL') || n.includes('bl') || (n.includes('rear') && n.includes('l'))) { tempWheels[2] = child; }
-            else if (n.includes('RR') || n.includes('br') || (n.includes('rear') && n.includes('r'))) { tempWheels[3] = child; }
-          }
-        });
-
-        // 브라우저 콘솔에서 바퀴가 잘 찾아졌는지 확인하기 위한 로그
-        console.log("폰티악 바퀴 검색 결과:", tempWheels.map(w => w ? w.name : "못찾음"));
 
         for (let i = 0; i < 4; i++) {
           const wheelMesh = tempWheels[i];
@@ -1337,37 +1342,26 @@ async function createPontiacPhoenix(color = '#ffffff') {
             car.add(group);
             group.position.copy(localCenter);
 
-            // ★ [핵심 수정 1] group의 전역 행렬을 강제로 업데이트합니다.
-            // 이게 없으면 attach 시점에 바퀴가 엉뚱한 곳으로 튕겨나가 사라집니다.
+            // ★ [행렬 버그 수정] group 배치 직후 전역 행렬을 강제로 최신화합니다.
+            // 이 코드가 있어야 attach할 때 바퀴가 화면 밖으로 날아가 사라지지 않습니다.
             group.updateMatrixWorld(true);
 
-            // 4. 통 안에 바퀴를 넣습니다.
+            // 4. 통 안에 바퀴를 부착합니다.
             group.attach(wheelMesh);
 
-            // ★ [핵심 수정 2] 만약 바퀴가 정상 위치에 생겼는데 90도 누워있거나 뒤집혀있다면 
-            // 아래 주석(//)을 해제하여 조절하세요. 모델에 따라 필요 없을 수 있습니다.
-            /*
+            // 5. ✨ 호버보드(눕는 현상) 보정 코드 ✨
             wheelMesh.rotateZ(Math.PI / 2);
             wheelMesh.rotateY(Math.PI / 2);
             if (i === 0 || i === 2) {
-                wheelMesh.rotateY(Math.PI); 
+                wheelMesh.rotateY(Math.PI); // 왼쪽 바퀴면 한 번 더 뒤집기
             }
-            */
 
-            // 5. 물리 엔진 연동용 데이터
+            // 6. 물리 엔진 연동용 데이터
             if (i === 0 || i === 2) group.userData.side = 'L';
             else group.userData.side = 'R';
 
             group.userData.baseQuaternion = group.quaternion.clone();
             group.matrixAutoUpdate = true;
-          } else {
-            // 바퀴 메쉬를 아예 못 찾았을 때 게임이 튕기는 것을 방지하기 위한 임시 가상 그룹 생성
-            car.add(group);
-            if (i === 0) group.position.set(-1, 0.4, 1.5);
-            if (i === 1) group.position.set(1, 0.4, 1.5);
-            if (i === 2) group.position.set(-1, 0.4, -1.5);
-            if (i === 3) group.position.set(1, 0.4, -1.5);
-            group.updateMatrixWorld(true);
           }
         }
 
