@@ -1321,6 +1321,7 @@ async function createPontiacPhoenix(color = '#ffffff') {
         carGroup.updateMatrixWorld(true);
 
         // 3. 바퀴 노드 추출 및 피벗(Pivot) 재조정 
+       // 3. 바퀴 노드 추출 및 피벗(Pivot) 재조정 
         const wheelNodes = [new THREE.Group(), new THREE.Group(), new THREE.Group(), new THREE.Group()];
 
         for (let i = 0; i < 4; i++) {
@@ -1328,36 +1329,36 @@ async function createPontiacPhoenix(color = '#ffffff') {
           const group = wheelNodes[i];
           
           if (wheelMesh) {
-            // 바퀴의 전역 월드 좌표 구하기
-            const wheelBox = new THREE.Box3().setFromObject(wheelMesh);
-            const worldCenter = wheelBox.getCenter(new THREE.Vector3());
-            
-            // ★ [핵심 수정 1] 바퀴 그룹을 car가 아닌 최상위 carGroup에 추가합니다.
-            // 물리 엔진이 group의 position을 마음대로 덮어써도 차체 밖으로 날아가지 않게 만듭니다.
-            carGroup.add(group);
-            
-            // carGroup 기준의 로컬 좌표로 변환하여 group 위치 설정
-            const localCenter = carGroup.worldToLocal(worldCenter.clone());
-            group.position.copy(localCenter);
+            // ★ [핵심 1] 물리 엔진이 조종할 빈 통(group)에 바퀴를 바로 집어넣습니다.
+            group.add(wheelMesh);
+
+            // ★ [핵심 2] 3D 모델 제작자가 남겨둔 이상한 위치/회전값을 싹 다 초기화합니다.
+            wheelMesh.position.set(0, 0, 0);
+            wheelMesh.rotation.set(0, 0, 0);
+            wheelMesh.scale.set(3, 3, 3); // 차체가 3배 커졌으므로 바퀴도 3배로 맞춤
+
+            // 행렬을 강제로 업데이트하여 현재 중심 상태를 계산합니다.
+            group.position.set(0, 0, 0);
             group.updateMatrixWorld(true);
 
-            // ★ [핵심 수정 2] 바퀴 메쉬의 크기를 원래대로 유지하기 위해 스케일 보정
-            // 차체가 3배 커졌으므로 자식이었던 바퀴를 꺼내오면 크기를 맞춰야 합니다.
-            wheelMesh.scale.set(3, 3, 3);
+            // ★ [핵심 3] 바퀴의 '진짜 기하학적 중심'을 박스(Box3)로 감싸서 찾아냅니다.
+            const box = new THREE.Box3().setFromObject(wheelMesh);
+            const center = box.getCenter(new THREE.Vector3());
 
-            // group 안으로 바퀴 쏙 넣기
-            group.attach(wheelMesh);
+            // 찾아낸 오차만큼 바퀴를 반대 방향으로 당겨와서 영점(0, 0, 0)에 완벽히 맞춥니다.
+            wheelMesh.position.x -= center.x;
+            wheelMesh.position.y -= center.y;
+            wheelMesh.position.z -= center.z;
 
             // 4. ✨ 바퀴 방향 회전 보정 ✨
-            // 만약 바퀴가 나타났는데 누워있거나 앞뒤가 뒤집혔다면 이 수치들을 조절합니다.
-            wheelMesh.rotation.set(0, 0, 0); // 회전 초기화
+            // 만약 영점은 맞았는데 바퀴가 90도 누워있다면 아래 각도들을 조절하세요.
             wheelMesh.rotateZ(Math.PI / 2);
             wheelMesh.rotateY(Math.PI / 2);
-            if (i === 0 || i === 2) {
-                wheelMesh.rotateY(Math.PI); 
+            if (i === 0 || i === 2) { 
+                wheelMesh.rotateY(Math.PI); // 왼쪽 바퀴면 한 번 더 뒤집기
             }
 
-            // 5. 물리 엔진 연동용 데이터 설정
+            // 5. 물리 엔진 연동용 데이터 저장
             if (i === 0 || i === 2) group.userData.side = 'L';
             else group.userData.side = 'R';
 
