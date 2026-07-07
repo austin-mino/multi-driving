@@ -1248,66 +1248,86 @@ for (let i = 0; i < 4; i++) {
     });
 }
 
-async function createPontiacPhoenix(color = '#ffffff') {
+function createPontiacPhoenix(color = '#ffffff') {
   return new Promise((resolve) => {
-    const loader = new GLTFLoader();
-    
-    loader.load(
-      'https://raw.githubusercontent.com/austin-mino/multi-driving/main/models/Pontiac%20Firebird/uploads_files_6012214_American+Muscle.glb', 
+    gltfLoader.load(
+      'https://raw.githubusercontent.com/austin-mino/multi-driving/main/models/Pontiac%20Firebird/uploads_files_6012214_American+Muscle.glb',
       (gltf) => {
-        const car = gltf.scene;
+        const innerCar = gltf.scene;
+        
+        innerCar.traverse((child) => {
+          if (!child.isMesh) return;
 
-        car.scale.set(3, 3, 3);
-        car.rotation.y = Math.PI;
+          child.castShadow = true;
+          child.receiveShadow = true;
 
-        const wheelNodes = [null, null, null, null];
-
-        car.traverse((child) => {
-          if (child.isMesh) {
-            child.castShadow = true;
-            child.receiveShadow = true;
-            
-            if (child.material) {
-              const name = child.name.toLowerCase();
-              const matName = child.material.name ? child.material.name.toLowerCase() : '';
-              
-              if (name.includes('body') || matName.includes('body') || matName.includes('paint')) {
-                // 기존 재질을 복제하여 텍스처 퀄리티를 유지하면서 색상만 강제 주입
-                child.material = child.material.clone();
-                child.material.color.set(color);
-              }
-            }
-          }
-
-          const name = child.name.trim();
-          // ✨ [해결책] 업데이트 루프에서 인식할 수 있도록 좌/우(L/R) 사이드를 확실하게 주입합니다.
-          if (name === 'Wheel_FL') { wheelNodes[0] = child; child.userData.side = 'L'; }
-          else if (name === 'Wheel_FR') { wheelNodes[1] = child; child.userData.side = 'R'; }
-          else if (name === 'Wheel_RL') { wheelNodes[2] = child; child.userData.side = 'L'; }
-          else if (name === 'Wheel_RR') { wheelNodes[3] = child; child.userData.side = 'R'; }
-
+          // 폰티악 고유의 불필요한 바닥 플레인 제거
           if (child.name.toLowerCase().includes('plane')) {
             child.visible = false;
+            return;
+          }
+
+          // 차체 페인트만 색 변경
+          const matName = child.material?.name ? child.material.name.toLowerCase() : '';
+          const meshName = child.name ? child.name.toLowerCase() : '';
+
+          if (meshName.includes('body') || matName.includes('body') || matName.includes('paint')) {
+            child.material = child.material.clone();
+
+            child.material.color.set(color);
+
+            // 원래 재질 느낌 유지
+            child.material.metalness = 0.6;
+            child.material.roughness = 0.4;
+
+            child.material.needsUpdate = true;
+          }
+        });
+ 
+        // 폰티악 모델 중심축 바인딩 및 기본 회전 정렬
+        innerCar.rotation.y = Math.PI;
+        const box = new THREE.Box3().setFromObject(innerCar);
+        const center = box.getCenter(new THREE.Vector3());
+        innerCar.position.set(-center.x, -box.min.y, -center.z);
+
+        // wrapper = carModel (physics 쿼터니언 적용 대상)
+        const wrapper = new THREE.Group();
+        wrapper.add(innerCar);
+        wrapper.scale.set(3.0, 3.0, 3.0);
+
+        // ─── Pontiac Phoenix 바퀴 노드 추출 ───────────────────────────
+        carWheelNodes = [null, null, null, null];
+        innerCar.traverse((child) => {
+          const n = child.name.toUpperCase();
+          // 더 넓은 범위의 이름 검색 (공백, 대소문자, 약어 대응)
+          if ((n.includes('FL') || n.includes('FRONT_LEFT')) && n.includes('WHEEL')) carWheelNodes[0] = child;
+          else if ((n.includes('FR') || n.includes('FRONT_RIGHT')) && n.includes('WHEEL')) carWheelNodes[1] = child;
+          else if ((n.includes('BL') || n.includes('BACK_LEFT') || n.includes('RL')) && n.includes('WHEEL')) carWheelNodes[2] = child;
+          else if ((n.includes('BR') || n.includes('BACK_RIGHT') || n.includes('RR')) && n.includes('WHEEL')) carWheelNodes[3] = child;
+        });
+        console.log('Pontiac Phoenix 바퀴 노드:', carWheelNodes.map(n => n ? n.name : 'null'));
+        carWheelNodes.forEach((node) => {
+          if (node) {
+              // SUV 바퀴 축 보정 (형식 통일)
+              node.rotateZ(Math.PI * 2);
+              // 데이터
+              node.userData.baseQuaternion = node.quaternion.clone();
+              // 애니메이션 간섭 방지
+              node.matrixAutoUpdate = true;
           }
         });
 
-        const box = new THREE.Box3().setFromObject(car);
-        const center = box.getCenter(new THREE.Vector3());
-        car.position.set(-center.x, -box.min.y, -center.z);
-
-        const carGroup = new THREE.Group();
-        carGroup.add(car);
-
-        carGroup.userData.wheelNodes = wheelNodes;
-        carGroup.userData.modelName = 'PontiacPhoenix';
-        carGroup.userData.visualOffsetY = -0.5; 
-
-        resolve(carGroup);
+        wrapper.userData.wheelNodes = carWheelNodes;
+        wrapper.userData.modelName = 'PontiacPhoenix';
+        wrapper.userData.visualOffsetY = -0.5;
+        wrapper.userData.steeringNode = typeof steeringWheelNode !== 'undefined' ? steeringWheelNode : null;
+                          
+        resolve(wrapper);
       },
       undefined,
-      (error) => {
-        console.error('Pontiac Phoenix 로드 실패:', error);
-        resolve(new THREE.Group()); 
+      (err) => {
+        console.error('Pontiac Phoenix 로드 실패:', err);
+        resolve(new THREE.Group());
       }
     );
   });
