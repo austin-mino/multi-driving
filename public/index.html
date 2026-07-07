@@ -1249,7 +1249,7 @@ for (let i = 0; i < 4; i++) {
 }
 
 
-/* 폰티악(Pontiac Phoenix) 생성 함수 - 바퀴 생존 보장 버전 */
+/* 폰티악(Pontiac Phoenix) 생성 함수 - 파일 구조(model/Plane) 맞춤형 */
 async function createPontiacPhoenix(color = '#ffffff') {
   return new Promise((resolve) => {
     const loader = new GLTFLoader();
@@ -1259,48 +1259,12 @@ async function createPontiacPhoenix(color = '#ffffff') {
       (gltf) => {
         const car = gltf.scene;
 
-        // 1. Plane 그림자 숨기기 & 색상 입히기
-        car.traverse((child) => {
-          const nameLower = child.name.toLowerCase();
-
-          // ★ [핵심 수정] 부모를 삭제(remove)하지 않고, 투명하게(visible = false)만 만듭니다!
-          // 단, 바퀴(wheel)가 포함된 이름이라면 건드리지 않습니다.
-          if (nameLower.includes('plane') && !nameLower.includes('wheel')) {
-            child.visible = false; 
-            // 삭제(remove) 코드는 절대 넣지 않습니다.
-          }
-
-          if (child.isMesh && child.material) {
-            child.castShadow = true;
-            child.receiveShadow = true;
-            
-            const matName = child.material.name.toLowerCase();
-            if (nameLower.includes('body') || matName.includes('body') || matName.includes('paint')) {
-              child.material = child.material.clone();
-              child.material.color.set(color);
-              child.material.metalness = 0.8;
-              child.material.roughness = 0.2;
-              child.name = 'MainBody'; 
-            }
-          }
-        });
-
-        // 2. 차체 스케일 및 회전 설정
+        // 1. 차체 기본 스케일 및 회전 (가장 먼저 적용하여 바퀴 빼낼 때 크기 유지)
         car.scale.set(3, 3, 3); 
-        car.rotation.y = Math.PI; 
+        car.rotation.y = Math.PI;
+        car.updateMatrixWorld(true);
 
-        // 3. 차체 중심점 정렬
-        const box = new THREE.Box3().setFromObject(car);
-        const center = box.getCenter(new THREE.Vector3());
-        car.position.x -= center.x;
-        car.position.z -= center.z;
-        car.position.y -= box.min.y;
-
-        const carGroup = new THREE.Group();
-        carGroup.add(car);
-        carGroup.updateMatrixWorld(true);
-
-        // 4. 바퀴 매칭
+        // 2. 바퀴 먼저 안전하게 찾기 (어떤 노드도 아직 삭제하지 않음)
         const tempWheels = [null, null, null, null];
         car.traverse((child) => {
           const trimmedName = child.name.trim();
@@ -1310,24 +1274,61 @@ async function createPontiacPhoenix(color = '#ffffff') {
           else if (trimmedName === 'Wheel_RR') tempWheels[3] = child;
         });
 
+        // 3. 바퀴를 차체(model)에서 뜯어내서 게임 맵(scene)으로 이식
+        // 이렇게 하면 이후에 차체에서 무슨 짓을 하든 바퀴는 절대 사라지지 않습니다.
         const wheelNodes = [null, null, null, null];
-
-        // 5. 바퀴를 게임 씬(scene)으로 안전하게 분리
         for (let i = 0; i < 4; i++) {
           if (tempWheels[i]) {
             const w = tempWheels[i];
-
-            // 바퀴를 부모(Plane 등)로부터 뜯어내서 최상위 scene에 직속으로 붙입니다.
+            
             if (typeof scene !== 'undefined') {
+              // attach를 쓰면 커진 크기(x3)와 위치를 유지한 채로 scene으로 이동됩니다.
               scene.attach(w);
             }
 
-            // 물리 엔진의 강제 회전 보정
+            // 물리 엔진 강제 회전 보정
             w.rotateX(Math.PI / 2);
-
             wheelNodes[i] = w;
           }
         }
+
+        // 4. 바퀴를 대피시켰으니, 이제 안심하고 'Plane'을 찾아서 완전히 박살(remove)냅니다.
+        const nodesToRemove = [];
+        car.traverse((child) => {
+          if (child.name === 'Plane' || child.name.toLowerCase().includes('plane')) {
+            nodesToRemove.push(child);
+          }
+        });
+        nodesToRemove.forEach(node => {
+          if (node.parent) node.parent.remove(node);
+        });
+
+        // 5. 남은 진짜 차체(model)에 그림자 켜기 및 색칠하기
+        car.traverse((child) => {
+          if (child.isMesh && child.material) {
+            child.castShadow = true;
+            child.receiveShadow = true;
+            
+            const matName = child.material.name.toLowerCase();
+            if (child.name.toLowerCase().includes('body') || matName.includes('body') || matName.includes('paint')) {
+              child.material = child.material.clone();
+              child.material.color.set(color);
+              child.material.metalness = 0.8;
+              child.material.roughness = 0.2;
+              child.name = 'MainBody'; 
+            }
+          }
+        });
+
+        // 6. 차체 중심점 정렬 (바닥에 딱 붙게)
+        const box = new THREE.Box3().setFromObject(car);
+        const center = box.getCenter(new THREE.Vector3());
+        car.position.x -= center.x;
+        car.position.z -= center.z;
+        car.position.y -= box.min.y;
+
+        const carGroup = new THREE.Group();
+        carGroup.add(car);
 
         // 차량 전역 데이터 설정
         carGroup.userData.wheelNodes = wheelNodes;
@@ -1344,8 +1345,7 @@ async function createPontiacPhoenix(color = '#ffffff') {
     );
   });
 }
-
-      
+  
     // 차량용 RaycastVehicle 설정
     const vehicle = new CANNON.RaycastVehicle({
       chassisBody,
