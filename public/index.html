@@ -1258,12 +1258,12 @@ async function createPontiacPhoenix(color = '#ffffff') {
       'https://raw.githubusercontent.com/austin-mino/multi-driving/main/models/Pontiac%20Firebird/uploads_files_6012214_American+Muscle.glb', 
       (gltf) => {
         const car = gltf.scene;
-        const carGroup = new THREE.Group(); // 최상위 차량 그룹
+        const carGroup = new THREE.Group(); 
 
         const tempWheels = [null, null, null, null];
         const nodesToRemove = []; 
 
-        // 1. 안전하게 Plane 제거 수집 및 바퀴 매칭 진행
+        // 1. Plane 제거 및 바퀴(Mesh) 매칭
         car.traverse((child) => {
           const nameLower = child.name.toLowerCase();
 
@@ -1276,8 +1276,7 @@ async function createPontiacPhoenix(color = '#ffffff') {
           if (child.isMesh && child.material) {
             child.castShadow = true;
             child.receiveShadow = true;
-
-            // 차체(Body) 색상 변경
+            
             const matName = child.material.name.toLowerCase();
             if (child.name.toLowerCase().includes('body') || matName.includes('body') || matName.includes('paint')) {
               child.material = child.material.clone();
@@ -1288,7 +1287,7 @@ async function createPontiacPhoenix(color = '#ffffff') {
             }
           }
 
-          // 이름 매칭
+          // 이름 공백 제거 후 정확히 매칭
           const trimmedName = child.name.trim();
           if (trimmedName === 'Wheel_FL') { tempWheels[0] = child; }
           else if (trimmedName === 'Wheel_FR') { tempWheels[1] = child; }
@@ -1296,80 +1295,74 @@ async function createPontiacPhoenix(color = '#ffffff') {
           else if (trimmedName === 'Wheel_RR') { tempWheels[3] = child; }
         });
 
-        // 불필요한 노드 삭제
+        // 탐색 완료 후 안전하게 불필요 노드 삭제
         nodesToRemove.forEach((child) => {
           if (child.parent) child.parent.remove(child);
         });
 
-        console.log("폰티악 바퀴 매칭 결과 (성공):", tempWheels.map(w => w ? w.name : "못찾음"));
-
-        // 2. 크기 및 기본 방향 설정 (차체를 늘려줍니다)
+        // 2. 차체 설정 (스케일 및 회전)
         car.scale.set(3, 3, 3); 
         car.rotation.y = Math.PI; 
 
-        // 중심점 재정렬
+        // 3. 차체 중심점 정렬
         const box = new THREE.Box3().setFromObject(car);
         const center = box.getCenter(new THREE.Vector3());
         car.position.x -= center.x;
         car.position.z -= center.z;
         car.position.y -= box.min.y;
 
-        // 차체를 최상위 그룹에 추가
+        // 메인 그룹에 차체 추가
         carGroup.add(car);
-        
-        // 전역 매트릭스 계산 강제 업데이트
         carGroup.updateMatrixWorld(true);
 
-        // 3. 바퀴 노드 추출 및 피벗(Pivot) 재조정 
-       // 3. 바퀴 노드 추출 및 피벗(Pivot) 재조정 
-        const wheelNodes = [new THREE.Group(), new THREE.Group(), new THREE.Group(), new THREE.Group()];
+        const wheelNodes = [null, null, null, null];
 
+        // 4. 바퀴 피벗 재설정 및 강제 회전 상쇄 로직
         for (let i = 0; i < 4; i++) {
           const wheelMesh = tempWheels[i];
-          const group = wheelNodes[i];
           
           if (wheelMesh) {
-            // ★ [핵심 1] 물리 엔진이 조종할 빈 통(group)에 바퀴를 바로 집어넣습니다.
-            group.add(wheelMesh);
+            car.updateMatrixWorld(true);
+            
+            // 진짜 기하학적 중심(World) 구하기
+            const wheelBox = new THREE.Box3().setFromObject(wheelMesh);
+            const worldCenter = wheelBox.getCenter(new THREE.Vector3());
+            
+            // 물리 엔진이 제어할 빈 통(pivotGroup) 생성
+            const pivotGroup = new THREE.Group();
+            carGroup.add(pivotGroup);
+            
+            // 통의 위치를 바퀴의 정중앙으로 이동시켜 피벗(Pivot)을 완벽히 맞춤
+            const localCenter = carGroup.worldToLocal(worldCenter.clone());
+            pivotGroup.position.copy(localCenter);
+            pivotGroup.updateMatrixWorld(true);
 
-            // ★ [핵심 2] 3D 모델 제작자가 남겨둔 이상한 위치/회전값을 싹 다 초기화합니다.
-            wheelMesh.position.set(0, 0, 0);
-            wheelMesh.rotation.set(0, 0, 0);
-            wheelMesh.scale.set(3, 3, 3); // 차체가 3배 커졌으므로 바퀴도 3배로 맞춤
+            // Three.js의 attach 기능을 사용해 바퀴를 통 안에 종속 (시각적 위치/크기는 자동 보존됨)
+            pivotGroup.attach(wheelMesh);
 
-            // 행렬을 강제로 업데이트하여 현재 중심 상태를 계산합니다.
-            group.position.set(0, 0, 0);
-            group.updateMatrixWorld(true);
-
-            // ★ [핵심 3] 바퀴의 '진짜 기하학적 중심'을 박스(Box3)로 감싸서 찾아냅니다.
-            const box = new THREE.Box3().setFromObject(wheelMesh);
-            const center = box.getCenter(new THREE.Vector3());
-
-            // 찾아낸 오차만큼 바퀴를 반대 방향으로 당겨와서 영점(0, 0, 0)에 완벽히 맞춥니다.
-            wheelMesh.position.x -= center.x;
-            wheelMesh.position.y -= center.y;
-            wheelMesh.position.z -= center.z;
-
-            // 4. ✨ 바퀴 방향 회전 보정 ✨
-            // 만약 영점은 맞았는데 바퀴가 90도 누워있다면 아래 각도들을 조절하세요.
-            wheelMesh.rotateZ(Math.PI / 2);
-            wheelMesh.rotateY(Math.PI / 2);
-            if (i === 0 || i === 2) { 
-                wheelMesh.rotateY(Math.PI); // 왼쪽 바퀴면 한 번 더 뒤집기
+            // ★★★ 물리 엔진의 강제 -90도 회전을 상쇄(+90도)시키는 핵심 보정 ★★★
+            wheelMesh.rotateX(Math.PI / 2);
+            
+            // (선택) 왼쪽 휠이나 오른쪽 휠이 뒤집혀 보인다면 아래 주석을 푸세요
+            /*
+            if (i === 0 || i === 2) {
+                wheelMesh.rotateY(Math.PI);
             }
+            */
 
-            // 5. 물리 엔진 연동용 데이터 저장
-            if (i === 0 || i === 2) group.userData.side = 'L';
-            else group.userData.side = 'R';
+            // 물리 엔진 참조 데이터 저장
+            if (i === 0 || i === 2) pivotGroup.userData.side = 'L';
+            else pivotGroup.userData.side = 'R';
 
-            group.userData.baseQuaternion = group.quaternion.clone();
-            group.matrixAutoUpdate = true;
+            pivotGroup.userData.baseQuaternion = pivotGroup.quaternion.clone();
+            pivotGroup.matrixAutoUpdate = true;
+            
+            wheelNodes[i] = pivotGroup;
           }
         }
 
-        // 4. 차량 데이터 최종 저장
+        // 최종 데이터 바인딩
         carGroup.userData.wheelNodes = wheelNodes;
-        carWheelNodes = wheelNodes; // 전역 변수 즉시 업데이트
         carGroup.userData.modelName = 'PontiacPhoenix';
         carGroup.userData.visualOffsetY = -0.5; 
 
@@ -1378,7 +1371,7 @@ async function createPontiacPhoenix(color = '#ffffff') {
       undefined,
       (error) => {
         console.error('Pontiac Phoenix 로드 실패:', error);
-        resolve(createGrandeurIGCarDetailed(color)); 
+        resolve(new THREE.Group()); 
       }
     );
   });
