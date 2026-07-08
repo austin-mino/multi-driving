@@ -1310,8 +1310,9 @@ async function createPontiacPhoenix(color = '#ffffff') {
 
         wheelNodes.forEach((node) => {
           if (node) {
-            // 폰티악 바퀴 노드 90도 기본 회전 적용
-            const rotation90 = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, Math.PI / 2, 0));
+            // 폰티악 바퀴 노드가 옆으로 눕지 않도록 X축 기준 90도 회전을 적용하여 세웁니다.
+            // 모델의 기본 축 상태에 따라 Euler 값을 조정합니다.
+            const rotation90 = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI / 2, 0, 0));
             node.quaternion.multiply(rotation90);
             
             node.userData.baseQuaternion = node.quaternion.clone();
@@ -2176,12 +2177,13 @@ const myWheels = carModel ? carModel.userData.wheelNodes : null;
     }
     node.quaternion.copy(finalModelQuat);
   } else if (currentCarModel.includes('PontiacPhoenix')) {
-    // 폰티악은 baseQuaternion(90도 회전 포함)에 물리 회전을 곱하여 적용
-    node.quaternion.copy(node.userData.baseQuaternion.clone().multiply(finalQuat));
+    // 폰티악은 baseQuaternion에 물리 회전을 결합
+    // 순서를 [물리회전 * baseQuaternion]으로 하여 로컬 축 정렬을 유지합니다.
+    node.quaternion.copy(finalQuat.clone().multiply(node.userData.baseQuaternion));
     
-    // 왼쪽 바퀴만 180도 반전 보정
+    // 왼쪽 바퀴만 180도 반전 보정 (Y축 기준 반전으로 방향 수정)
     if (node.userData.side === 'L') {
-      const LEFT_SIDE_INVERSION = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI);
+      const LEFT_SIDE_INVERSION = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI);
       node.quaternion.multiply(LEFT_SIDE_INVERSION);
     }
     node.updateMatrix();
