@@ -2138,15 +2138,16 @@ const myWheels = carModel ? carModel.userData.wheelNodes : null;
   }
 
   // 5. 새로 계산된 시각적 조향 쿼터니언 생성
-  let steeringAxis = new THREE.Vector3(0, 1, 0);
+  let visualSteeringQuat = new THREE.Quaternion();
   
-  // 폰티악은 조향 축을 시계방향으로 90도 회전시켜야 함 (로컬 축 기준 보정)
   if (currentCarModel.includes('PontiacPhoenix')) {
-    // Y축(0,1,0)을 X축(1,0,0) 방향으로 90도 눕힘으로써 실제 꺾이는 축을 보정
-    steeringAxis.set(1, 0, 0); 
+    // 폰티악은 조향 시에만 축을 90도 돌려서 적용 (X축 기준 회전)
+    // 조향값이 0일 때는 기본 정렬을 유지하게 됩니다.
+    visualSteeringQuat.setFromAxisAngle(new THREE.Vector3(1, 0, 0), visualSteering);
+  } else {
+    // 일반 차량은 Y축 기준 조향
+    visualSteeringQuat.setFromAxisAngle(new THREE.Vector3(0, 1, 0), visualSteering);
   }
-  
-  const visualSteeringQuat = new THREE.Quaternion().setFromAxisAngle(steeringAxis, visualSteering);
 
   // 6. 새로운 조향값과 아까 추출해 둔 '순수 구름 회전(Roll)'을 결합하여 localQuat를 최종 업데이트
   localQuat.copy(visualSteeringQuat.multiply(rollingQuat));
@@ -2301,7 +2302,7 @@ if (currentCarModel.includes('SportsCar') || currentCarModel.includes('SUV') || 
                 // ─── [3] 폰티악 전용 바퀴 정렬 로직 (조향 및 반전 수정) ───
                 const visualSteering = (i === 0 || i === 1) ? -steerAngle * 2.6 : 0;
                 
-                // 폰티악 조향 축 보정 (시계방향 90도)
+                // 폰티악 조향 시에만 축 보정 (X축 기준 조향)
                 const steerQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), visualSteering);
                 const rollQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), pData.accumulatedRoll);
                 
