@@ -2173,11 +2173,11 @@ if (currentCarModel.includes('SportsCar') || currentCarModel.includes('SUV') || 
     }
     node.quaternion.copy(finalModelQuat);
   } else if (currentCarModel.includes('PontiacPhoenix')) {
-    // ✨ Pontiac은 오른쪽 바퀴가 180도 돌아가 있으므로 'R'을 반전시킵니다.
+    // ✨ Pontiac은 왼쪽 바퀴가 180도 돌아가 있으므로 'L'을 반전시킵니다.
     let finalModelQuat = finalQuat.clone();
-    if (node.userData.side === 'R') {
-      const RIGHT_SIDE_INVERSION = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI);
-      finalModelQuat.multiply(RIGHT_SIDE_INVERSION);
+    if (node.userData.side === 'L') {
+      const LEFT_SIDE_INVERSION = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI);
+      finalModelQuat.multiply(LEFT_SIDE_INVERSION);
     }
     node.quaternion.copy(finalModelQuat);
 
@@ -2290,9 +2290,9 @@ if (currentCarModel.includes('SportsCar') || currentCarModel.includes('SUV') || 
                 const correctionQuat = new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI / 2, -Math.PI / 2, 0));
                 let finalTransform = localTransform.clone().multiply(correctionQuat);
                 
-                if (wheel.userData.side === 'R') {
-                    const RIGHT_SIDE_INVERSION = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI);
-                    finalTransform.multiply(RIGHT_SIDE_INVERSION);
+                if (wheel.userData.side === 'L') {
+                    const LEFT_SIDE_INVERSION = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI);
+                    finalTransform.multiply(LEFT_SIDE_INVERSION);
                 }
                 wheel.quaternion.copy(finalTransform);
             } else {
