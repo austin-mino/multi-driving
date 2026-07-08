@@ -2135,10 +2135,6 @@ const myWheels = carModel ? carModel.userData.wheelNodes : null;
     if (i === 0 || i === 1) {
       visualSteering = physicsSteering * exaggerationFactor;  
     }
-    // 폰티악은 조향 방향이 반대이므로 반전
-    if (currentCarModel.includes('PontiacPhoenix')) {
-      visualSteering = -visualSteering;
-    }
   }
 
   // 5. 새로 계산된 시각적 조향 쿼터니언 생성
@@ -2152,11 +2148,23 @@ const myWheels = carModel ? carModel.userData.wheelNodes : null;
 if (currentCarModel.includes('SportsCar') || currentCarModel.includes('SUV') || currentCarModel.includes('McLarenP1')) {
     correctionQuat.setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0));
   } else if (currentCarModel.includes('PontiacPhoenix')) {
-    // 폰티악 전용 축 보정
+    // 폰티악 전용 축 보정: 모델 기본 회전 상쇄 및 물리 축 일치
     correctionQuat.setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0));
   }
 
-  const finalQuat = localQuat.clone().multiply(correctionQuat);
+  // 폰티악은 조향 축이 다르므로 별도 처리
+  let finalQuat;
+  if (currentCarModel.includes('PontiacPhoenix')) {
+    // 조향(Y)을 먼저 적용하고, 모델 보정(-90도)을 적용한 뒤, 구름(X)을 적용해야 축이 뒤틀리지 않습니다.
+    const steerPart = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), visualSteering);
+    const modelCorrection = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, -Math.PI / 2, 0));
+    const rollPart = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), rollingQuat.x || 0); // 근사치 사용 혹은 rollingQuat 직접 활용
+    
+    // 폰티악 특수 조합: [조향 * 모델보정 * 구름 * 기본축보정]
+    finalQuat = steerPart.clone().multiply(modelCorrection).multiply(rollingQuat).multiply(correctionQuat);
+  } else {
+    finalQuat = localQuat.clone().multiply(correctionQuat);
+  }
   const euler = new THREE.Euler().setFromQuaternion(finalQuat, 'YXZ');
 
   // 공통 반전 처리
@@ -2176,16 +2184,12 @@ if (currentCarModel.includes('SportsCar') || currentCarModel.includes('SUV') || 
     }
     node.quaternion.copy(finalModelQuat);
   } else if (currentCarModel.includes('PontiacPhoenix')) {
-    // 폰티악 조향 축 및 반전 수정
+    // ✨ Pontiac은 모든 바퀴가 180도 돌아가 있으므로 전체를 반전시킵니다.
     let finalModelQuat = finalQuat.clone();
-    
-    // 왼쪽 바퀴만 180도 반전 (이미지에서 왼쪽 바퀴가 뒤집혀 있었으므로)
-    if (node.userData.side === 'L') {
-      const LEFT_SIDE_INVERSION = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI);
-      finalModelQuat.multiply(LEFT_SIDE_INVERSION);
-    }
-    
+    const WHEEL_INVERSION = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI);
+    finalModelQuat.multiply(WHEEL_INVERSION);
     node.quaternion.copy(finalModelQuat);
+    return; // 폰티악은 직접 쿼터니언을 설정했으므로 아래 오일러 변환을 건너뜁니다.
 
   } else if (currentCarModel.includes('SUV')) {  
     node.quaternion.copy(node.userData.baseQuaternion.clone().multiply(finalQuat));
@@ -2291,14 +2295,14 @@ if (currentCarModel.includes('SportsCar') || currentCarModel.includes('SUV') || 
                 const steerQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), visualSteering);
                 const rollQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), pData.accumulatedRoll);
                 
-                const localTransform = new THREE.Quaternion().copy(steerQuat).multiply(rollQuat);
-                const correctionQuat = new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0));
-                let finalTransform = localTransform.clone().multiply(correctionQuat);
+                // 폰티악 전용 축 보정 및 조합
+                const modelCorrection = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, -Math.PI / 2, 0));
+                const baseCorrection = new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0));
                 
-                if (wheel.userData.side === 'L') {
-                    const LEFT_SIDE_INVERSION = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI);
-                    finalTransform.multiply(LEFT_SIDE_INVERSION);
-                }
+                let finalTransform = steerQuat.clone().multiply(modelCorrection).multiply(rollQuat).multiply(baseCorrection);
+                
+                const WHEEL_INVERSION = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI);
+                finalTransform.multiply(WHEEL_INVERSION);
                 wheel.quaternion.copy(finalTransform);
             } else {
                 // ─── [3] 일반 차량 로직 (그랜저, 스포츠카 등) ───
