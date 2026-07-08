@@ -1254,21 +1254,21 @@ function createPontiacPhoenix(color = '#ffffff') {
       'https://raw.githubusercontent.com/austin-mino/multi-driving/main/models/Pontiac%20Firebird/uploads_files_6012214_American+Muscle.glb',
       (gltf) => {
         const innerCar = gltf.scene;
-        
+        steeringWheelNode = null; // 핸들 노드 초기화
+
         innerCar.traverse((child) => {
+          const n = child.name.toLowerCase();
+          // 핸들 노드 찾기
+          if (n.includes('steering') || n.includes('handle')) {
+            steeringWheelNode = child;
+          }
+
           if (!child.isMesh) return;
 
           child.castShadow = true;
           child.receiveShadow = true;
 
-          // 1. 바퀴(wheel)는 제외하고 이름에 'plane'이 들어간 불필요한 바닥 모델만 숨기기
-          const meshName = child.name.toLowerCase();
-          if (meshName.includes('plane') && !meshName.includes('wheel')) {
-            child.visible = false;
-            return; 
-          }
-
-          // 2. 차체 페인트 색상 변경 및 기본 재질감 세팅
+          // 차체 페인트만 색 변경
           if (child.material?.name?.trim() === 'Car Paint') {
             child.material = child.material.clone();
             child.material.color.set(color);
@@ -1277,53 +1277,53 @@ function createPontiacPhoenix(color = '#ffffff') {
             child.material.needsUpdate = true;
           }
         });
- 
-        // 3. 폰티악 모델 고유의 중심축 정렬 및 정면 방향(rotation.y) 세팅
-        innerCar.rotation.y = Math.PI;
-        const box = new THREE.Box3().setFromObject(innerCar);
-        const center = box.getCenter(new THREE.Vector3());
-        innerCar.position.set(-center.x, -box.min.y, -center.z);
 
-        // wrapper = 물리 엔진 및 쿼터니언을 적용받는 최종 카 바디 그룹
+        innerCar.position.set(0, -0.8, 0); 
+        innerCar.rotation.y = Math.PI / 2;
+
         const wrapper = new THREE.Group();
         wrapper.add(innerCar);
-        wrapper.scale.set(3.0, 3.0, 3.0); // 폰티악 크기에 맞춘 스케일 조정
+        wrapper.scale.set(2.5, 2.5, 2.5);
 
-        // 4. 바퀴 노드(FL, FR, RL, RR 순서) 추출 및 데이터 바인딩
+        // ─── Pontiac 바퀴 노드 추출 ───────────────────────────
         carWheelNodes = [null, null, null, null];
         innerCar.traverse((child) => {
           const n = child.name.toUpperCase();
-          if ((n.includes('FL') || n.includes('FRONT_LEFT')) && n.includes('WHEEL')) carWheelNodes[0] = child;
-          else if ((n.includes('FR') || n.includes('FRONT_RIGHT')) && n.includes('WHEEL')) carWheelNodes[1] = child;
-          else if ((n.includes('BL') || n.includes('BACK_LEFT') || n.includes('RL')) && n.includes('WHEEL')) carWheelNodes[2] = child;
-          else if ((n.includes('BR') || n.includes('BACK_RIGHT') || n.includes('RR')) && n.includes('WHEEL')) carWheelNodes[3] = child;
+          // 폰티악 모델의 바퀴 노드 이름 패턴 대응 (Mesh 또는 Group 모두 포함)
+          const isWheelPart = n.includes('WHEEL') || n.includes('TIRE') || n.includes('RIM') || n.includes('TYRE');
+          if ((n.includes('FL') || n.includes('FRONT_LEFT')) && isWheelPart) carWheelNodes[0] = child;
+          else if ((n.includes('FR') || n.includes('FRONT_RIGHT')) && isWheelPart) carWheelNodes[1] = child;
+          else if ((n.includes('BL') || n.includes('BACK_LEFT') || n.includes('RL')) && isWheelPart) carWheelNodes[2] = child;
+          else if ((n.includes('BR') || n.includes('BACK_RIGHT') || n.includes('RR')) && isWheelPart) carWheelNodes[3] = child;
         });
 
-        console.log('Pontiac Phoenix 바퀴 노드 매칭 완료:', carWheelNodes.map(n => n ? n.name : 'null'));
+        console.log('Pontiac Phoenix 바퀴 노드:', carWheelNodes.map(n => n ? n.name : 'null'));
         
         carWheelNodes.forEach((node) => {
           if (node) {
-              node.rotateZ(Math.PI * 2); // 기본 축 보정
-              node.userData.baseQuaternion = node.quaternion.clone(); // 초기 회전값 저장
-              node.matrixAutoUpdate = true;
+            // 바퀴가 너무 작거나 숨겨져 있을 수 있으므로 scale 확인
+            if (node.scale.x < 0.1) node.scale.set(1, 1, 1);
+            // 바퀴 축 보정
+            node.userData.baseQuaternion = node.quaternion.clone();
+            node.matrixAutoUpdate = true;
+            node.visible = true; // 강제로 보이게 설정
           }
         });
 
-        // 5. SUV 데이터 구조와 100% 동일하게 메타데이터 주입
         wrapper.userData.wheelNodes = carWheelNodes;
         wrapper.userData.modelName = 'PontiacPhoenix';
-        wrapper.userData.visualOffsetY = -0.5; // 차체 높낮이 보정값
-        wrapper.userData.steeringNode = typeof steeringWheelNode !== 'undefined' ? steeringWheelNode : null;
+        wrapper.userData.visualOffsetY = -0.8;
+        wrapper.userData.steeringNode = steeringWheelNode;
                           
         resolve(wrapper);
-      },
-      undefined,
-      (err) => {
-        console.error('Pontiac Phoenix 모델 로드 중 오류 발생:', err);
-        resolve(new THREE.Group());
-      }
-    );
-  });
+      },
+      undefined,
+      (err) => {
+        console.error('Pontiac Phoenix 로드 실패:', err);
+        resolve(new THREE.Group());
+      }
+    );
+  });
 }
   
     // 차량용 RaycastVehicle 설정
@@ -2074,12 +2074,12 @@ visualSteeringLag += (steeringValue - visualSteeringLag) * 0.1;
 
 // ★ 내 차 전용 변수(steeringNode) 업데이트
 if (carModel && carModel.userData.steeringNode) {
-  if (cameraMode === 'first') {
-    // 내가 1인칭 시점일 때만 핸들을 실시간으로 회전시킵니다.
-    carModel.userData.steeringNode.rotation.y = visualSteeringLag * 15.0;
+  // 폰티악 모델이나 다른 모델에서도 핸들이 보이도록 회전 적용 (시점 상관없이)
+  // 폰티악 모델의 경우 축이 다를 수 있으므로 확인 필요 (일반적으로 y축 또는 z축)
+  if (currentCarModel.includes('PontiacPhoenix')) {
+    carModel.userData.steeringNode.rotation.z = visualSteeringLag * 2.0; 
   } else {
-    // 3인칭 시점으로 바꾸면 핸들을 정중앙(0)으로 리셋하여 고정시킵니다.
-    carModel.userData.steeringNode.rotation.y = 0;
+    carModel.userData.steeringNode.rotation.y = visualSteeringLag * 15.0;
   }
 }
       // ─── GLTF/GLB 모델 바퀴 노드 회전 업데이트 ───────────────────────────
@@ -2088,90 +2088,112 @@ if (carModel && carModel.userData.steeringNode) {
       // 로컬 공간의 바퀴 회전을 추출한 뒤 모델 노드에 적용한다.
 const myWheels = carModel ? carModel.userData.wheelNodes : null;
       
-if (carModel && myWheels && myWheels.some(n => n !== null)) {
-  const carInvQuat = carModel.quaternion.clone().invert();
+     if (carModel && myWheels && myWheels.some(n => n !== null)) {
+        const carInvQuat = carModel.quaternion.clone().invert();
 
-  for (let i = 0; i < 4; i++) {
-    const node = myWheels[i];
-    if (!node) continue;
+       for (let i = 0; i < 4; i++) {
+ const node = myWheels[i];
+  if (!node) continue;
 
-    vehicle.updateWheelTransform(i);
-    const wt = vehicle.wheelInfos[i].worldTransform;
+  vehicle.updateWheelTransform(i);
+  const wt = vehicle.wheelInfos[i].worldTransform;
+	const worldPos = new THREE.Vector3(wt.position.x, wt.position.y, wt.position.z);
+	    node.parent.worldToLocal(worldPos);
+	    node.position.copy(worldPos);
+  // 세계 쿼터니언에서 차체 회전 제거 -> 로컬 회전
+  const localQuat = carInvQuat.clone().multiply(
+    new THREE.Quaternion(wt.quaternion.x, wt.quaternion.y, wt.quaternion.z, wt.quaternion.w)
+  );
 
-    // 세계 쿼터니언에서 차체 회전 제거 -> 로컬 회전 추출
-    const localQuat = carInvQuat.clone().multiply(
-      new THREE.Quaternion(wt.quaternion.x, wt.quaternion.y, wt.quaternion.z, wt.quaternion.w)
-    );
+  // 1. 물리 엔진이 계산한 실제 조향각(Steering) 가져오기
+  const physicsSteering = vehicle.wheelInfos[i].steering;
 
-    // 1. 물리 엔진 기준 조향각 가져오기
-    const physicsSteering = vehicle.wheelInfos[i].steering;
-    const physicsSteeringQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), physicsSteering);
+  // 2. 물리 기준의 조향 쿼터니언 생성 (Y축 회전)
+  const physicsSteeringQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), physicsSteering);
 
-    // 2. 전체 회전에서 조향 성분을 제거하여 순수 구름(Roll) 회전값만 추출
-    const rollingQuat = physicsSteeringQuat.clone().invert().multiply(localQuat);
+  // 3. 전체 로컬 회전에서 조향 성분을 빼버려서, '순수하게 바퀴가 굴러가는 회전(Roll)'만 추출
+  const rollingQuat = physicsSteeringQuat.clone().invert().multiply(localQuat);
 
-    // 3. 시각적 조향각 계산 및 앞바퀴 증폭 연산
-    let visualSteering = physicsSteering;
-    const exaggerationFactor = 2.6; 
+  // 4. 우리가 원하는 시각적 조향각 계산 (SUV 반전 및 앞바퀴 증폭)
+  let visualSteering = physicsSteering;
+  const exaggerationFactor = 2.6; //원하는 꺾임 배율
 
-    if (currentCarModel.includes('SUV') || currentCarModel.includes('McLarenP1')) {
-      if (i === 0 || i === 1) {
-        visualSteering = -physicsSteering * exaggerationFactor; 
-      } else {
-        visualSteering = -physicsSteering; 
-      }
+  if (currentCarModel.includes('SUV') || currentCarModel.includes('McLarenP1')) {
+    // 레인지로버(SUV)는 조향 축 방향이 반대이므로 마이너스(-) 처리
+    if (i === 0 || i === 1) {
+      visualSteering = -physicsSteering * exaggerationFactor; 
     } else {
-      if (i === 0 || i === 1) {
-        visualSteering = physicsSteering * exaggerationFactor;  
-      }
+      visualSteering = -physicsSteering; 
     }
-
-    // 4. 시각적 조향 쿼터니언 생성 후 순수 구름 회전과 결합
-    const visualSteeringQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), visualSteering);
-    localQuat.copy(visualSteeringQuat.multiply(rollingQuat));
-    
-    // 5. 모델별 맞춤형 축 보정 (폰티악을 일반 스포츠카 축 정렬 그룹에 완전히 통합)
-    let correctionQuat = new THREE.Quaternion();
-    if (
-      currentCarModel.includes('SportsCar') || 
-      currentCarModel.includes('SUV') || 
-      currentCarModel.includes('McLarenP1') || 
-      currentCarModel.includes('PontiacPhoenix')
-    ) {
-      correctionQuat.setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0));
+  } else {
+    // 다른 일반 차량들 (McLaren 포함)
+    if (i === 0 || i === 1) {
+      visualSteering = physicsSteering * exaggerationFactor;  
     }
+  }
 
-    const finalQuat = localQuat.clone().multiply(correctionQuat);
-    const euler = new THREE.Euler().setFromQuaternion(finalQuat, 'YXZ');
+  // 5. 새로 계산된 시각적 조향 쿼터니언 생성
+  const visualSteeringQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), visualSteering);
 
-    // 6. 축 공통 반전 처리
-    euler.x = -euler.x; 
-    if (currentCarModel.includes('SUV')) {
-      euler.y = euler.y;
-    } else {
-      euler.y = -euler.y;
+  // 6. 새로운 조향값과 아까 추출해 둔 '순수 구름 회전(Roll)'을 결합하여 localQuat를 최종 업데이트
+  localQuat.copy(visualSteeringQuat.multiply(rollingQuat));
+  
+	  // ─── 모델별 맞춤형 축 보정 ─────────────────────────────
+	  let correctionQuat = new THREE.Quaternion();
+	  if (currentCarModel.includes('SportsCar') || currentCarModel.includes('SUV') || currentCarModel.includes('McLarenP1')) {
+	    correctionQuat.setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0));
+	  } else if (currentCarModel.includes('PontiacPhoenix')) {
+	    // 폰티악 모델의 경우 바퀴가 90도 돌아가 보일 수 있으므로 축 보정
+	    correctionQuat.setFromEuler(new THREE.Euler(0, -Math.PI / 2, 0));
+	  }
+
+  const finalQuat = localQuat.clone().multiply(correctionQuat);
+  const euler = new THREE.Euler().setFromQuaternion(finalQuat, 'YXZ');
+
+  // 공통 반전 처리
+  euler.x = -euler.x; 
+  if (currentCarModel.includes('SUV')) {
+    euler.y = euler.y;
+  } else {
+    euler.y = -euler.y;
+  }
+  
+  // ─── 최종 회전 적용 ─────────────────────────────
+  if (currentCarModel.includes('McLarenP1')) {
+    let finalModelQuat = finalQuat.clone();
+    if (node.userData.side === 'L') {
+      const LEFT_SIDE_INVERSION = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI);
+      finalModelQuat.multiply(LEFT_SIDE_INVERSION);
     }
-    
-    // 7. 최종 회전 쿼터니언 바퀴 노드에 복사 및 적용
-    if (currentCarModel.includes('McLarenP1')) {
-      let finalModelQuat = finalQuat.clone();
+    node.quaternion.copy(finalModelQuat);
+  } 
+      else if (currentCarModel.includes('PontiacPhoenix')) {
+      // ✨ [정상 작동] 이제 로더에서 side를 주입하므로 축 뒤틀림 제어가 완벽하게 먹힙니다.
+      const finalSteer = (i === 0 || i === 1) ? visualSteering : 0;
+      const rollAngle = vehicle.wheelInfos[i].rollAngle;
+
+      node.quaternion.setFromEuler(new THREE.Euler(0, 0, 0)); 
+      node.rotateY(-finalSteer);
+      node.rotateX(rollAngle);
+      
       if (node.userData.side === 'L') {
-        const LEFT_SIDE_INVERSION = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI);
-        finalModelQuat.multiply(LEFT_SIDE_INVERSION);
+        node.rotateY(Math.PI);
       }
-      node.quaternion.copy(finalModelQuat);
-    } 
-    else if (currentCarModel.includes('SUV')) {
+      
+      node.rotateZ(Math.PI / 2);
+      node.rotateY(Math.PI / 2);
+
+    } else if (currentCarModel.includes('SUV')) {
       node.quaternion.copy(node.userData.baseQuaternion.clone().multiply(finalQuat));
     } else {
-      // 폰티악(PontiacPhoenix)도 다른 세단/스포츠카들과 완벽하게 한 그룹으로 묶여 공통 오일러 각 제어를 받습니다.
       node.quaternion.setFromEuler(euler);
     }
-    
-    // 월드 행렬 강제 업데이트
-    node.updateMatrix();
-  }
+  
+  // 강제 행렬 업데이트
+  node.updateMatrix();
 }
+      }
+    
 
        // 상대방 차량 위치 보간 처리
       
@@ -2354,7 +2376,12 @@ if (cameraMode === 'third') {
   }
   carModel.userData.modelName = currentCarModel;
   wheelHolders.forEach(h => scene.add(h));
-  carModel.userData.steeringNode = steeringWheelNode;
+  // 모델 생성 시 이미 steeringNode를 설정했다면 유지, 아니면 전역 변수 사용
+  if (!carModel.userData.steeringNode) {
+    carModel.userData.steeringNode = steeringWheelNode;
+  } else {
+    steeringWheelNode = carModel.userData.steeringNode;
+  }
 
   // 물리 바디 보간용 초기값 설정
   chassisBody.previousPosition = new THREE.Vector3(chassisBody.position.x, chassisBody.position.y, chassisBody.position.z);
