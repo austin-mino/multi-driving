@@ -1310,6 +1310,10 @@ async function createPontiacPhoenix(color = '#ffffff') {
 
         wheelNodes.forEach((node) => {
           if (node) {
+            // 폰티악 바퀴 노드 90도 기본 회전 적용
+            const rotation90 = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, Math.PI / 2, 0));
+            node.quaternion.multiply(rotation90);
+            
             node.userData.baseQuaternion = node.quaternion.clone();
             node.matrixAutoUpdate = true;
           }
@@ -2140,36 +2144,19 @@ const myWheels = carModel ? carModel.userData.wheelNodes : null;
   // 5. 새로 계산된 시각적 조향 쿼터니언 생성
   let visualSteeringQuat = new THREE.Quaternion();
   
-  if (currentCarModel.includes('PontiacPhoenix')) {
-    // 폰티악은 조향 시에만 축을 90도 돌려서 적용 (X축 기준 회전)
-    // 조향값이 0일 때는 기본 정렬을 유지하게 됩니다.
-    visualSteeringQuat.setFromAxisAngle(new THREE.Vector3(1, 0, 0), visualSteering);
-  } else {
-    // 일반 차량은 Y축 기준 조향
-    visualSteeringQuat.setFromAxisAngle(new THREE.Vector3(0, 1, 0), visualSteering);
-  }
+  // 일반 차량 및 폰티악 모두 Y축 기준 조향 (폰티악은 노드 자체가 90도 회전되어 있으므로 Y축 조향이 올바르게 작동함)
+  visualSteeringQuat.setFromAxisAngle(new THREE.Vector3(0, 1, 0), visualSteering);
 
   // 6. 새로운 조향값과 아까 추출해 둔 '순수 구름 회전(Roll)'을 결합하여 localQuat를 최종 업데이트
   localQuat.copy(visualSteeringQuat.multiply(rollingQuat));
   
   // ─── 모델별 맞춤형 축 보정 ─────────────────────────────
   let correctionQuat = new THREE.Quaternion();
-if (currentCarModel.includes('SportsCar') || currentCarModel.includes('SUV') || currentCarModel.includes('McLarenP1')) {
-    correctionQuat.setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0));
-  } else if (currentCarModel.includes('PontiacPhoenix')) {
-    // 폰티악 전용 축 보정: 모델 기본 회전 상쇄 및 물리 축 일치
+  if (currentCarModel.includes('SportsCar') || currentCarModel.includes('SUV') || currentCarModel.includes('McLarenP1') || currentCarModel.includes('PontiacPhoenix')) {
     correctionQuat.setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0));
   }
 
-  // 폰티악은 조향 축이 다르므로 별도 처리
-  let finalQuat;
-  if (currentCarModel.includes('PontiacPhoenix')) {
-    // 폰티악 전용 축 조합: [구름 * 기본보정]
-    // 조향은 위에서 steeringAxis(1,0,0)를 통해 localQuat에 이미 반영됨
-    finalQuat = localQuat.clone().multiply(correctionQuat);
-  } else {
-    finalQuat = localQuat.clone().multiply(correctionQuat);
-  }
+  const finalQuat = localQuat.clone().multiply(correctionQuat);
   const euler = new THREE.Euler().setFromQuaternion(finalQuat, 'YXZ');
 
   // 공통 반전 처리
@@ -2189,16 +2176,16 @@ if (currentCarModel.includes('SportsCar') || currentCarModel.includes('SUV') || 
     }
     node.quaternion.copy(finalModelQuat);
   } else if (currentCarModel.includes('PontiacPhoenix')) {
-    // ✨ Pontiac은 모든 바퀴가 180도 돌아가 있으므로 전체를 반전시킵니다.
-    let finalModelQuat = finalQuat.clone();
+    // 폰티악은 baseQuaternion(90도 회전 포함)에 물리 회전을 곱하여 적용
+    node.quaternion.copy(node.userData.baseQuaternion.clone().multiply(finalQuat));
     
-    // 모델의 기본 방향에 맞춰 180도 회전 (Y축 기준)
-    const MODEL_INVERSION = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI);
-    finalModelQuat.multiply(MODEL_INVERSION);
-    
-    node.quaternion.copy(finalModelQuat);
+    // 왼쪽 바퀴만 180도 반전 보정
+    if (node.userData.side === 'L') {
+      const LEFT_SIDE_INVERSION = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI);
+      node.quaternion.multiply(LEFT_SIDE_INVERSION);
+    }
     node.updateMatrix();
-    continue; // 폰티악은 직접 쿼터니언을 설정했으므로 아래 오일러 변환을 건너뜁니다.
+    continue;
 
   } else if (currentCarModel.includes('SUV')) {  
     node.quaternion.copy(node.userData.baseQuaternion.clone().multiply(finalQuat));
