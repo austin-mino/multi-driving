@@ -1749,7 +1749,7 @@ if (input.handbrake) {
   } else if (currentCarModel === 'McLarenP1') {
     offset = new THREE.Vector3(0, 0.5, -4); // mclaren
   } else if (currentCarModel === 'PontiacPhoenix') {
-    offset = new THREE.Vector3(-0.85, 2.5, -0.25); // Pontiac Phoenix
+    offset = new THREE.Vector3(-0.6, 2.5, -1.6); // Pontiac Phoenix
   } else {
     offset = new THREE.Vector3(-0.85, 2.5, -0.4); // 그랜저 기본
   }
@@ -2289,18 +2289,25 @@ correctionQuat.setFromEuler(new THREE.Euler(0, -Math.PI / 2, 0));
 
                         } else if (remoteModelName.includes('PontiacPhoenix')) {
                 // ─── [3] 폰티악 전용 바퀴 정렬 로직 (조향 및 반전 수정) ───
-                const visualSteering = (i === 0 || i === 1) ? -steerAngle * 2.6 : 0;
+                // 싱글플레이와 동일하게 Y축 기준 조향
+                const steerQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), visualSteering);
                 
-                // 폰티악 조향 시에만 축 보정 (X축 기준 조향)
-                const steerQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), visualSteering);
+                // 싱글플레이에서 rollingQuat.invert()를 적용했으므로 구름(Roll) 방향을 반전(-)
                 const rollQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -pData.accumulatedRoll);                
-                const localTransform = new THREE.Quaternion().copy(steerQuat).multiply(rollQuat);
-                const correctionQuat = new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0));
-                let finalTransform = localTransform.clone().multiply(correctionQuat);
                 
-                const MODEL_INVERSION = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI);
-                finalTransform.multiply(MODEL_INVERSION);
-                wheel.quaternion.copy(finalTransform);
+                // 조향 성분과 구름 성분 결합
+                const localTransform = new THREE.Quaternion().copy(steerQuat).multiply(rollQuat);
+                
+                // 폰티악 전용 축 보정 (싱글플레이와 동일하게 Y축 -90도 회전)
+                const correctionQuat = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, -Math.PI / 2, 0));
+                const finalTransform = localTransform.clone().multiply(correctionQuat);
+                
+                // 싱글플레이처럼 baseQuaternion과 최종 변환을 곱해서 적용
+                if (wheel.userData.baseQuaternion) {
+                    wheel.quaternion.copy(wheel.userData.baseQuaternion.clone().multiply(finalTransform));
+                } else {
+                    wheel.quaternion.copy(finalTransform);
+                }
             } else {
                 // ─── [3] 일반 차량 로직 (그랜저, 스포츠카 등) ───
                 const finalSteer = (i === 0 || i === 1) ? steerAngle * 2.6 : 0;
