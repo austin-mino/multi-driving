@@ -2182,11 +2182,7 @@ const myWheels = carModel ? carModel.userData.wheelNodes : null;
     // 폰티악은 baseQuaternion(90도 회전 포함)에 물리 회전을 곱하여 적용
     node.quaternion.copy(node.userData.baseQuaternion.clone().multiply(finalQuat));
     
-    // 왼쪽 바퀴만 180도 반전 보정
-    if (node.userData.side === 'L') {
-      const LEFT_SIDE_INVERSION = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI);
-      node.quaternion.multiply(LEFT_SIDE_INVERSION);
-    }
+   
     node.updateMatrix();
     continue;
 
