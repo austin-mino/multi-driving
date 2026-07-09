@@ -2095,8 +2095,12 @@ visualSteeringLag += (steeringValue - visualSteeringLag) * 0.1;
 // ★ 내 차 전용 변수(steeringNode) 업데이트
 if (carModel && carModel.userData.steeringNode) {
   if (cameraMode === 'first') {
-    // 내가 1인칭 시점일 때만 핸들을 실시간으로 회전시킵니다.
-    carModel.userData.steeringNode.rotation.y = visualSteeringLag * 15.0;
+    // 폰티악 모델인 경우에만 핸들 회전 방향을 반대로(-) 설정
+    if (currentCarModel === 'PontiacPhoenix') {
+      carModel.userData.steeringNode.rotation.y = -visualSteeringLag * 15.0;
+    } else {
+      carModel.userData.steeringNode.rotation.y = visualSteeringLag * 15.0;
+    }
   } else {
     // 3인칭 시점으로 바꾸면 핸들을 정중앙(0)으로 리셋하여 고정시킵니다.
     carModel.userData.steeringNode.rotation.y = 0;
