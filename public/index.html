@@ -2152,8 +2152,11 @@ const myWheels = carModel ? carModel.userData.wheelNodes : null;
   
   // ─── 모델별 맞춤형 축 보정 ─────────────────────────────
   let correctionQuat = new THREE.Quaternion();
-  if (currentCarModel.includes('SportsCar') || currentCarModel.includes('SUV') || currentCarModel.includes('McLarenP1') || currentCarModel.includes('PontiacPhoenix')) {
+  if (currentCarModel.includes('SportsCar') || currentCarModel.includes('SUV') || currentCarModel.includes('McLarenP1')) {
     correctionQuat.setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0));
+  } else if (currentCarModel.includes('PontiacPhoenix')) {
+    // 폰티악은 바퀴가 아래를 향하지 않도록 X축 회전 보정을 제거하거나 조정합니다.
+    correctionQuat.setFromEuler(new THREE.Euler(0, 0, 0));
   }
 
   const finalQuat = localQuat.clone().multiply(correctionQuat);
