@@ -2123,7 +2123,9 @@ const myWheels = carModel ? carModel.userData.wheelNodes : null;
 
   // 3. 전체 로컬 회전에서 조향 성분을 빼버려서, '순수하게 바퀴가 굴러가는 회전(Roll)'만 추출
   const rollingQuat = physicsSteeringQuat.clone().invert().multiply(localQuat);
-
+if (currentCarModel.includes('PontiacPhoenix')) {
+      rollingQuat.invert(); 
+  }
   // 4. 우리가 원하는 시각적 조향각 계산 (SUV 반전 및 앞바퀴 증폭)
   let visualSteering = physicsSteering;
   const exaggerationFactor = 2.6; //원하는 꺾임 배율
@@ -2291,8 +2293,7 @@ correctionQuat.setFromEuler(new THREE.Euler(0, -Math.PI / 2, 0));
                 
                 // 폰티악 조향 시에만 축 보정 (X축 기준 조향)
                 const steerQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), visualSteering);
-                const rollQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), pData.accumulatedRoll);
-                
+                const rollQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -pData.accumulatedRoll);                
                 const localTransform = new THREE.Quaternion().copy(steerQuat).multiply(rollQuat);
                 const correctionQuat = new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0));
                 let finalTransform = localTransform.clone().multiply(correctionQuat);
