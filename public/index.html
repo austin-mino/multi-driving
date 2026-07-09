@@ -1325,6 +1325,7 @@ node.quaternion.multiply(rotation90);
         carWheelNodes = wheelNodes; // 전역 변수 즉시 업데이트
         carGroup.userData.modelName = 'PontiacPhoenix';
         carGroup.userData.visualOffsetY = -0.5; 
+        carGroup.userData.steeringNode = steeringWheelNode;
 
         resolve(carGroup);
       },
@@ -1749,7 +1750,7 @@ if (input.handbrake) {
   } else if (currentCarModel === 'McLarenP1') {
     offset = new THREE.Vector3(0, 0.5, -4); // mclaren
   } else if (currentCarModel === 'PontiacPhoenix') {
-    offset = new THREE.Vector3(-0.97, 2.7, 0.26); // Pontiac Phoenix
+    offset = new THREE.Vector3(-0.97, 2.66, 0.26); // Pontiac Phoenix
   } else {
     offset = new THREE.Vector3(-0.85, 2.5, -0.4); // 그랜저 기본
   }
