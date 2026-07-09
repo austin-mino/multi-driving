@@ -147,7 +147,6 @@
   <option value="SUV">Range Rover Sport</option>
   <option value="PontiacPhoenix">Pontiac Phoenix</option>
   <option value="McLarenP1">McLaren P1</option>
-  <option value="AlbanyRoadster">Albany Roadster</option>
   <option value="GrandeurIG">box car</option>
 
 </select>
@@ -1346,90 +1345,7 @@ node.quaternion.multiply(rotation90);
   });
 }
 
-   // 폰티악 모델 수정 버전 (바퀴 정렬 오류 해결)
-async function createPontiacPhoenix(color = '#ffffff') {
-  return new Promise((resolve) => {
-    const loader = new GLTFLoader();
-    loader.load(
-      'https://raw.githubusercontent.com/austin-mino/multi-driving/main/models/Pontiac%20Firebird/uploads_files_6012214_American+Muscle.glb', 
-      (gltf ) => {
-        const car = gltf.scene;
-        car.traverse((child) => {
-          if (child.name.toLowerCase().includes('plane')) {
-            child.visible = false; 
-            if (child.parent) child.parent.remove(child);
-            return;
-          }
-          if (child.isMesh && child.material) {
-            child.castShadow = true;
-            child.receiveShadow = true;
-            const matName = child.material.name.toLowerCase();
-            if (child.name.toLowerCase().includes('body') || matName.includes('body') || matName.includes('paint')) {
-              child.material = child.material.clone();
-              child.material.color.set(color);
-            }
-          }
-        });
-        car.scale.set(3, 3, 3); 
-        car.rotation.y = Math.PI; 
-
-        const carGroup = new THREE.Group();
-        carGroup.add(car);
-
-        const wheelNodes = [null, null, null, null];
-        car.traverse((child) => {
-          const n = child.name;
-          if (n === 'Wheel_FL') wheelNodes[0] = child;
-          else if (n === 'Wheel_FR') wheelNodes[1] = child;
-          else if (n === 'Wheel_RL') wheelNodes[2] = child;
-          else if (n === 'Wheel_RR') wheelNodes[3] = child;
-        });
-
-        wheelNodes.forEach((node) => {
-          if (node) {
-            // 모든 바퀴 정렬 보정 제거 (0도)
-            node.userData.baseQuaternion = node.quaternion.clone();
-          }
-        });
-
-        carGroup.userData.wheelNodes = wheelNodes;
-        carGroup.userData.modelName = 'PontiacPhoenix';
-        resolve(carGroup);
-      }
-    );
-  });
-}
-
-// 새로운 차량: Albany Roadster 추가
-async function createAlbanyRoadster(color = '#ffffff') {
-  return new Promise((resolve) => {
-    const loader = new GLTFLoader();
-    loader.load(
-      'uploads_files_6963140_albany_roadster+(1).glb', 
-      (gltf) => {
-        const car = gltf.scene;
-        car.traverse((child) => {
-          if (child.isMesh) {
-            child.castShadow = true;
-            child.receiveShadow = true;
-          }
-        });
-        car.scale.set(2.6, 2.6, 2.6);
-        car.rotation.y = Math.PI;
-
-        const carGroup = new THREE.Group();
-        carGroup.add(car);
-        
-        // 이 모델은 단일 노드 구조이므로 필요에 따라 바퀴 노드 설정을 추가할 수 있습니다.
-        carGroup.userData.wheelNodes = [null, null, null, null];
-        carGroup.userData.modelName = 'AlbanyRoadster';
-        resolve(carGroup);
-      }
-    );
-  });
-}
-
-  
+      
     // 차량용 RaycastVehicle 설정
     const vehicle = new CANNON.RaycastVehicle({
       chassisBody,
@@ -2021,9 +1937,6 @@ socket.on('updatePlayers', async (players) => {
         case 'PontiacPhoenix':
           otherCar = await createPontiacPhoenix(player.carColor || '#aaaaaa');
           break;
-        case 'AlbanyRoadster':
-          otherCar = await createAlbanyRoadster(player.carColor || '#aaaaaa');
-          break;
         default:
           otherCar = createGrandeurIGCarDetailed(player.carColor || '#aaaaaa');
       }
@@ -2479,9 +2392,6 @@ if (cameraMode === 'third') {
       break;
     case 'PontiacPhoenix':
       carModel = await createPontiacPhoenix(color);
-      break;
-    case 'AlbanyRoadster':
-      carModel = await createAlbanyRoadster(color);
       break;
     default:
       carModel = createGrandeurIGCarDetailed(color);
