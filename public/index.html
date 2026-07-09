@@ -1310,9 +1310,9 @@ async function createPontiacPhoenix(color = '#ffffff') {
 
         wheelNodes.forEach((node) => {
           if (node) {
-            // 폰티악 바퀴 노드를 Y축 기준으로 90도 회전시켜 차체와 정렬합니다.
-            const rotation90 = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI /2);
-            node.quaternion.multiply(rotation90);
+            // 폰티악 바퀴 노드 정렬: 기존의 90도 회전이 바퀴 옆면을 앞을 향하게 했다면, 이를 제거하거나 0도로 설정합니다.
+            const rotation0 = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), 0);
+            node.quaternion.multiply(rotation0);
             
             node.userData.baseQuaternion = node.quaternion.clone();
             node.matrixAutoUpdate = true;
