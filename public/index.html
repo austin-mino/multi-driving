@@ -2156,7 +2156,7 @@ const myWheels = carModel ? carModel.userData.wheelNodes : null;
     correctionQuat.setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0));
   } else if (currentCarModel.includes('PontiacPhoenix')) {
     // 폰티악은 바퀴가 아래를 향하지 않도록 X축 회전 보정을 제거하거나 조정합니다.
-    correctionQuat.setFromEuler(new THREE.Euler(0, 0, 0));
+correctionQuat.setFromEuler(new THREE.Euler(0, Math.PI / 2, 0));
   }
 
   const finalQuat = localQuat.clone().multiply(correctionQuat);
