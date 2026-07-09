@@ -2128,7 +2128,7 @@ const myWheels = carModel ? carModel.userData.wheelNodes : null;
   let visualSteering = physicsSteering;
   const exaggerationFactor = 2.6; //원하는 꺾임 배율
 
-  if (currentCarModel.includes('SUV') || currentCarModel.includes('McLarenP1')) {
+  if (currentCarModel.includes('SUV') || currentCarModel.includes('McLarenP1') || currentCarModel.includes('PontiacPhoenix')) {
     // 레인지로버(SUV)는 조향 축 방향이 반대이므로 마이너스(-) 처리
     if (i === 0 || i === 1) {
       visualSteering = -physicsSteering * exaggerationFactor; 
@@ -2136,7 +2136,7 @@ const myWheels = carModel ? carModel.userData.wheelNodes : null;
       visualSteering = -physicsSteering; 
     }
   } else {
-    // 다른 일반 차량들 (McLaren 포함)
+    // 다른 일반 차량들 
     if (i === 0 || i === 1) {
       visualSteering = physicsSteering * exaggerationFactor;  
     }
