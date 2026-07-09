@@ -1258,6 +1258,13 @@ async function createPontiacPhoenix(color = '#ffffff') {
       'https://raw.githubusercontent.com/austin-mino/multi-driving/main/models/Pontiac%20Firebird/uploads_files_6012214_American+Muscle.glb', 
       (gltf) => {
         const car = gltf.scene;
+         steeringWheelNode = null; // 헨들 조정 초기화
+
+        car.traverse((child) => {
+          // 핸들은 Mesh가 아닐 수도 있으므로 isMesh 체크를 아래로 이동하거나 이름 체크를 먼저 합니다.
+          if (child.name === 'Steering_wheel') {
+            steeringWheelNode = child;
+          }
 
         // 1. 불필요한 노드(Plane) 제거 및 그림자/색상 설정
         car.traverse((child) => {
