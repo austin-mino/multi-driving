@@ -2288,6 +2288,8 @@ correctionQuat.setFromEuler(new THREE.Euler(0, -Math.PI / 2, 0));
                 wheel.quaternion.copy(finalTransform);
 
                         } else if (remoteModelName.includes('PontiacPhoenix')) {
+
+              const visualSteering = (i === 0 || i === 1) ? -steerAngle * 2.6 : 0;
                 // ─── [3] 폰티악 전용 바퀴 정렬 로직 (조향 및 반전 수정) ───
                 // 싱글플레이와 동일하게 Y축 기준 조향
                 const steerQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), visualSteering);
