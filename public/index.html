@@ -2413,9 +2413,9 @@ function createCarShadowTexture() {
   canvas.height = 128;
   const ctx = canvas.getContext('2d');
   const gradient = ctx.createRadialGradient(64, 64, 0, 64, 64, 64);
-  gradient.addColorStop(0, 'rgba(0,0,0,1.0)');   // 중심부: 완전 불투명 (0.9 -> 1.0)
-gradient.addColorStop(0.6, 'rgba(0,0,0,0.7)'); // 중간: 훨씬 진하게 (0.4 -> 0.7)
-gradient.addColorStop(1, 'rgba(0,0,0,0.2)');   // 외곽: 살짝 잔상이 남도록 (0 -> 0.2)
+  gradient.addColorStop(0, 'rgba(0,0,0,0.9)');   // 중심부
+gradient.addColorStop(0.6, 'rgba(0,0,0,0.4)'); // 중간
+gradient.addColorStop(1, 'rgba(0,0,0,0)');   // 외곽
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, 128, 128);
   return new THREE.CanvasTexture(canvas);
