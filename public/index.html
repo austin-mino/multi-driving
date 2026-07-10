@@ -2365,6 +2365,17 @@ correctionQuat.setFromEuler(new THREE.Euler(0, -Math.PI / 2, 0));
     }
   } 
 
+      if (carModel) {
+    // 자동차의 X, Z 좌표를 따라가되, 높이는 바닥(약 -4.98)에 고정
+    carShadowPlane.position.set(
+      interpolatedCarPosition.x, 
+      -4.98, 
+      interpolatedCarPosition.z
+    );
+    // 자동차의 회전값(Y축)을 복사하여 그림자도 같이 회전
+    carShadowPlane.rotation.z = -getYRotation(interpolatedCarQuaternion);
+  }
+
  // 조명 위치가 차량을 따라다니도록 업데이트 (그림자 품질 유지)
     sun.position.set(interpolatedCarPosition.x + 200, interpolatedCarPosition.y + 400, interpolatedCarPosition.z + 100);
     sun.target.position.copy(interpolatedCarPosition);
@@ -2394,6 +2405,34 @@ if (cameraMode === 'third') {
 
       renderer.render(scene, camera);
     }
+
+  // 1. 진한 그림자용 텍스처 생성 함수
+function createCarShadowTexture() {
+  const canvas = document.createElement('canvas');
+  canvas.width = 128;
+  canvas.height = 128;
+  const ctx = canvas.getContext('2d');
+  const gradient = ctx.createRadialGradient(64, 64, 0, 64, 64, 64);
+  gradient.addColorStop(0, 'rgba(0,0,0,0.9)'); // 중심부 (매우 진함)
+  gradient.addColorStop(0.6, 'rgba(0,0,0,0.4)'); // 중간
+  gradient.addColorStop(1, 'rgba(0,0,0,0)');   // 외곽 (투명)
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, 128, 128);
+  return new THREE.CanvasTexture(canvas);
+}
+
+// 2. 그림자 평면 생성
+const carShadowPlane = new THREE.Mesh(
+  new THREE.PlaneGeometry(4, 8), // 자동차 크기에 맞게 조절 (가로, 세로)
+  new THREE.MeshBasicMaterial({
+    map: createCarShadowTexture(),
+    transparent: true,
+    depthWrite: false, // 바닥과 깜빡거림 방지
+  })
+);
+carShadowPlane.rotation.x = -Math.PI / 2;
+scene.add(carShadowPlane);
+
       
   async function startGame(modelName = 'GrandeurIG', color = '#ffffff', nickname) {
   currentCarModel = modelName;
