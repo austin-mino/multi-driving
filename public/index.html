@@ -242,6 +242,10 @@ const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerH
 camera.position.set(0, 300, 500);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
+//그림자
+  renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap; // 부드러운 그림자 설정
+//렌더
 renderer.setPixelRatio(1);
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
@@ -343,6 +347,9 @@ scene.background = new THREE.Color(0x87ceeb);
 
 // ─── 조명 ─────────────────────────────────────────────────
 const sun = new THREE.DirectionalLight(0xfff5e0, 1.4);
+// --- 그림자 설정 추가 ---
+sun.castShadow = true;
+//빛
 sun.position.set(200, 400, 100);
 sun.castShadow = true;
 sun.shadow.mapSize.width = 512;
@@ -494,6 +501,7 @@ function createSidewalk(x, z) {
     new THREE.MeshStandardMaterial({ map: sidewalkTex, roughness: 0.9 })
   );
   swMesh.position.set(x, -4.82, z);
+  swMesh.receiveShadow = true;
   swMesh.receiveShadow = true;
   roadGroup.add(swMesh);
 
@@ -925,6 +933,8 @@ function createSportsCar(color = '#ffffff') {
         steeringWheelNode = null; // 헨들 조정 초기화
 
         car.traverse((child) => {
+           child.castShadow = true;
+           child.receiveShadow = true;
           // 핸들은 Mesh가 아닐 수도 있으므로 isMesh 체크를 아래로 이동하거나 이름 체크를 먼저 합니다.
           if (child.name === 'steering_wheel') {
             steeringWheelNode = child;
@@ -966,6 +976,8 @@ function createSportsCar(color = '#ffffff') {
         // CANNON 인덱스: 0=FL(-x,+z), 1=FR(+x,+z), 2=RL(-x,-z), 3=RR(+x,-z)
         carWheelNodes = [null, null, null, null];
         car.traverse((child) => {
+           child.castShadow = true;
+        child.receiveShadow = true;
           if (child.name === 'wheel_fl') carWheelNodes[0] = child;
           else if (child.name === 'wheel_fr') carWheelNodes[1] = child;
           else if (child.name === 'wheel_rl') carWheelNodes[2] = child;
@@ -1001,6 +1013,8 @@ function createSUVCar(color = '#ffffff') {
         const innerCar = gltf.scene;
         
  innerCar.traverse((child) => {
+    child.castShadow = true;
+        child.receiveShadow = true;
           if (!child.isMesh) return;
 
           child.castShadow = true;
@@ -1032,6 +1046,8 @@ function createSUVCar(color = '#ffffff') {
         // ─── Range Rover 바퀴 노드 추출 ───────────────────────────
         carWheelNodes = [null, null, null, null];
         innerCar.traverse((child) => {
+           child.castShadow = true;
+        child.receiveShadow = true;
           const n = child.name.toUpperCase();
           // 더 넓은 범위의 이름 검색 (공백, 대소문자, 약어 대응)
           if ((n.includes('FL') || n.includes('FRONT_LEFT')) && n.includes('WHEEL')) carWheelNodes[0] = child;
@@ -1159,6 +1175,8 @@ car.traverse((child) => {
     const tempParts = [[], [], [], []];
 
  car.traverse((child) => {
+    child.castShadow = true;
+        child.receiveShadow = true;
   if (child.isMesh) {
     const n = child.name;
     
@@ -1262,6 +1280,8 @@ async function createPontiacPhoenix(color = '#ffffff') {
 
         // 1. 불필요한 노드(Plane) 제거 및 그림자/색상 설정
         car.traverse((child) => {
+           child.castShadow = true;
+        child.receiveShadow = true;
 
            // 핸들은 Mesh가 아닐 수도 있으므로 isMesh 체크를 아래로 이동하거나 이름 체크를 먼저 합니다.
           if (child.name === 'Steering_wheel') {
@@ -1307,6 +1327,8 @@ async function createPontiacPhoenix(color = '#ffffff') {
         // 3. 바퀴 노드 추출 및 설정 (CANNON 인덱스: 0=FL, 1=FR, 2=RL, 3=RR)
         const wheelNodes = [null, null, null, null];
         car.traverse((child) => {
+           child.castShadow = true;
+        child.receiveShadow = true;
           const n = child.name;
           if (n === 'Wheel_FL') { wheelNodes[0] = child; child.userData.side = 'L'; }
           else if (n === 'Wheel_FR') { wheelNodes[1] = child; child.userData.side = 'R'; }
@@ -2343,7 +2365,11 @@ correctionQuat.setFromEuler(new THREE.Euler(0, -Math.PI / 2, 0));
     }
   } 
 
-
+ // 조명 위치가 차량을 따라다니도록 업데이트 (그림자 품질 유지)
+    sun.position.set(interpolatedCarPosition.x + 200, interpolatedCarPosition.y + 400, interpolatedCarPosition.z + 100);
+    sun.target.position.copy(interpolatedCarPosition);
+    sun.target.updateMatrixWorld();
+      
   // 속도 + RPM + 기어 UI 표시
   hud.textContent = `속도: ${getSpeedKmH().toFixed(1)} km/h | RPM: ${Math.floor(rpm)} | 기어: ${currentGear}`;
       // 카메라 따라가기
