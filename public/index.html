@@ -111,6 +111,23 @@
 #btnToggleCam:active {
   background: #005a9e;
 }
+#adminPanel {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: rgba(0, 0, 0, 0.85);
+      padding: 15px;
+      border-radius: 12px;
+      z-index: 200;
+      display: none;
+      width: 250px;
+      font-size: 14px;
+      border: 1px solid #444;
+    }
+    #adminPanel h3 { margin: 0 0 10px 0; font-size: 16px; color: #0078d7; }
+    .admin-row { margin-bottom: 10px; display: flex; flex-direction: column; gap: 4px; }
+    .admin-row label { font-weight: bold; display: flex; justify-content: space-between; }
+    .admin-row input[type="range"] { width: 100%; cursor: pointer; }
   </style>
   
    <script src="/socket.io/socket.io.js"></script>
@@ -181,7 +198,36 @@
 
     <!-- 카메라 토글 버튼 -->
 <button id="btnToggleCam" class="controlBtn">C: 3</button>
-
+    
+ <div id="adminPanel">
+    <h3>차량 물리 설정 (Admin)</h3>
+    <div class="admin-row">
+      <label>엔진 힘: <span id="valEngine">6000</span></label>
+      <input type="range" id="inputEngine" min="1000" max="20000" step="500" value="6000">
+    </div>
+    <div class="admin-row">
+      <label>브레이크 힘: <span id="valBrake">400</span></label>
+      <input type="range" id="inputBrake" min="50" max="2000" step="50" value="400">
+    </div>
+    <div class="admin-row">
+      <label>최대 조향각: <span id="valSteer">11.25</span>°</label>
+      <input type="range" id="inputSteer" min="5" max="45" step="1" value="11.25">
+    </div>
+    <div class="admin-row">
+      <label>서스펜션 강도: <span id="valSusp">80</span></label>
+      <input type="range" id="inputSusp" min="10" max="200" step="5" value="80">
+    </div>
+    <div class="admin-row">
+      <label>마찰력 (Grip): <span id="valFriction">5.5</span></label>
+      <input type="range" id="inputFriction" min="0.5" max="15" step="0.5" value="5.5">
+    </div>
+    <div class="admin-row">
+      <label>질량 (kg): <span id="valMass">1200</span></label>
+      <input type="range" id="inputMass" min="500" max="3000" step="100" value="1200">
+    </div>
+    <button id="btnCloseAdmin" style="width:100%; padding:5px; margin-top:5px; cursor:pointer;">닫기</button>
+  </div>
+    
 <script type="module">
 import * as THREE from 'three';
 import { FontLoader } from 'https://cdn.jsdelivr.net/npm/three@0.152.2/examples/jsm/loaders/FontLoader.js';
@@ -1504,6 +1550,44 @@ btnToggleCam.addEventListener('click', () => {
         case 's': input.brake = false; break;
         case 'c': btnToggleCam.click(); break;
       }
+    });
+
+   const adminPanel = document.getElementById('adminPanel');
+    const btnCloseAdmin = document.getElementById('btnCloseAdmin');
+    let lastKeyPressed = '';
+
+    window.addEventListener('keydown', (e) => {
+      const key = e.key;
+      if (lastKeyPressed === '1' && key === '6') {
+        adminPanel.style.display = adminPanel.style.display === 'block' ? 'none' : 'block';
+      }
+      lastKeyPressed = key;
+      setTimeout(() => { if (lastKeyPressed === key) lastKeyPressed = ''; }, 1000);
+    });
+
+    btnCloseAdmin.addEventListener('click', () => adminPanel.style.display = 'none');
+
+    function updateAdminSetting(id, valId, callback) {
+      const inputEl = document.getElementById(id);
+      const valEl = document.getElementById(valId);
+      inputEl.addEventListener('input', (e) => {
+        const val = parseFloat(e.target.value);
+        valEl.textContent = val;
+        callback(val);
+      });
+    }
+
+    updateAdminSetting('inputEngine', 'valEngine', (v) => maxEngineForce = v);
+    updateAdminSetting('inputBrake', 'valBrake', (v) => maxBrakeForce = v);
+    updateAdminSetting('inputSteer', 'valSteer', (v) => maxSteerVal = (v * Math.PI) / 180);
+    updateAdminSetting('inputSusp', 'valSusp', (v) => {
+      if (typeof vehicle !== 'undefined') vehicle.wheelInfos.forEach(w => w.suspensionStiffness = v);
+    });
+    updateAdminSetting('inputFriction', 'valFriction', (v) => {
+      if (typeof vehicle !== 'undefined') vehicle.wheelInfos.forEach(w => w.frictionSlip = v);
+    });
+    updateAdminSetting('inputMass', 'valMass', (v) => {
+      if (typeof chassisBody !== 'undefined') chassisBody.mass = v;
     });
 
     // 모바일 버튼 바인딩 함수
