@@ -225,6 +225,8 @@
       <label>질량 (kg): <span id="valMass">1200</span></label>
       <input type="range" id="inputMass" min="500" max="3000" step="100" value="1200">
     </div>
+    <button id="btnResetAdmin" style="width:100%; padding:8px; margin-top:10px; cursor:pointer; background:#d70000; color:white; border:none; border-radius:5px; font-weight:bold;">설정 초기화</button>
+    <button id="btnCloseAdmin" style="width:100%; padding:5px; margin-top:5px; cursor:pointer;">닫기</button>
     <button id="btnCloseAdmin" style="width:100%; padding:5px; margin-top:5px; cursor:pointer;">닫기</button>
   </div>
     
@@ -1589,6 +1591,29 @@ btnToggleCam.addEventListener('click', () => {
     updateAdminSetting('inputMass', 'valMass', (v) => {
       if (typeof chassisBody !== 'undefined') chassisBody.mass = v;
     });
+    // 초기화 버튼 기능
+const btnResetAdmin = document.getElementById('btnResetAdmin');
+
+btnResetAdmin.addEventListener('click', () => {
+  // 1. 기본값 정의
+  const defaults = {
+    inputEngine: 6000,
+    inputBrake: 400,
+    inputSteer: 11.25, // (45도 기준 11.25도)
+    inputSusp: 80,
+    inputFriction: 5.5,
+    inputMass: 1200
+  };
+
+  // 2. 각 입력창과 표시값 복구
+  for (const [id, value] of Object.entries(defaults)) {
+    const input = document.getElementById(id);
+    input.value = value;
+    input.dispatchEvent(new Event('input')); // input 이벤트를 강제로 발생시켜 물리 변수도 업데이트
+  }
+  
+  alert('모든 설정이 초기화되었습니다.');
+});
 
     // 모바일 버튼 바인딩 함수
     function bindButton(button, prop) {
