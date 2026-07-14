@@ -225,6 +225,10 @@
       <label>질량 (kg): <span id="valMass">1200</span></label>
       <input type="range" id="inputMass" min="500" max="3000" step="100" value="1200">
     </div>
+    <div class="admin-row">
+  <label>공기 저항: <span id="valDrag">0.003</span></label>
+  <input type="range" id="inputDrag" min="0" max="0.01" step="0.0005" value="0.003">
+</div>
     <button id="btnResetAdmin" style="width:100%; padding:8px; margin-top:10px; cursor:pointer; background:#d70000; color:white; border:none; border-radius:5px; font-weight:bold;">설정 초기화</button>
     <button id="btnCloseAdmin" style="width:100%; padding:5px; margin-top:5px; cursor:pointer;">닫기</button>
     <button id="btnCloseAdmin" style="width:100%; padding:5px; margin-top:5px; cursor:pointer;">닫기</button>
@@ -1591,6 +1595,10 @@ btnToggleCam.addEventListener('click', () => {
     updateAdminSetting('inputMass', 'valMass', (v) => {
       if (typeof chassisBody !== 'undefined') chassisBody.mass = v;
     });
+  
+let airDrag = 0.003; // 공기 저항 변수 선언
+updateAdminSetting('inputDrag', 'valDrag', (v) => airDrag = v); // 슬라이더 연동
+
     // 초기화 버튼 기능
 const btnResetAdmin = document.getElementById('btnResetAdmin');
 
@@ -1602,7 +1610,8 @@ btnResetAdmin.addEventListener('click', () => {
     inputSteer: 11.25, // (45도 기준 11.25도)
     inputSusp: 80,
     inputFriction: 5.5,
-    inputMass: 1200
+    inputMass: 1200,
+    inputDrag: 0.003
   };
 
   // 2. 각 입력창과 표시값 복구
@@ -1775,9 +1784,10 @@ const gearRatio = gearRatios[currentGear] * finalDrive;
 const torque = maxEngineForce * torqueCurve / gearRatios[currentGear];
 engineForce = Math.min(torque, maxEngineForce * 0.9);
 
-const drag = 0.003 * speed * speed;
+const drag = airDrag * speed * speed;
+
 engineForce -= drag;
-engineForce = Math.max(-8000, Math.min(engineForce, 8000));
+engineForce = Math.max(-maxEngineForce * 2, Math.min(engineForce, maxEngineForce * 3));
 
   } else if (isShifting) {
     engineForce = 0;
