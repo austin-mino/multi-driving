@@ -32,7 +32,7 @@
       text-align: center;
     }
 
-    /* 하이엔드 다크 모드 HUD */
+    /* 모드 HUD */
     #hudContainer {
       position: fixed;
       bottom: 30px;
@@ -69,7 +69,7 @@
       font-family: 'JetBrains Mono', monospace;
       font-size: 22px;
       font-weight: 700;
-      color: #3b82f6; /* 차분한 블루 액센트 */
+      color: #3b82f6;
       min-width: 50px;
       text-align: center;
       box-shadow: 0 10px 30px rgba(0,0,0,0.4);
@@ -290,7 +290,8 @@
 
     <!-- 카메라 토글 버튼 -->
 <button id="btnToggleCam" class="controlBtn">C: 3</button>
-    
+
+ <!-- 개발자 도구 -->  
  <div id="adminPanel">
     <h3>차량 물리 설정 (Admin)</h3>
     <div class="admin-row">
@@ -358,7 +359,7 @@ document.getElementById('startMenu').style.display = 'none';
 let font;
 const fontLoader = new FontLoader();
 
-// 보간된 차량 위치 및 회전 변수 (카메라 업데이트용)
+// 차량 위치 및 회전 변수 (카메라 업데이트용)
 let interpolatedCarPosition = new THREE.Vector3();
 let interpolatedCarQuaternion = new THREE.Quaternion();
 const camDistance = 15;
@@ -394,7 +395,7 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
     // 자유 카메라 각도 변수 (구면좌표)
 // 초기 각도 설정
-// (전역 변수로 이동됨)
+// (전역 변수로 이동)
 
 // 마우스/터치 드래그 상태 저장
 let isDragging = false;
@@ -713,7 +714,7 @@ function createBuilding(x, z) {
   
   const w = 20 + rng() * (maxArea - 20);
   const d = 20 + rng() * (maxArea - 20);
-  // 실제 도시 형태: 중심부는 고층 스카이라인(최대 220m), 외곽은 중·저층 건물
+  // 도시 맵: 중심부는 고층, 외곽은 중,저층 건물
   const h = isDowntown ? (70 + rng() * 150) : (20 + rng() * 60);
   const baseColor = buildingPalette[Math.floor(rng() * buildingPalette.length)];
 
@@ -891,7 +892,7 @@ function createStreetLight(x, z) {
   const bulbMat = new THREE.MeshStandardMaterial({
   color: 0xfff5cc,
   emissive: 0xfff5cc,
-  emissiveIntensity: 3.0, // 더 밝게
+  emissiveIntensity: 3.0, // 밝게
   roughness: 0.2
 });
   
@@ -945,7 +946,7 @@ function addStreetProps(x, z, w, d) {
   // 바퀴 노드 배열: [FL, FR, RL, RR] 순서 (앞왼쪽, 앞오른쪽, 뒤왼쪽, 뒤오른쪽)
   // CANNON vehicle 인덱스: 0=FL, 1=FR, 2=RL, 3=RR
   let carWheelNodes = [null, null, null, null];
-  let steeringWheelNode = null; // ferrari 헨들 노드
+  let steeringWheelNode = null; // 헨들 노드
 
 
     // 자동차 시각 모델
@@ -1038,14 +1039,13 @@ tailBar.position.set(0, 0.85, 3.3);  // 차 뒷부분, 중심 위치
 group.add(tailBar);
 
   // ─── GrandeurIG 바퀴 노드 추가 ───────────────────────────────
-  // 박스 실린더 타이어를 바퀴 그룹에 담아 회전 제어
   const wheelMat = new THREE.MeshStandardMaterial({ color: 0x222222, metalness: 0.3, roughness: 0.8 });
   const rimMat  = new THREE.MeshStandardMaterial({ color: 0xcccccc, metalness: 0.9, roughness: 0.1 });
   const wheelPositionsIG = [
-    [-1.2, 0.0, 2.4],  // FL (CANNON 0)
-    [ 1.2, 0.0, 2.4],  // FR (CANNON 1)
-    [-1.2, 0.0,-2.4],  // RL (CANNON 2)
-    [ 1.2, 0.0,-2.4],  // RR (CANNON 3)
+    [ 1.2, 0.0,-2.4],// FL (CANNON 0)
+    [-1.2, 0.0,-2.4], // FR (CANNON 1)
+    [ 1.2, 0.0, 2.4],  // RL (CANNON 2)
+    [-1.2, 0.0, 2.4], // RR (CANNON 3)
   ];
   carWheelNodes = [null, null, null, null];
   wheelPositionsIG.forEach(([wx, wy, wz], idx) => {
@@ -1085,7 +1085,7 @@ function createSportsCar(color = '#ffffff') {
         car.traverse((child) => {
            child.castShadow = true;
            child.receiveShadow = true;
-          // 핸들은 Mesh가 아닐 수도 있으므로 isMesh 체크를 아래로 이동하거나 이름 체크를 먼저 합니다.
+          // 핸들은 Mesh가 아닐 수도 있으므로 isMesh 체크를 아래로 이동하거나 이름 체크를 먼저 하기
           if (child.name === 'steering_wheel') {
             steeringWheelNode = child;
           }
@@ -1260,13 +1260,13 @@ car.traverse((child) => {
             'Vert011__0',
             '.007', '.004', 'material.012', 'material.013', 'material.014','011',
             '.028', '.026', '.034', '.032', '.033', '.027', 'material_2', 'material_3',
-            'glass', 'window', 'transparent', // 유리
-            'tire', 'rubber', 'wheel', 'rim', 'bolt', 'nut', // 타이어/휠
-            'light', 'lamp', 'emissive', 'led', // 전조등/후미등
-            'brake', 'caliper', 'disc', // 브레이크
-            'interior', 'seat', 'dash', 'steering', // 내부
-            'carbon', 'fiber', 'plastic', 'grille', 'mesh', // 카본/그릴/윙
-            'mirror', 'engine' // 기타 부품
+            'glass', 'window', 'transparent', 
+            'tire', 'rubber', 'wheel', 'rim', 'bolt', 'nut', 
+            'light', 'lamp', 'emissive', 'led', 
+            'brake', 'caliper', 'disc', 
+            'interior', 'seat', 'dash', 'steering', 
+            'carbon', 'fiber', 'plastic', 'grille', 'mesh', 
+            'mirror', 'engine' 
         ];
         const hasExcludeKeyword = excludeKeywords.some(kw => matName.includes(kw));
 
@@ -1279,7 +1279,7 @@ car.traverse((child) => {
         // 검은색 부품(윙, 타이어 안쪽 등): 색상이 아주 어둡고 광택이 없는(Roughness가 높은) 경우
         const isDarkMatte = (m.color.r < 0.15 && m.color.g < 0.15 && m.color.b < 0.15) && m.roughness > 0.4;      
         // --- [3. 최종 도색 판정] ---
-        // 1순위: 이름에 'paint'나 'body'가 들어가거나, 아까 확인한 '.036'이면 무조건 도색
+        // 1순위: 이름에 'paint'나 'body'가 들어가거나, '.036'이면 무조건 도색
         const isExplicitBody = matName.includes('paint') || matName.includes('body') || matName.includes('.036');
         
       // 2순위: 제외 대상이 아니면서, 너무 어두운 부품도 아닐 때만 도색
@@ -1330,13 +1330,13 @@ car.traverse((child) => {
   if (child.isMesh) {
     const n = child.name;
     
-    // ✨ 핵심 수정 1: 차체(Vert) 부품이 바퀴에 섞여 들어가는 것 철통 방어!
+    // 차체(Vert) 부품이 바퀴에 섞여 들어가는 것 방어
     if (n.includes('Vert')) return; 
 
-    // ✨ 요청 수정 1: Object_37 및 관련 부품(37001~37003)을 그룹에서 완전히 제외
+    // Object_37 및 관련 부품(37001~37003)을 그룹에서 완전히 제외
     if (n.includes('Object_37')) return;
 
-    // ✨ 핵심 수정 2: '015' 대신 '015_0'으로 휠 부품만 정확하게 저격 (Object_37 관련 조건은 삭제됨)
+    // '015' 대신 '015_0'으로 휠 부품만 정확하게 설정 (Object_37 관련 조건은 삭제됨)
     if (n.includes('Object_35_') || (n.includes('015_0') && !n.includes('002') && !n.includes('004') && !n.includes('006'))) {
       tempParts[0].push(child);
     } else if (n.includes('35001') || (n.includes('015_0') && n.includes('002'))) {
@@ -1433,7 +1433,7 @@ async function createPontiacPhoenix(color = '#ffffff') {
            child.castShadow = true;
         child.receiveShadow = true;
 
-           // 핸들은 Mesh가 아닐 수도 있으므로 isMesh 체크를 아래로 이동하거나 이름 체크를 먼저 합니다.
+           // 핸들은 Mesh가 아닐 수도 있으므로 isMesh 체크를 아래로 이동하거나 이름 체크를 먼저 하기
           if (child.name === 'Steering_wheel') {
             steeringWheelNode = child;
           }
@@ -2005,7 +2005,7 @@ if (input.handbrake) {
   // 1인칭 흔들림 효과 (G-Force 표현)
   const speed = getSpeedKmH();
   const speedFactor = speed / 100;
-  const shake = Math.sin(Date.now() * 0.01) * 0.0021618 * speedFactor;
+  const shake = Math.sin(Date.now() * 0.06) * 0.0021618 * speedFactor;
   offset.y += shake;
   offset.x += -steeringValue * 0.5; // 조향 시 몸이 쏠리는 효과
 
@@ -2139,7 +2139,7 @@ socket.on('updatePlayers', async (players) => {
         pData.wheels = player.wheels || [];
         pData.steeringValue = player.steeringValue || 0;
         
-        // 차량 색상 실시간 업데이트 (필요시)
+        // 차량 색상 실시간 업데이트
         if (pData.model) {
           pData.model.traverse(child => {
             if (child.isMesh && child.name === 'MainBody' && child.material && child.material.color) {
@@ -2196,7 +2196,7 @@ socket.on('updatePlayers', async (players) => {
         const holder = new THREE.Group();
         const tireGeo = new THREE.CylinderGeometry(0.65, 0.65, 0.4, 24);
         
-        // 방법 1: 투명하게 만들기 (Material 속성 변경)
+        //  투명하게 만들기 (Material 속성 변경)
         const tireMat = new THREE.MeshStandardMaterial({ 
           color: 0x222222, metalness: 0.7, roughness: 0.4,
           transparent: true,
@@ -2205,7 +2205,7 @@ socket.on('updatePlayers', async (players) => {
         const tireMesh = new THREE.Mesh(tireGeo, tireMat);
         tireMesh.rotation.z = Math.PI / 2;
         
-        // 방법 2: 렌더링에서 제외하기 (이 방법을 더 추천합니다)
+        // 렌더링에서 제외하기 
         tireMesh.visible = false; 
 
         holder.add(tireMesh);
@@ -2258,7 +2258,7 @@ socket.on('updatePlayers', async (players) => {
 }, 50);
 
 setInterval(() => {
-  // 속도 조건(velocity)을 지우고, 내 차(chassisBody)가 존재할 때 무조건 전송하도록 변경!
+  // 속도 조건(velocity)을 지우고, 내 차(chassisBody)가 존재할 때 무조건 전송하게 하기
   if (chassisBody) { 
     sendPlayerState();
   }
@@ -2331,7 +2331,7 @@ setInterval(() => {
 // 실제 핸들 회전 시스템 (매 프레임마다 시각값이 물리값을 부드럽게 추적)
 visualSteeringLag += (steeringValue - visualSteeringLag) * 0.1;
 
-// ★ 내 차 전용 변수(steeringNode) 업데이트
+// 내 차 전용 변수(steeringNode) 업데이트
 if (carModel && carModel.userData.steeringNode) {
   if (cameraMode === 'first') {
     // 폰티악 모델인 경우에만 핸들 회전 방향을 반대로(-) 설정
@@ -2346,9 +2346,9 @@ if (carModel && carModel.userData.steeringNode) {
   }
 }
       // ─── GLTF/GLB 모델 바퀴 노드 회전 업데이트 ───────────────────────────
-      // carWheelNodes[i]는 모델 내부 바퀴 부모 노드를 가리킨다.
+      // carWheelNodes[i]는 모델 내부 바퀴 부모 노드를 가리킴
       // CANNON의 worldTransform.quaternion에서 차체 회전을 제거하여
-      // 로컬 공간의 바퀴 회전을 추출한 뒤 모델 노드에 적용한다.
+      // 로컬 공간의 바퀴 회전을 추출한 뒤 모델 노드에 적용함
 const myWheels = carModel ? carModel.userData.wheelNodes : null;
       
      if (carModel && myWheels && myWheels.some(n => n !== null)) {
@@ -2455,7 +2455,6 @@ correctionQuat.setFromEuler(new THREE.Euler(0, -Math.PI / 2, 0));
       
   const now = performance.now();
 // 상대방 차량 위치 보간 처리
-// 상대방 차량 위치 보간 처리
   for (const id in otherPlayers) {
     const pData = otherPlayers[id];
     
@@ -2515,7 +2514,7 @@ correctionQuat.setFromEuler(new THREE.Euler(0, -Math.PI / 2, 0));
                 const correctionQuat = new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0));
                 const finalTransform = localTransform.clone().multiply(correctionQuat);
                 
-                // ★ 중요: SUV는 곱하는 순서가 [baseQuaternion * 회전값] 이어야 옆으로 구르지 않습니다.
+                //  SUV는 곱하는 순서가 [baseQuaternion * 회전값] 이어야 옆으로 구르지 않음
                 if (wheel.userData.baseQuaternion) {
                     wheel.quaternion.copy(wheel.userData.baseQuaternion.clone().multiply(finalTransform));
                 } else {
@@ -2601,7 +2600,7 @@ if (cameraMode === 'third') {
   const desiredY = carPos.y + camDistance * Math.cos(camElevation);
   const desiredZ = carPos.z + camDistance * Math.sin(camElevation) * Math.cos(camAzimuth);
   
-  // 쿠션감(lerp) 제거 -> 위치 및 시선 즉시 100% 동기화 (두두둑 거림 원천 차단)
+  // 쿠션감(lerp) 제거 -> 위치 및 시선 즉시 100% 동기화 (두두둑 거림 차단)
   camera.position.set(desiredX, desiredY, desiredZ);
   camera.lookAt(carPos);
 }
@@ -2622,10 +2621,10 @@ if (cameraMode === 'third') {
 
   switch (modelName) {
     case 'GrandeurIG':
-      carModel = createGrandeurIGCarDetailed(color); // 동기, await 불필요
+      carModel = createGrandeurIGCarDetailed(color);
       break;
     case 'SportsCar':
-      carModel = await createSportsCar(color); // ← await 필수
+      carModel = await createSportsCar(color); 
       break;
     case 'SUV':
       carModel = await createSUVCar(color); 
@@ -2641,7 +2640,7 @@ if (cameraMode === 'third') {
   }
 
   scene.add(carModel);
-  // carModel.userData.wheelNodes가 이미 설정되어 있다면 전역 변수 carWheelNodes를 업데이트합니다.
+  // carModel.userData.wheelNodes가 이미 설정되어 있다면 전역 변수 carWheelNodes를 업데이트함
   if (carModel.userData.wheelNodes) {
     carWheelNodes = carModel.userData.wheelNodes;
   } else {
