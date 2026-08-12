@@ -5,129 +5,301 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>multi driving</title>
-  <style>
+      <style>
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&display=swap');
+    
     body {
       margin: 0;
       overflow: hidden;
-      background: #121212;
-      font-family: 'Segoe UI', Tahoma, Verdana, sans-serif;
+      background: #05070a;
+      font-family: 'Rajdhani', sans-serif;
       color: #fff;
       user-select: none;
     }
+    
     #rotateWarning {
       position: fixed;
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      background: rgba(0, 0, 0, 0.85);
-      padding: 25px 40px;
-      border-radius: 15px;
+      background: rgba(5, 7, 10, 0.95);
+      border: 1px solid #00f0ff;
+      box-shadow: 0 0 30px rgba(0, 240, 255, 0.3);
+      padding: 30px 50px;
+      border-radius: 4px;
+      font-family: 'Orbitron', sans-serif;
       font-size: 1.3rem;
-      font-weight: bold;
+      font-weight: 700;
+      color: #00f0ff;
+      letter-spacing: 2px;
       z-index: 1000;
       display: none;
+      text-align: center;
     }
-    #hud, #gearDisplay, #timerDisplay {
+
+    /* 하이엔드 레이싱 HUD 디자인 */
+    #hud {
       position: fixed;
-      background: rgba(0, 0, 0, 0.7);
-      padding: 12px 18px;
-      border-radius: 10px;
-      font-weight: 700;
-      font-size: 18px;
-      user-select: none;
+      bottom: 30px;
+      left: 30px;
+      background: linear-gradient(135deg, rgba(10, 15, 25, 0.9), rgba(5, 7, 10, 0.95));
+      border-left: 4px solid #00f0ff;
+      border-top: 1px solid rgba(0, 240, 255, 0.3);
+      border-right: 1px solid rgba(255, 255, 255, 0.05);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      padding: 15px 25px;
+      border-radius: 4px;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 26px;
+      font-weight: 900;
+      color: #00f0ff;
+      text-shadow: 0 0 10px rgba(0, 240, 255, 0.5);
+      z-index: 100;
+      letter-spacing: 1px;
+    }
+
+    #gearDisplay {
+      position: fixed;
+      bottom: 30px;
+      left: 220px;
+      background: linear-gradient(135deg, rgba(10, 15, 25, 0.9), rgba(5, 7, 10, 0.95));
+      border-left: 4px solid #ff0055;
+      border-top: 1px solid rgba(255, 0, 85, 0.3);
+      border-right: 1px solid rgba(255, 255, 255, 0.05);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      padding: 15px 30px;
+      border-radius: 4px;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 26px;
+      font-weight: 900;
+      color: #ff0055;
+      text-shadow: 0 0 10px rgba(255, 0, 85, 0.5);
       z-index: 100;
     }
-    #hud { top: 20px; left: 20px; }
-    #gearDisplay { top: 10px; right: 20px; }
-    #timerDisplay { top: 60px; left: 20px; }
+
+    #timerDisplay {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      background: rgba(5, 7, 10, 0.8);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 8px 16px;
+      border-radius: 4px;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 14px;
+      color: #94a3b8;
+      letter-spacing: 1px;
+      z-index: 100;
+    }
+
     #gearControls {
       position: fixed;
-      top: 50px;
+      top: 20px;
       right: 20px;
       display: flex;
-      flex-direction: column;
-      gap: 10px;
+      flex-direction: row;
+      gap: 6px;
       z-index: 100;
     }
+
     #controlsLeft, #driveControls {
       position: fixed;
-      bottom: 20px;
+      bottom: 30px;
       display: flex;
       gap: 15px;
       z-index: 100;
       user-select: none;
     }
-    #controlsLeft { left: 20px; }
-    #driveControls { right: 20px; }
+    #controlsLeft { right: 340px; }
+    #driveControls { right: 30px; }
+
     button.controlBtn {
-      padding: 14px 20px;
-      border-radius: 12px;
-      border: none;
-      background: #0078d7;
-      color: #fff;
+      padding: 16px 28px;
+      border-radius: 4px;
+      border: 1px solid rgba(0, 240, 255, 0.4);
+      background: rgba(10, 15, 25, 0.85);
+      color: #00f0ff;
+      font-family: 'Orbitron', sans-serif;
       font-weight: 700;
       font-size: 16px;
       cursor: pointer;
+      letter-spacing: 1px;
       touch-action: manipulation;
-      transition: background-color 0.2s, color 0.2s;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 0 15px rgba(0, 240, 255, 0.1);
     }
+
+    button.controlBtn:hover {
+      background: #00f0ff;
+      color: #05070a;
+      box-shadow: 0 0 25px rgba(0, 240, 255, 0.6);
+    }
+
     button.controlBtn:active {
-      background: #005a9e;
+      transform: scale(0.95);
     }
-    @media (max-width: 600px) {
-      button.controlBtn {
-        padding: 18px 22px;
-        font-size: 20px;
-      }
-    }
-    /* 기어 버튼 크기 조절 */
-#gearControls button.controlBtn {
-  padding: 8px 12px;
-  font-size: 14px;
-}
 
-/* 리셋 버튼 크기 조절 */
-#btnReset.controlBtn {
-  padding: 8px 12px;
-  font-size: 14px;
-}
+    #gearControls button.controlBtn {
+      padding: 10px 18px;
+      font-size: 14px;
+      border-color: rgba(255, 0, 85, 0.4);
+      color: #ff0055;
+      background: rgba(10, 15, 25, 0.85);
+    }
+    #gearControls button.controlBtn:hover {
+      background: #ff0055;
+      color: #fff;
+      box-shadow: 0 0 20px rgba(255, 0, 85, 0.6);
+    }
+
+    #btnReset.controlBtn {
+      border-color: rgba(255, 170, 0, 0.4);
+      color: #ffaa00;
+    }
+    #btnReset.controlBtn:hover {
+      background: #ffaa00;
+      color: #05070a;
+      box-shadow: 0 0 20px rgba(255, 170, 0, 0.6);
+    }
+
     #btnToggleCam {
-  position: fixed;
-  top: 10px;        /* 위에서부터 거리 조절 */
-  right: 120px;      /* 오른쪽에서부터 거리 */
-  padding: 10px 14px; /* 버튼 크기 조절 */
-  font-size: 16px;    /* 글자 크기 */
-  border-radius: 12px;
-  background: #0078d7;
-  color: white;
-  border: none;
-  cursor: pointer;
-  z-index: 100;
-  user-select: none;
-  touch-action: manipulation;
-  transition: background-color 0.2s, color 0.2s;
-}
+      position: fixed;
+      top: 70px;
+      right: 20px;
+      padding: 10px 18px;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 13px;
+      border-radius: 4px;
+      background: rgba(10, 15, 25, 0.85);
+      color: #cbd5e1;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      cursor: pointer;
+      z-index: 100;
+      letter-spacing: 1px;
+    }
+    #btnToggleCam:hover {
+      border-color: #00f0ff;
+      color: #00f0ff;
+    }
 
-#btnToggleCam:active {
-  background: #005a9e;
-}
-#adminPanel {
+    /* Start Menu - Cinematic Racing Lobby Style */
+    #startMenu {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(5, 7, 10, 0.95);
+      border: 1px solid rgba(0, 240, 255, 0.3);
+      box-shadow: 0 0 50px rgba(0, 0, 0, 0.9), 0 0 20px rgba(0, 240, 255, 0.2);
+      padding: 45px;
+      border-radius: 8px;
+      z-index: 2000;
+      color: #fff;
+      width: 400px;
+      font-family: 'Rajdhani', sans-serif;
+    }
+
+    #startMenu h2 {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 24px;
+      font-weight: 900;
+      color: #00f0ff;
+      margin-top: 0;
+      margin-bottom: 25px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      border-bottom: 2px solid rgba(0, 240, 255, 0.3);
+      padding-bottom: 10px;
+    }
+
+    #startMenu label {
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      color: #94a3b8;
+      display: block;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+    }
+
+    #startMenu input[type="text"], #startMenu select {
+      width: 100%;
+      padding: 12px 15px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 4px;
+      color: #fff;
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 16px;
+      margin-bottom: 20px;
+      box-sizing: border-box;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    #startMenu input[type="text"]:focus, #startMenu select:focus {
+      border-color: #00f0ff;
+      box-shadow: 0 0 10px rgba(0, 240, 255, 0.2);
+    }
+
+    #startMenu input[type="color"] {
+      -webkit-appearance: none;
+      border: none;
+      width: 100%;
+      height: 40px;
+      border-radius: 4px;
+      cursor: pointer;
+      background: none;
+      margin-bottom: 20px;
+    }
+    #startMenu input[type="color"]::-webkit-color-swatch-wrapper {
+      padding: 0;
+    }
+    #startMenu input[type="color"]::-webkit-color-swatch {
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 4px;
+    }
+
+    #startButton {
+      width: 100%;
+      padding: 16px;
+      background: linear-gradient(135deg, #00f0ff, #0077ff);
+      border: none;
+      border-radius: 4px;
+      color: #05070a;
+      font-family: 'Orbitron', sans-serif;
+      font-weight: 900;
+      font-size: 16px;
+      letter-spacing: 2px;
+      cursor: pointer;
+      text-transform: uppercase;
+      transition: all 0.2s;
+      box-shadow: 0 0 20px rgba(0, 240, 255, 0.4);
+    }
+
+    #startButton:hover {
+      background: #fff;
+      box-shadow: 0 0 30px rgba(255, 255, 255, 0.8);
+    }
+
+    #adminPanel {
       position: fixed;
       top: 20px;
       right: 20px;
-      background: rgba(0, 0, 0, 0.85);
-      padding: 15px;
-      border-radius: 12px;
+      background: rgba(5, 7, 10, 0.95);
+      border: 1px solid rgba(0, 240, 255, 0.3);
+      padding: 20px;
+      border-radius: 6px;
       z-index: 200;
       display: none;
-      width: 250px;
-      font-size: 14px;
-      border: 1px solid #444;
+      width: 300px;
+      font-size: 13px;
+      box-shadow: 0 0 30px rgba(0,0,0,0.8);
     }
-    #adminPanel h3 { margin: 0 0 10px 0; font-size: 16px; color: #0078d7; }
-    .admin-row { margin-bottom: 10px; display: flex; flex-direction: column; gap: 4px; }
-    .admin-row label { font-weight: bold; display: flex; justify-content: space-between; }
-    .admin-row input[type="range"] { width: 100%; cursor: pointer; }
+    #adminPanel h3 { margin: 0 0 15px 0; font-family: 'Orbitron', sans-serif; font-size: 14px; color: #00f0ff; letter-spacing: 1px; }
+    .admin-row { margin-bottom: 12px; display: flex; flex-direction: column; gap: 4px; }
+    .admin-row label { font-weight: 600; color: #94a3b8; display: flex; justify-content: space-between; }
+    .admin-row input[type="range"] { width: 100%; cursor: pointer; accent-color: #00f0ff; }
   </style>
   
    <script src="/socket.io/socket.io.js"></script>
@@ -615,18 +787,26 @@ function addCrosswalk(x, z) {
 // ─── 건물 생성 ─────────────────────────────────────────────
 
 function createBuilding(x, z) {
-  const maxArea = BLOCK_SIZE - ROAD_WIDTH - 8;
-  const w = 22 + rng() * (maxArea - 22);
-  const d = 22 + rng() * (maxArea - 22);
-  const h = 25 + rng() * 130;
+  const maxArea = BLOCK_SIZE - ROAD_WIDTH - 6;
+  const distFromCenter = Math.sqrt(x*x + z*z);
+  const isDowntown = distFromCenter < 160;
+  
+  const w = 20 + rng() * (maxArea - 20);
+  const d = 20 + rng() * (maxArea - 20);
+  // 실제 도시 형태: 중심부는 고층 스카이라인(최대 220m), 외곽은 중·저층 건물
+  const h = isDowntown ? (70 + rng() * 150) : (20 + rng() * 60);
   const baseColor = buildingPalette[Math.floor(rng() * buildingPalette.length)];
 
   const buildingTexPool = buildingPalette.map(color =>
-  makeBuildingTexture(color, 10, 5)
-);
+    makeBuildingTexture(color, isDowntown ? 14 : 8, isDowntown ? 6 : 4)
+  );
   const tex = buildingTexPool[Math.floor(rng() * buildingTexPool.length)];
   const geo = new THREE.BoxGeometry(w, h, d);
-  const mat = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.7, metalness: 0.1 });
+  const mat = new THREE.MeshStandardMaterial({ 
+    map: tex, 
+    roughness: isDowntown ? 0.2 : 0.75, 
+    metalness: isDowntown ? 0.6 : 0.1 
+  });
   const mesh = new THREE.Mesh(geo, mat);
   mesh.position.set(x, -5 + h / 2, z);
   mesh.castShadow = true;
