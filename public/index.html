@@ -266,11 +266,71 @@
     #nicknameInput:focus {
       border-color: #3b82f6;
     }
+    .vehicle-select-control {
+      position: relative;
+      margin-bottom: 20px;
+    }
+    .current-car-button {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 13px 15px;
+      background: rgba(30, 41, 59, 0.78);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 8px;
+      color: #f8fafc;
+      cursor: pointer;
+      text-align: left;
+      transition: all 0.2s ease;
+    }
+    .current-car-button:hover,
+    .current-car-button.is-open {
+      background: rgba(51, 65, 85, 0.9);
+      border-color: #3b82f6;
+    }
+    .current-car-label {
+      color: #94a3b8;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+    }
+    #currentCarName {
+      flex: 1;
+      color: #fff;
+      font-size: 14px;
+      font-weight: 700;
+      text-align: right;
+    }
+    .current-car-chevron {
+      color: #60a5fa;
+      font-size: 18px;
+      line-height: 1;
+      transition: transform 0.2s ease;
+    }
+    .current-car-button.is-open .current-car-chevron {
+      transform: rotate(180deg);
+    }
+    .car-options-panel {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: calc(100% + 8px);
+      padding: 8px;
+      background: rgba(15, 23, 42, 0.98);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 8px;
+      box-shadow: 0 18px 35px rgba(0, 0, 0, 0.45);
+      z-index: 20;
+    }
+    .car-options-panel[hidden] {
+      display: none;
+    }
     .car-select-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 8px;
-      margin-bottom: 20px;
     }
     .car-option-btn {
       padding: 10px;
@@ -386,12 +446,21 @@
     <div id="step2" class="showroom-step" style="display:none;">
       <h2>VEHICLE SHOWROOM</h2>
       <p class="step-desc">차량을 선택하면 360도 미리보기가 제공됩니다</p>
-      <div class="car-select-grid">
-        <button class="car-option-btn active" data-model="GrandeurIG">Grandeur Sedan</button>
-        <button class="car-option-btn" data-model="SportsCar">Ferrari 458</button>
-        <button class="car-option-btn" data-model="SUV">Range Rover</button>
-        <button class="car-option-btn" data-model="McLarenP1">McLaren P1</button>
-        <button class="car-option-btn" data-model="PontiacPhoenix">Pontiac Phoenix</button>
+      <div class="vehicle-select-control">
+        <button id="currentCarButton" class="current-car-button" type="button" aria-expanded="false" aria-controls="carOptionsPanel">
+          <span class="current-car-label">CURRENT VEHICLE</span>
+          <strong id="currentCarName">Grandeur Sedan</strong>
+          <span class="current-car-chevron" aria-hidden="true">⌄</span>
+        </button>
+        <div id="carOptionsPanel" class="car-options-panel" hidden>
+          <div class="car-select-grid">
+            <button class="car-option-btn active" type="button" data-model="GrandeurIG">Grandeur Sedan</button>
+            <button class="car-option-btn" type="button" data-model="SportsCar">Ferrari 458</button>
+            <button class="car-option-btn" type="button" data-model="SUV">Range Rover</button>
+            <button class="car-option-btn" type="button" data-model="McLarenP1">McLaren P1</button>
+            <button class="car-option-btn" type="button" data-model="PontiacPhoenix">Pontiac Phoenix</button>
+          </div>
+        </div>
       </div>
       <div class="showroom-nav-btns">
         <button id="btnPrevStep2" class="showroom-btn-sec">BACK</button>
@@ -2418,17 +2487,17 @@ setInterval(() => {
     function animate() {
 
     
-    // 쇼룸 모드일 때 미리보기 차량 360도 회전 및 조명 고정
+    // 쇼룸 모드일 때 미리보기 차량 360도 회전 및 조명 고정 (게임 맵과 완전히 격리된 좌표 X: 5000, Y: 1000, Z: 5000)
     if (isPreviewActive) {
       if (previewCarModel) previewCarModel.rotation.y += 0.008;
       
-      // 조명을 쇼룸 중앙으로 고정
-      sun.position.set(100, 200, 100);
-      sun.target.position.set(0, 0, 0);
+      const showroomCenter = new THREE.Vector3(5000, 1000, 5000);
+      sun.position.set(showroomCenter.x + 100, showroomCenter.y + 200, showroomCenter.z + 100);
+      sun.target.position.copy(showroomCenter);
       sun.target.updateMatrixWorld();
       
-      camera.position.set(0, 1, 10);
-      camera.lookAt(0, -1, 0);
+      camera.position.set(showroomCenter.x, showroomCenter.y + 1, showroomCenter.z + 10);
+      camera.lookAt(showroomCenter.x, showroomCenter.y - 1, showroomCenter.z);
       renderer.render(scene, camera);
       requestAnimationFrame(animate);
       return;
@@ -2803,10 +2872,11 @@ if (cameraMode === 'third') {
       }
       
       if (previewCarModel) {
-        previewCarModel.position.set(0, -3.0, 0);
+        // 게임 맵과 완전히 격리된 별도의 쇼룸 좌표에 위치 설정
+        previewCarModel.position.set(5000, 1000 - 3.0, 5000);
         previewCarModel.rotation.set(0, 0, 0);
         scene.add(previewCarModel);
-        console.log("Preview model added to scene");
+        console.log("Preview model added to isolated showroom scene");
       }
     }
 
@@ -2838,27 +2908,71 @@ if (cameraMode === 'third') {
       document.getElementById('step2').style.display = 'block';
     });
 
+    // 차량 선택 토글 메뉴 이벤트
+    const currentCarButton = document.getElementById('currentCarButton');
+    const carOptionsPanel = document.getElementById('carOptionsPanel');
+    const currentCarName = document.getElementById('currentCarName');
+
+    currentCarButton.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isHidden = carOptionsPanel.hasAttribute('hidden');
+      if (isHidden) {
+        carOptionsPanel.removeAttribute('hidden');
+        currentCarButton.classList.add('is-open');
+        currentCarButton.setAttribute('aria-expanded', 'true');
+      } else {
+        carOptionsPanel.setAttribute('hidden', '');
+        currentCarButton.classList.remove('is-open');
+        currentCarButton.setAttribute('aria-expanded', 'false');
+      }
+    });
+
+    // 메뉴 바깥 클릭 시 닫기
+    document.addEventListener('click', (e) => {
+      if (!currentCarButton.contains(e.target) && !carOptionsPanel.contains(e.target)) {
+        carOptionsPanel.setAttribute('hidden', '');
+        currentCarButton.classList.remove('is-open');
+        currentCarButton.setAttribute('aria-expanded', 'false');
+      }
+    });
+
     // 차량 옵션 버튼 클릭 이벤트
     document.querySelectorAll('.car-option-btn').forEach(btn => {
       btn.addEventListener('click', async (e) => {
         document.querySelectorAll('.car-option-btn').forEach(b => b.classList.remove('active'));
         e.target.classList.add('active');
+        
         selectedCarModelName = e.target.getAttribute('data-model');
+        currentCarName.textContent = e.target.textContent;
+        
+        // 메뉴 선택 후 패널 닫기
+        carOptionsPanel.setAttribute('hidden', '');
+        currentCarButton.classList.remove('is-open');
+        currentCarButton.setAttribute('aria-expanded', 'false');
+
         await initPreviewCar(selectedCarModelName, selectedCarColor);
       });
     });
 
-    // 컬러 피커 변경 이벤트
+    // 컬러 피커 변경 이벤트 (모든 차종 즉시 실시간 반영)
     const colorInput = document.getElementById('colorInput');
     const colorHexDisplay = document.getElementById('colorHexDisplay');
     colorInput.addEventListener('input', async (e) => {
       selectedCarColor = e.target.value;
       colorHexDisplay.textContent = selectedCarColor.toUpperCase();
       if (previewCarModel) {
-        // 실시간 색상 변경 (전체 재생성 대신 특정 파츠 색상 변경 시도)
         previewCarModel.traverse(child => {
-          if (child.isMesh && (child.name === 'MainBody' || child.material.name === 'Car Paint')) {
-             child.material.color.set(selectedCarColor);
+          if (child.isMesh && child.material) {
+            const matName = (child.material.name || '').toLowerCase();
+            const meshName = (child.name || '').toLowerCase();
+            // 차체, 페인트 재질, 또는 MainBody 메쉬인 경우 즉시 색상 변경
+            if (meshName === 'mainbody' || meshName === 'body' || matName.includes('body') || matName.includes('paint') || matName.includes('.036')) {
+              if (!child.material.color) {
+                child.material = child.material.clone();
+              }
+              child.material.color.set(selectedCarColor);
+              child.material.needsUpdate = true;
+            }
           }
         });
       }
