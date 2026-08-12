@@ -2430,21 +2430,20 @@ setInterval(() => {
     function animate() {
 
     
+    
     // 쇼룸 모드일 때 미리보기 차량 360도 회전 및 조명 고정
     if (isPreviewActive) {
       if (previewCarModel) previewCarModel.rotation.y += 0.008;
       
-      // 조명을 쇼룸 중앙으로 고정
-      sun.position.set(100, 200, 100);
-      sun.target.position.set(0, 0, 0);
-      sun.target.updateMatrixWorld();
+      // 카메라를 차량 쪽으로 고정 (약간 위에서 내려다보는 구도)
+      camera.position.set(8, 2, 8);
+      camera.lookAt(0, -2, 0);
       
-      camera.position.set(0, 1, 10);
-      camera.lookAt(0, -1, 0);
       renderer.render(scene, camera);
       requestAnimationFrame(animate);
       return;
     }
+
 
 
        requestAnimationFrame(animate);
@@ -2788,17 +2787,90 @@ if (cameraMode === 'third') {
     }
       
   
+    
+    // ─── 디자인 룸 (Showroom Studio) 환경 구축 ─────────────────────────────
+    const showroomGroup = new THREE.Group();
+    scene.add(showroomGroup);
+    showroomGroup.visible = false;
+
+    function initShowroomStudio() {
+      // 1. 바닥 (Studio Floor)
+      const floorGeo = new THREE.CircleGeometry(20, 64);
+      const floorMat = new THREE.MeshStandardMaterial({ 
+        color: 0x1a1f26, 
+        roughness: 0.2, 
+        metalness: 0.8 
+      });
+      const floor = new THREE.Mesh(floorGeo, floorMat);
+      floor.rotation.x = -Math.PI / 2;
+      floor.position.y = -4.0;
+      floor.receiveShadow = true;
+      showroomGroup.add(floor);
+
+      // 2. 바닥 그리드 (Cyber Grid)
+      const grid = new THREE.GridHelper(40, 20, 0x3b82f6, 0x1e293b);
+      grid.position.y = -3.99;
+      grid.material.opacity = 0.2;
+      grid.material.transparent = true;
+      showroomGroup.add(grid);
+
+      // 3. 스튜디오 조명 (Studio Lights)
+      const spotLight1 = new THREE.SpotLight(0xffffff, 2);
+      spotLight1.position.set(10, 20, 10);
+      spotLight1.angle = Math.PI / 6;
+      spotLight1.penumbra = 0.5;
+      spotLight1.castShadow = true;
+      showroomGroup.add(spotLight1);
+
+      const spotLight2 = new THREE.SpotLight(0x3b82f6, 1.5);
+      spotLight2.position.set(-10, 15, -10);
+      showroomGroup.add(spotLight2);
+      
+      const ambient = new THREE.AmbientLight(0xffffff, 0.5);
+      showroomGroup.add(ambient);
+    }
+    initShowroomStudio();
+
     // ─── 쇼룸 미리보기 3D 시스템 (고급 3D 쇼룸) ─────────────────────────────
     let previewCarModel = null;
     let selectedCarModelName = 'GrandeurIG';
     let selectedCarColor = '#ffffff';
     let isPreviewActive = true;
 
+    
     async function initPreviewCar(modelName, color) {
+      // 게임 월드 요소 숨기기
+      roadGroup.visible = false;
+      buildingGroup.visible = false;
+      parkGroup.visible = false;
+      showroomGroup.visible = true;
+      scene.background = new THREE.Color(0x05070a); // 스튜디오 배경색
+      scene.fog = null; // 안개 제거
+
       if (previewCarModel) {
-        scene.remove(previewCarModel);
+        showroomGroup.remove(previewCarModel);
         previewCarModel = null;
       }
+      
+      if (modelName === 'GrandeurIG') {
+        previewCarModel = createGrandeurIGCarDetailed(color);
+      } else if (modelName === 'SportsCar') {
+        previewCarModel = await createSportsCar(color);
+      } else if (modelName === 'SUV') {
+        previewCarModel = await createSUVCar(color);
+      } else if (modelName === 'McLarenP1') {
+        previewCarModel = await createMcLarenP1(color);
+      } else if (modelName === 'PontiacPhoenix') {
+        previewCarModel = await createPontiacPhoenix(color);
+      }
+      
+      if (previewCarModel) {
+        previewCarModel.position.set(0, -4.0, 0); // 바닥 높이에 맞춤
+        previewCarModel.rotation.set(0, 0, 0);
+        showroomGroup.add(previewCarModel);
+      }
+    }
+
       
       console.log("Loading preview for:", modelName, color);
       
@@ -2877,6 +2949,7 @@ if (cameraMode === 'third') {
     });
 
     // 게임 시작 버튼
+    
     document.getElementById('startButton').addEventListener('click', async () => {
       const nickname = document.getElementById('nicknameInput').value.trim();
       if (!nickname) {
@@ -2885,13 +2958,16 @@ if (cameraMode === 'third') {
       }
       
       isPreviewActive = false;
-      if (previewCarModel) {
-        scene.remove(previewCarModel);
-        previewCarModel = null;
-      }
+      showroomGroup.visible = false;
+      roadGroup.visible = true;
+      buildingGroup.visible = true;
+      parkGroup.visible = true;
+      scene.background = new THREE.Color(0x87ceeb); // 원래 배경 복구
+      
       document.getElementById('startMenu').style.display = 'none';
       startGame(selectedCarModelName, selectedCarColor, nickname);
     });
+
 
     async function startGame(modelName = 'GrandeurIG', color = '#ffffff', nickname) {
   currentCarModel = modelName;
