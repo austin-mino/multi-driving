@@ -497,19 +497,7 @@ gltfLoader.setDRACOLoader(dracoLoader);
     
 
     const socket = io('https://multi-driving.onrender.com'); // 배포 주소
-    document.getElementById('startButton').addEventListener('click', () => {
-  const nickname = document.getElementById('nicknameInput').value.trim();
-  const modelName = document.getElementById('modelSelect').value || 'GrandeurIG';
-  const color = document.getElementById('colorInput').value || '#ffffff';
-  if (!nickname) {
-    alert('닉네임을 입력하세요!');
-    return;
-  }
 
-document.getElementById('startMenu').style.display = 'none';
-
-  startGame(modelName, color, nickname);
-});
 
 let font;
 const fontLoader = new FontLoader();
@@ -2938,8 +2926,10 @@ if (cameraMode === 'third') {
 
   startTimer();
   updateGearDisplay();
-  animate();
 }
+
+// 쇼룸 미리보기를 위해 즉시 애니메이션 루프 시작
+animate();
   
 </script>
 </body>
