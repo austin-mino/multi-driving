@@ -5,7 +5,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>multi driving</title>
-      <style>
+        <style>
     @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&display=swap');
     
     body {
@@ -37,59 +37,90 @@
       text-align: center;
     }
 
-    /* 하이엔드 레이싱 HUD 디자인 */
-    #hud {
+    /* 하이엔드 레이싱 HUD - 중앙 집중형 레이아웃 */
+    #hudContainer {
       position: fixed;
-      bottom: 30px;
-      left: 30px;
+      bottom: 25px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 10px;
+      align-items: flex-end;
+      z-index: 100;
+      pointer-events: none;
+    }
+
+    #hud {
       background: linear-gradient(135deg, rgba(10, 15, 25, 0.9), rgba(5, 7, 10, 0.95));
-      border-left: 4px solid #00f0ff;
-      border-top: 1px solid rgba(0, 240, 255, 0.3);
-      border-right: 1px solid rgba(255, 255, 255, 0.05);
-      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-      padding: 15px 25px;
+      border-bottom: 4px solid #00f0ff;
+      border-top: 1px solid rgba(0, 240, 255, 0.2);
+      padding: 12px 20px;
       border-radius: 4px;
       font-family: 'Orbitron', sans-serif;
-      font-size: 26px;
+      font-size: 24px;
       font-weight: 900;
       color: #00f0ff;
       text-shadow: 0 0 10px rgba(0, 240, 255, 0.5);
-      z-index: 100;
-      letter-spacing: 1px;
+      min-width: 140px;
+      text-align: center;
     }
 
     #gearDisplay {
-      position: fixed;
-      bottom: 30px;
-      left: 220px;
       background: linear-gradient(135deg, rgba(10, 15, 25, 0.9), rgba(5, 7, 10, 0.95));
-      border-left: 4px solid #ff0055;
-      border-top: 1px solid rgba(255, 0, 85, 0.3);
-      border-right: 1px solid rgba(255, 255, 255, 0.05);
-      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-      padding: 15px 30px;
+      border-bottom: 4px solid #ff0055;
+      border-top: 1px solid rgba(255, 0, 85, 0.2);
+      padding: 12px 20px;
       border-radius: 4px;
       font-family: 'Orbitron', sans-serif;
-      font-size: 26px;
+      font-size: 24px;
       font-weight: 900;
       color: #ff0055;
       text-shadow: 0 0 10px rgba(255, 0, 85, 0.5);
-      z-index: 100;
+      min-width: 60px;
+      text-align: center;
     }
 
     #timerDisplay {
       position: fixed;
       top: 20px;
-      left: 20px;
-      background: rgba(5, 7, 10, 0.8);
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(5, 7, 10, 0.6);
+      backdrop-filter: blur(5px);
       border: 1px solid rgba(255, 255, 255, 0.1);
-      padding: 8px 16px;
-      border-radius: 4px;
+      padding: 6px 20px;
+      border-radius: 20px;
       font-family: 'Orbitron', sans-serif;
-      font-size: 14px;
-      color: #94a3b8;
+      font-size: 13px;
+      color: #fff;
       letter-spacing: 1px;
       z-index: 100;
+    }
+
+    /* 조작 버튼 - 좌우 하단 분리 */
+    #controlsLeft {
+      position: fixed;
+      bottom: 30px;
+      left: 30px;
+      display: flex;
+      gap: 12px;
+      z-index: 110;
+    }
+
+    #driveControls {
+      position: fixed;
+      bottom: 30px;
+      right: 30px;
+      display: flex;
+      flex-direction: row-reverse;
+      align-items: flex-end;
+      gap: 12px;
+      z-index: 110;
+    }
+    
+    .drive-main-btns {
+      display: flex;
+      gap: 12px;
     }
 
     #gearControls {
@@ -97,209 +128,109 @@
       top: 20px;
       right: 20px;
       display: flex;
-      flex-direction: row;
-      gap: 6px;
+      gap: 5px;
       z-index: 100;
     }
-
-    #controlsLeft, #driveControls {
-      position: fixed;
-      bottom: 30px;
-      display: flex;
-      gap: 15px;
-      z-index: 100;
-      user-select: none;
-    }
-    #controlsLeft { right: 340px; }
-    #driveControls { right: 30px; }
 
     button.controlBtn {
-      padding: 16px 28px;
-      border-radius: 4px;
-      border: 1px solid rgba(0, 240, 255, 0.4);
-      background: rgba(10, 15, 25, 0.85);
+      padding: 18px 25px;
+      border-radius: 6px;
+      border: 1px solid rgba(0, 240, 255, 0.3);
+      background: rgba(10, 15, 25, 0.8);
+      backdrop-filter: blur(10px);
       color: #00f0ff;
       font-family: 'Orbitron', sans-serif;
       font-weight: 700;
-      font-size: 16px;
+      font-size: 18px;
       cursor: pointer;
-      letter-spacing: 1px;
-      touch-action: manipulation;
-      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-      box-shadow: 0 0 15px rgba(0, 240, 255, 0.1);
+      transition: all 0.2s;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
     }
 
     button.controlBtn:hover {
-      background: #00f0ff;
-      color: #05070a;
-      box-shadow: 0 0 25px rgba(0, 240, 255, 0.6);
+      background: rgba(0, 240, 255, 0.2);
+      border-color: #00f0ff;
+      box-shadow: 0 0 20px rgba(0, 240, 255, 0.4);
     }
 
     button.controlBtn:active {
-      transform: scale(0.95);
+      transform: scale(0.92);
+      background: #00f0ff;
+      color: #05070a;
     }
 
     #gearControls button.controlBtn {
-      padding: 10px 18px;
-      font-size: 14px;
-      border-color: rgba(255, 0, 85, 0.4);
-      color: #ff0055;
-      background: rgba(10, 15, 25, 0.85);
+      padding: 8px 12px;
+      font-size: 12px;
+      border-color: rgba(255, 255, 255, 0.1);
+      color: #94a3b8;
     }
-    #gearControls button.controlBtn:hover {
-      background: #ff0055;
-      color: #fff;
-      box-shadow: 0 0 20px rgba(255, 0, 85, 0.6);
+    
+    #gearControls button.controlBtn.active-gear {
+      border-color: #ff0055;
+      color: #ff0055;
+      background: rgba(255, 0, 85, 0.1);
     }
 
     #btnReset.controlBtn {
-      border-color: rgba(255, 170, 0, 0.4);
+      padding: 10px 15px;
+      font-size: 12px;
+      border-color: rgba(255, 170, 0, 0.3);
       color: #ffaa00;
-    }
-    #btnReset.controlBtn:hover {
-      background: #ffaa00;
-      color: #05070a;
-      box-shadow: 0 0 20px rgba(255, 170, 0, 0.6);
+      margin-bottom: 5px;
     }
 
     #btnToggleCam {
       position: fixed;
-      top: 70px;
+      top: 65px;
       right: 20px;
-      padding: 10px 18px;
+      padding: 6px 12px;
       font-family: 'Orbitron', sans-serif;
-      font-size: 13px;
-      border-radius: 4px;
-      background: rgba(10, 15, 25, 0.85);
-      color: #cbd5e1;
-      border: 1px solid rgba(255, 255, 255, 0.2);
+      font-size: 11px;
+      background: rgba(5, 7, 10, 0.6);
+      color: #94a3b8;
+      border: 1px solid rgba(255, 255, 255, 0.1);
       cursor: pointer;
       z-index: 100;
-      letter-spacing: 1px;
-    }
-    #btnToggleCam:hover {
-      border-color: #00f0ff;
-      color: #00f0ff;
     }
 
-    /* Start Menu - Cinematic Racing Lobby Style */
+    /* 반응형 대응 */
+    @media (max-width: 768px) {
+      button.controlBtn { padding: 20px 30px; font-size: 22px; }
+      #hudContainer { bottom: 15px; }
+      #hud, #gearDisplay { font-size: 20px; padding: 10px 15px; }
+    }
+
     #startMenu {
       position: fixed;
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      background: rgba(5, 7, 10, 0.95);
-      border: 1px solid rgba(0, 240, 255, 0.3);
-      box-shadow: 0 0 50px rgba(0, 0, 0, 0.9), 0 0 20px rgba(0, 240, 255, 0.2);
-      padding: 45px;
+      background: rgba(5, 7, 10, 0.98);
+      border: 1px solid #00f0ff;
+      padding: 40px;
       border-radius: 8px;
       z-index: 2000;
-      color: #fff;
-      width: 400px;
-      font-family: 'Rajdhani', sans-serif;
+      width: 350px;
+      box-shadow: 0 0 50px rgba(0,0,0,0.9);
     }
-
-    #startMenu h2 {
-      font-family: 'Orbitron', sans-serif;
-      font-size: 24px;
-      font-weight: 900;
-      color: #00f0ff;
-      margin-top: 0;
-      margin-bottom: 25px;
-      letter-spacing: 2px;
-      text-transform: uppercase;
-      border-bottom: 2px solid rgba(0, 240, 255, 0.3);
-      padding-bottom: 10px;
-    }
-
-    #startMenu label {
-      font-size: 15px;
-      font-weight: 600;
-      letter-spacing: 1px;
-      color: #94a3b8;
-      display: block;
-      margin-bottom: 8px;
-      text-transform: uppercase;
-    }
-
-    #startMenu input[type="text"], #startMenu select {
-      width: 100%;
-      padding: 12px 15px;
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      border-radius: 4px;
-      color: #fff;
-      font-family: 'Rajdhani', sans-serif;
-      font-size: 16px;
-      margin-bottom: 20px;
-      box-sizing: border-box;
-      outline: none;
-      transition: border-color 0.2s;
-    }
-
-    #startMenu input[type="text"]:focus, #startMenu select:focus {
-      border-color: #00f0ff;
-      box-shadow: 0 0 10px rgba(0, 240, 255, 0.2);
-    }
-
-    #startMenu input[type="color"] {
-      -webkit-appearance: none;
-      border: none;
-      width: 100%;
-      height: 40px;
-      border-radius: 4px;
-      cursor: pointer;
-      background: none;
-      margin-bottom: 20px;
-    }
-    #startMenu input[type="color"]::-webkit-color-swatch-wrapper {
-      padding: 0;
-    }
-    #startMenu input[type="color"]::-webkit-color-swatch {
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      border-radius: 4px;
-    }
-
-    #startButton {
-      width: 100%;
-      padding: 16px;
-      background: linear-gradient(135deg, #00f0ff, #0077ff);
-      border: none;
-      border-radius: 4px;
-      color: #05070a;
-      font-family: 'Orbitron', sans-serif;
-      font-weight: 900;
-      font-size: 16px;
-      letter-spacing: 2px;
-      cursor: pointer;
-      text-transform: uppercase;
-      transition: all 0.2s;
-      box-shadow: 0 0 20px rgba(0, 240, 255, 0.4);
-    }
-
-    #startButton:hover {
-      background: #fff;
-      box-shadow: 0 0 30px rgba(255, 255, 255, 0.8);
-    }
-
+    
+    #startMenu h2 { font-family: 'Orbitron', sans-serif; color: #00f0ff; margin-bottom: 30px; text-align: center; letter-spacing: 3px; }
+    #startMenu input, #startMenu select { width: 100%; padding: 12px; margin-bottom: 20px; background: #1a1f26; border: 1px solid #333; color: #fff; box-sizing: border-box; }
+    #startButton { width: 100%; padding: 15px; background: #00f0ff; color: #000; font-family: 'Orbitron', sans-serif; font-weight: 900; border: none; cursor: pointer; letter-spacing: 2px; }
+    
     #adminPanel {
       position: fixed;
       top: 20px;
-      right: 20px;
+      left: 20px;
       background: rgba(5, 7, 10, 0.95);
-      border: 1px solid rgba(0, 240, 255, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.1);
       padding: 20px;
-      border-radius: 6px;
+      border-radius: 8px;
       z-index: 200;
       display: none;
-      width: 300px;
-      font-size: 13px;
-      box-shadow: 0 0 30px rgba(0,0,0,0.8);
+      width: 260px;
     }
-    #adminPanel h3 { margin: 0 0 15px 0; font-family: 'Orbitron', sans-serif; font-size: 14px; color: #00f0ff; letter-spacing: 1px; }
-    .admin-row { margin-bottom: 12px; display: flex; flex-direction: column; gap: 4px; }
-    .admin-row label { font-weight: 600; color: #94a3b8; display: flex; justify-content: space-between; }
-    .admin-row input[type="range"] { width: 100%; cursor: pointer; accent-color: #00f0ff; }
   </style>
   
    <script src="/socket.io/socket.io.js"></script>
@@ -343,9 +274,11 @@
 </div>
 
   <div id="rotateWarning">가로 모드로 전환해주세요</div>
-  <div id="hud">속도: 0 km/h</div>
-  <div id="timerDisplay">타이머: 0.00 s</div>
-  <div id="gearDisplay">기어: P</div>
+  <div id="timerDisplay">TIME: 0.00s</div>
+  <div id="hudContainer">
+    <div id="hud">0 KM/H</div>
+    <div id="gearDisplay">P</div>
+  </div>
 
   <!-- 좌/우 스티어링 -->
   <div id="controlsLeft">
@@ -354,11 +287,11 @@
   </div>
   <!-- 엑셀·브레이크 -->
   <div id="driveControls">
-    <button id="btnAccel" class="controlBtn">accel</button>
-    <button id="btnBrake" class="controlBtn">brake</button>
-  <div id="reset">
-    <!-- 기어 선택 아래에 추가 -->
-    <button id="btnReset" class="controlBtn">리셋</button>
+    <div class="drive-main-btns">
+      <button id="btnAccel" class="controlBtn">ACCEL</button>
+      <button id="btnBrake" class="controlBtn">BRAKE</button>
+    </div>
+    <button id="btnReset" class="controlBtn">RESET</button>
   </div>
     <!-- 기어 선택 -->
   <div id="gearControls">
@@ -1833,7 +1766,7 @@ btnResetAdmin.addEventListener('click', () => {
     let visualSteeringLag = 0; // 핸들 시각 전용
 
     function updateGearDisplay() {
-      gearDisplay.textContent = `기어: ${gearState}`;
+      gearDisplay.textContent = `${gearState}`;
       const colorMap = { P: '#00ffff', R: '#ff5555', N: '#ffff55', D: '#55ff55' };
       gearDisplay.style.color = colorMap[gearState] || '#fff';
     }
@@ -2115,7 +2048,7 @@ if (input.handbrake) {
     function updateTimer() {
       if (startTime === null) return;
       elapsedTime = (performance.now() - startTime) / 1000;
-      timerDisplay.textContent = `타이머: ${elapsedTime.toFixed(2)} s`;
+      timerDisplay.textContent = `TIME: ${elapsedTime.toFixed(2)} s`;
     }
 
     // 애니메이션 및 물리 루프
@@ -2668,7 +2601,7 @@ correctionQuat.setFromEuler(new THREE.Euler(0, -Math.PI / 2, 0));
     sun.target.updateMatrixWorld();
       
   // 속도 + RPM + 기어 UI 표시
-  hud.textContent = `속도: ${getSpeedKmH().toFixed(1)} km/h | RPM: ${Math.floor(rpm)} | 기어: ${currentGear}`;
+  hud.textContent = `${Math.floor(getSpeedKmH().toFixed(1)} km/h | RPM: ${Math.floor(rpm)} | 기어: ${currentGear}`;
       // 카메라 따라가기
 const carPos = interpolatedCarPosition; // 보간된 차량 위치 사용
 
