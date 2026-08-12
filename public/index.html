@@ -702,8 +702,15 @@ sun.shadow.camera.bottom = -360;
 scene.add(sun);
 const ambientLight = new THREE.AmbientLight(0x88aacc, 0.28);
 const hemisphereLight = new THREE.HemisphereLight(0x87ceeb, 0x4a7a3a, 0.22);
+// 쇼룸 전용 포인트 조명. 게임 중에는 강도를 0으로 유지합니다.
+const showroomKeyLight = new THREE.PointLight(0xffe6b8, 0, 100, 2);
+const showroomFillLight = new THREE.PointLight(0x9fc8ff, 0, 100, 2);
+const showroomRimLight = new THREE.PointLight(0xb9a7ff, 0, 100, 2);
 scene.add(ambientLight);
 scene.add(hemisphereLight);
+scene.add(showroomKeyLight);
+scene.add(showroomFillLight);
+scene.add(showroomRimLight);
 
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
 
@@ -1498,22 +1505,19 @@ car.traverse((child) => {
         } 
     }
 });
-                const box = new THREE.Box3().setFromObject(car);
-                const center = box.getCenter(new THREE.Vector3());
-
-              // 1.크기 조절
+              // 크기와 방향을 먼저 적용한 뒤, 변환된 실제 바운딩 박스로 중심을 다시 계산합니다.
+              // 기존에는 스케일/회전 전의 중심값을 사용해서 맥라렌이 쇼룸 중앙에서 벗어났습니다.
                 car.scale.set(0.0116, 0.0116, 0.0116);
-              //방향 조절
-               // 모델을 원점으로 이동
-                car.position.x -= center.x;
-                car.position.z -= center.z;
-                car.position.y -= box.min.y;
+                car.position.set(0, 0, 0);
+                car.rotation.set(0, Math.PI, 0);
+                car.updateMatrixWorld(true);
 
-                // car 자체를 180
-                car.position.y = 0;
-                car.rotation.y = Math.PI; 
-                car.position.x -= 0.19;   // 왼쪽으로
-                car.position.z -= 16;   // 앞으로
+                const transformedBox = new THREE.Box3().setFromObject(car);
+                const transformedCenter = transformedBox.getCenter(new THREE.Vector3());
+                car.position.x -= transformedCenter.x;
+                car.position.z -= transformedCenter.z;
+                car.position.y -= transformedBox.min.y;
+                car.updateMatrixWorld(true);
                 // 3. 회전용 컨테이너 생성
                 const carGroup = new THREE.Group();
                 carGroup.add(car);
@@ -2480,12 +2484,18 @@ setInterval(() => {
       if (previewCarModel) previewCarModel.rotation.y += 0.008;
       
       const showroomCenter = new THREE.Vector3(5000, 1000, 5000);
-      // 쇼룸은 어두운 중성 톤의 스튜디오 조명으로 유지
-      scene.background = new THREE.Color(0x11151c);
+      // 너무 칙칙하지 않은 어두운 스튜디오 톤과 3점 조명
+      scene.background = new THREE.Color(0x1d2736);
       scene.fog = null;
-      sun.intensity = 0.48;
-      ambientLight.intensity = 0.18;
-      hemisphereLight.intensity = 0.12;
+      sun.intensity = 0.58;
+      ambientLight.intensity = 0.24;
+      hemisphereLight.intensity = 0.18;
+      showroomKeyLight.intensity = 2.6;
+      showroomFillLight.intensity = 1.8;
+      showroomRimLight.intensity = 2.2;
+      showroomKeyLight.position.set(showroomCenter.x + 7, showroomCenter.y + 8, showroomCenter.z + 9);
+      showroomFillLight.position.set(showroomCenter.x - 8, showroomCenter.y + 4, showroomCenter.z + 4);
+      showroomRimLight.position.set(showroomCenter.x, showroomCenter.y + 6, showroomCenter.z - 10);
       sun.position.set(showroomCenter.x + 100, showroomCenter.y + 200, showroomCenter.z + 100);
       sun.target.position.copy(showroomCenter);
       sun.target.updateMatrixWorld();
@@ -2869,6 +2879,21 @@ if (cameraMode === 'third') {
         // 게임 맵과 완전히 격리된 별도의 쇼룸 좌표에 위치 설정
         previewCarModel.position.set(5000, 1000 - 3.0, 5000);
         previewCarModel.rotation.set(0, 0, 0);
+
+        // 폰티악은 게임용 바퀴 축 보정(90도)을 유지하되, 쇼룸에서는 그 보정만 되돌립니다.
+        // 따라서 실제 주행 바퀴 정렬은 건드리지 않고 미리보기만 정상 방향으로 표시됩니다.
+        if (modelName === 'PontiacPhoenix' && previewCarModel.userData.wheelNodes) {
+          const undoPontiacPreviewRotation = new THREE.Quaternion().setFromAxisAngle(
+            new THREE.Vector3(0, 1, 0),
+            -Math.PI / 2
+          );
+          previewCarModel.userData.wheelNodes.forEach((node) => {
+            if (node?.userData?.baseQuaternion) {
+              node.quaternion.copy(node.userData.baseQuaternion).multiply(undoPontiacPreviewRotation);
+            }
+          });
+        }
+
         scene.add(previewCarModel);
         console.log("Preview model added to isolated showroom scene");
       }
@@ -2987,6 +3012,9 @@ if (cameraMode === 'third') {
       sun.intensity = 0.75;
       ambientLight.intensity = 0.28;
       hemisphereLight.intensity = 0.22;
+      showroomKeyLight.intensity = 0;
+      showroomFillLight.intensity = 0;
+      showroomRimLight.intensity = 0;
       if (previewCarModel) {
         scene.remove(previewCarModel);
         previewCarModel = null;
