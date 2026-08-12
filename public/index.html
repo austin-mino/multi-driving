@@ -590,6 +590,10 @@ renderer.shadowMap.type = THREE.PCFSoftShadowMap; // 부드러운 그림자 설�
 //렌더
 renderer.setPixelRatio(1);
 renderer.setSize(window.innerWidth, window.innerHeight);
+// 쇼룸과 실제 게임에서 동일한 색감이 나오도록 색공간/톤 매핑을 통일합니다.
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.12;
 document.body.appendChild(renderer.domElement);
     // 자유 카메라 각도 변수 (구면좌표)
 // 초기 각도 설정
@@ -684,7 +688,7 @@ const contactMaterial = new CANNON.ContactMaterial(groundMaterial, wheelMaterial
 world.addContactMaterial(contactMaterial);
 
 // ─── 안개 ────────────────────────────────────
-scene.fog = new THREE.Fog(0x87ceeb, 160, 600);
+scene.fog = new THREE.Fog(0x87ceeb, 240, 900);
 scene.background = new THREE.Color(0x87ceeb);
 
 // ─── 조명 ─────────────────────────────────────────────────
@@ -700,8 +704,8 @@ sun.shadow.camera.right = 260;
 sun.shadow.camera.top = 260;
 sun.shadow.camera.bottom = -360;
 scene.add(sun);
-const ambientLight = new THREE.AmbientLight(0x88aacc, 0.28);
-const hemisphereLight = new THREE.HemisphereLight(0x87ceeb, 0x4a7a3a, 0.22);
+const ambientLight = new THREE.AmbientLight(0xbac7d9, 0.30);
+const hemisphereLight = new THREE.HemisphereLight(0xdce8ff, 0x263224, 0.20);
 // 쇼룸 전용 포인트 조명. 게임 중에는 강도를 0으로 유지합니다.
 const showroomKeyLight = new THREE.PointLight(0xffe6b8, 0, 100, 2);
 const showroomFillLight = new THREE.PointLight(0x9fc8ff, 0, 100, 2);
@@ -713,6 +717,83 @@ scene.add(showroomFillLight);
 scene.add(showroomRimLight);
 
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+
+// ─── 쇼룸 전시장 세트 ───────────────────────────────────────
+// 실제 게임 맵과 분리된 좌표에 바닥, 단상, 벽, 라이트 스트립을 구성합니다.
+const SHOWROOM_CENTER = new THREE.Vector3(5000, 1000, 5000);
+
+function createShowroomExhibition() {
+  const exhibition = new THREE.Group();
+  exhibition.name = 'ShowroomExhibition';
+  exhibition.position.copy(SHOWROOM_CENTER);
+
+  const floorMat = new THREE.MeshStandardMaterial({
+    color: 0x202d3d,
+    metalness: 0.55,
+    roughness: 0.28
+  });
+  const wallMat = new THREE.MeshStandardMaterial({
+    color: 0x182233,
+    metalness: 0.25,
+    roughness: 0.6
+  });
+  const trimMat = new THREE.MeshStandardMaterial({
+    color: 0x5fa8ff,
+    emissive: 0x164a85,
+    emissiveIntensity: 1.8,
+    metalness: 0.2,
+    roughness: 0.32
+  });
+
+  const floor = new THREE.Mesh(new THREE.CylinderGeometry(11, 11, 0.22, 96), floorMat);
+  floor.position.y = -3.32;
+  floor.receiveShadow = true;
+  exhibition.add(floor);
+
+  const platform = new THREE.Mesh(new THREE.CylinderGeometry(7.1, 7.35, 0.34, 96), new THREE.MeshStandardMaterial({
+    color: 0x2e4055,
+    metalness: 0.7,
+    roughness: 0.22
+  }));
+  platform.position.y = -3.02;
+  platform.castShadow = true;
+  platform.receiveShadow = true;
+  exhibition.add(platform);
+
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(7.0, 0.055, 10, 128), trimMat);
+  ring.rotation.x = Math.PI / 2;
+  ring.position.y = -2.83;
+  exhibition.add(ring);
+
+  const backWall = new THREE.Mesh(new THREE.BoxGeometry(26, 12, 0.45), wallMat);
+  backWall.position.set(0, 3.0, -12);
+  backWall.receiveShadow = true;
+  exhibition.add(backWall);
+
+  const leftWall = new THREE.Mesh(new THREE.BoxGeometry(0.45, 12, 24), wallMat);
+  leftWall.position.set(-13, 3.0, 0);
+  exhibition.add(leftWall);
+
+  const rightWall = leftWall.clone();
+  rightWall.position.x = 13;
+  exhibition.add(rightWall);
+
+  for (const x of [-8, -4, 4, 8]) {
+    const strip = new THREE.Mesh(new THREE.BoxGeometry(0.10, 7, 0.08), trimMat);
+    strip.position.set(x, 3.0, -11.72);
+    exhibition.add(strip);
+  }
+
+  const ceilingBar = new THREE.Mesh(new THREE.BoxGeometry(22, 0.12, 0.12), trimMat);
+  ceilingBar.position.set(0, 8.1, -11.7);
+  exhibition.add(ceilingBar);
+
+  exhibition.visible = false;
+  scene.add(exhibition);
+  return exhibition;
+}
+
+const showroomExhibition = createShowroomExhibition();
 
 // ─── 캔버스 텍스처 생성 함수 ───────────────────────────────
 function makeAsphaltTexture() {
@@ -2483,7 +2564,8 @@ setInterval(() => {
     if (isPreviewActive) {
       if (previewCarModel) previewCarModel.rotation.y += 0.008;
       
-      const showroomCenter = new THREE.Vector3(5000, 1000, 5000);
+      const showroomCenter = SHOWROOM_CENTER;
+      showroomExhibition.visible = true;
       // 너무 칙칙하지 않은 어두운 스튜디오 톤과 3점 조명
       scene.background = new THREE.Color(0x1d2736);
       scene.fog = null;
@@ -3008,7 +3090,8 @@ if (cameraMode === 'third') {
       isPreviewActive = false;
       // 게임 화면으로 돌아갈 때 맵용 배경, 안개, 조명 복원
       scene.background = new THREE.Color(0x87ceeb);
-      scene.fog = new THREE.Fog(0x87ceeb, 160, 600);
+      scene.fog = new THREE.Fog(0x87ceeb, 240, 900);
+      showroomExhibition.visible = false;
       sun.intensity = 0.75;
       ambientLight.intensity = 0.28;
       hemisphereLight.intensity = 0.22;
