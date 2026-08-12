@@ -221,31 +221,31 @@
       /* 쇼룸 시작 메뉴 스타일 */
     #startMenu {
       position: fixed;
-      top: 30px;
+      top: 16px;
       left: 50%;
       transform: translateX(-50%);
-      background: rgba(15, 23, 42, 0.92);
-      backdrop-filter: blur(16px);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      padding: 24px 32px;
-      border-radius: 12px;
+      background: rgba(8, 12, 20, 0.76);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 12px 16px;
+      border-radius: 8px;
       z-index: 2000;
-      width: 380px;
-      box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+      width: 250px;
+      box-shadow: 0 12px 24px rgba(0,0,0,0.38);
       font-family: 'Inter', sans-serif;
       color: #f8fafc;
     }
     .showroom-step h2 {
-      margin: 0 0 6px 0;
-      font-size: 18px;
+      margin: 0 0 4px 0;
+      font-size: 12px;
       font-weight: 800;
       letter-spacing: 0.05em;
       color: #fff;
       text-align: center;
     }
     .step-desc {
-      margin: 0 0 20px 0;
-      font-size: 12px;
+      margin: 0 0 10px 0;
+      font-size: 9px;
       color: #94a3b8;
       text-align: center;
     }
@@ -268,15 +268,15 @@
     }
     .vehicle-select-control {
       position: relative;
-      margin-bottom: 20px;
+      margin-bottom: 10px;
     }
     .current-car-button {
       width: 100%;
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      padding: 13px 15px;
+      justify-content: center;
+      gap: 0;
+      padding: 4px 7px;
       background: rgba(30, 41, 59, 0.78);
       border: 1px solid rgba(255, 255, 255, 0.12);
       border-radius: 8px;
@@ -290,34 +290,22 @@
       background: rgba(51, 65, 85, 0.9);
       border-color: #3b82f6;
     }
-    .current-car-label {
-      color: #94a3b8;
-      font-size: 10px;
-      font-weight: 700;
-      letter-spacing: 0.08em;
-    }
     #currentCarName {
-      flex: 1;
-      color: #fff;
-      font-size: 14px;
-      font-weight: 700;
-      text-align: right;
+      color: #e2e8f0;
+      font-size: 10px;
+      font-weight: 600;
+      text-align: center;
     }
+    .current-car-label,
     .current-car-chevron {
-      color: #60a5fa;
-      font-size: 18px;
-      line-height: 1;
-      transition: transform 0.2s ease;
-    }
-    .current-car-button.is-open .current-car-chevron {
-      transform: rotate(180deg);
+      display: none;
     }
     .car-options-panel {
       position: absolute;
       left: 0;
       right: 0;
-      top: calc(100% + 8px);
-      padding: 8px;
+      top: calc(100% + 5px);
+      padding: 5px;
       background: rgba(15, 23, 42, 0.98);
       border: 1px solid rgba(255, 255, 255, 0.14);
       border-radius: 8px;
@@ -330,15 +318,15 @@
     .car-select-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 8px;
+      gap: 4px;
     }
     .car-option-btn {
-      padding: 10px;
+      padding: 6px 4px;
       background: rgba(30, 41, 59, 0.6);
       border: 1px solid rgba(255, 255, 255, 0.08);
       border-radius: 6px;
       color: #cbd5e1;
-      font-size: 13px;
+      font-size: 9px;
       font-weight: 600;
       cursor: pointer;
       transition: all 0.2s;
@@ -355,18 +343,18 @@
     .color-picker-wrapper {
       display: flex;
       align-items: center;
-      gap: 15px;
-      margin-bottom: 20px;
+      gap: 7px;
+      margin-bottom: 10px;
       background: rgba(30, 41, 59, 0.4);
-      padding: 12px;
+      padding: 6px 8px;
       border-radius: 8px;
       border: 1px solid rgba(255, 255, 255, 0.08);
     }
     #colorInput {
       -webkit-appearance: none;
       border: none;
-      width: 50px;
-      height: 36px;
+      width: 28px;
+      height: 20px;
       border-radius: 6px;
       cursor: pointer;
       background: none;
@@ -375,36 +363,36 @@
     #colorInput::-webkit-color-swatch { border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; }
     #colorHexDisplay {
       font-family: 'JetBrains Mono', monospace;
-      font-size: 15px;
+      font-size: 10px;
       font-weight: 700;
       color: #cbd5e1;
     }
     .showroom-btn {
       width: 100%;
-      padding: 12px;
+      padding: 7px 8px;
       background: #3b82f6;
       border: none;
       border-radius: 8px;
       color: #fff;
       font-weight: 700;
-      font-size: 14px;
+      font-size: 10px;
       cursor: pointer;
       transition: background 0.2s;
     }
     .showroom-btn:hover { background: #2563eb; }
     .showroom-nav-btns {
       display: flex;
-      gap: 10px;
+      gap: 5px;
     }
     .showroom-btn-sec {
       width: 40%;
-      padding: 12px;
+      padding: 7px 8px;
       background: rgba(255, 255, 255, 0.05);
       border: 1px solid rgba(255, 255, 255, 0.1);
       border-radius: 8px;
       color: #94a3b8;
       font-weight: 600;
-      font-size: 14px;
+      font-size: 10px;
       cursor: pointer;
     }
     .showroom-btn-sec:hover { background: rgba(255, 255, 255, 0.1); color: #fff; }
@@ -448,9 +436,7 @@
       <p class="step-desc">차량을 선택하면 360도 미리보기가 제공됩니다</p>
       <div class="vehicle-select-control">
         <button id="currentCarButton" class="current-car-button" type="button" aria-expanded="false" aria-controls="carOptionsPanel">
-          <span class="current-car-label">CURRENT VEHICLE</span>
           <strong id="currentCarName">Grandeur Sedan</strong>
-          <span class="current-car-chevron" aria-hidden="true">⌄</span>
         </button>
         <div id="carOptionsPanel" class="car-options-panel" hidden>
           <div class="car-select-grid">
@@ -702,7 +688,7 @@ scene.fog = new THREE.Fog(0x87ceeb, 160, 600);
 scene.background = new THREE.Color(0x87ceeb);
 
 // ─── 조명 ─────────────────────────────────────────────────
-const sun = new THREE.DirectionalLight(0xfff5e0, 1.4);
+const sun = new THREE.DirectionalLight(0xfff5e0, 0.75);
 // --- 그림자 설정 추가 ---
 sun.castShadow = true;
 //빛
@@ -714,8 +700,10 @@ sun.shadow.camera.right = 260;
 sun.shadow.camera.top = 260;
 sun.shadow.camera.bottom = -360;
 scene.add(sun);
-scene.add(new THREE.AmbientLight(0x88aacc, 0.6));
-scene.add(new THREE.HemisphereLight(0x87ceeb, 0x4a7a3a, 0.5));
+const ambientLight = new THREE.AmbientLight(0x88aacc, 0.28);
+const hemisphereLight = new THREE.HemisphereLight(0x87ceeb, 0x4a7a3a, 0.22);
+scene.add(ambientLight);
+scene.add(hemisphereLight);
 
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
 
@@ -2492,6 +2480,12 @@ setInterval(() => {
       if (previewCarModel) previewCarModel.rotation.y += 0.008;
       
       const showroomCenter = new THREE.Vector3(5000, 1000, 5000);
+      // 쇼룸은 어두운 중성 톤의 스튜디오 조명으로 유지
+      scene.background = new THREE.Color(0x11151c);
+      scene.fog = null;
+      sun.intensity = 0.48;
+      ambientLight.intensity = 0.18;
+      hemisphereLight.intensity = 0.12;
       sun.position.set(showroomCenter.x + 100, showroomCenter.y + 200, showroomCenter.z + 100);
       sun.target.position.copy(showroomCenter);
       sun.target.updateMatrixWorld();
@@ -2987,6 +2981,12 @@ if (cameraMode === 'third') {
       }
       
       isPreviewActive = false;
+      // 게임 화면으로 돌아갈 때 맵용 배경, 안개, 조명 복원
+      scene.background = new THREE.Color(0x87ceeb);
+      scene.fog = new THREE.Fog(0x87ceeb, 160, 600);
+      sun.intensity = 0.75;
+      ambientLight.intensity = 0.28;
+      hemisphereLight.intensity = 0.22;
       if (previewCarModel) {
         scene.remove(previewCarModel);
         previewCarModel = null;
