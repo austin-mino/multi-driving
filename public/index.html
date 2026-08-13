@@ -631,16 +631,16 @@
       left: 24px;
       display: none;
       flex-direction: column;
-      gap: 7px;
-      width: 178px;
-      padding: 9px 10px;
+      gap: 14px;
+      width: 250px;
+      padding: 20px;
       box-sizing: border-box;
-      background: rgba(15, 20, 28, 0.78);
-      backdrop-filter: blur(10px);
-      border: 1px solid rgba(148, 163, 184, 0.22);
-      border-radius: 10px;
+      background: rgba(15, 20, 28, 0.92);
+      backdrop-filter: blur(14px);
+      border: 1px solid rgba(96, 165, 250, 0.45);
+      border-radius: 14px;
       z-index: 2100;
-      box-shadow: 0 8px 22px rgba(0, 0, 0, 0.30);
+      box-shadow: 0 15px 45px rgba(0, 0, 0, 0.5);
     }
 
     #liveColorPicker.is-visible {
@@ -652,56 +652,67 @@
       align-items: center;
       justify-content: space-between;
       color: #94a3b8;
-      font-size: 9px;
+      font-size: 11px;
       font-weight: 800;
       letter-spacing: 0.08em;
+      margin-bottom: 2px;
     }
 
     #liveColorHex {
-      color: #e2e8f0;
+      color: #3b82f6;
       font-family: 'JetBrains Mono', monospace;
-      font-size: 10px;
+      font-size: 14px;
+      font-weight: 700;
       letter-spacing: 0;
     }
 
     .live-color-control {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 15px;
     }
 
     #liveColorInput {
-      width: 34px;
-      height: 24px;
+      width: 64px;
+      height: 44px;
       padding: 0;
       border: 0;
-      border-radius: 5px;
+      border-radius: 8px;
       background: transparent;
       cursor: pointer;
     }
 
     #liveColorInput::-webkit-color-swatch-wrapper { padding: 0; }
-    #liveColorInput::-webkit-color-swatch { border: 1px solid rgba(255,255,255,0.24); border-radius: 5px; }
+    #liveColorInput::-webkit-color-swatch { border: 2px solid rgba(255,255,255,0.3); border-radius: 8px; }
 
     .live-color-help {
-      color: #64748b;
-      font-size: 9px;
+      color: #94a3b8;
+      font-size: 12px;
+      font-weight: 600;
       white-space: nowrap;
     }
 
     #liveStartButton {
       width: 100%;
-      padding: 5px 7px;
-      border: 1px solid rgba(96, 165, 250, 0.32);
-      border-radius: 5px;
-      background: rgba(59, 130, 246, 0.18);
-      color: #bfdbfe;
-      font-size: 9px;
+      padding: 12px 10px;
+      margin-top: 5px;
+      border: 1px solid rgba(96, 165, 250, 0.5);
+      border-radius: 8px;
+      background: rgba(59, 130, 246, 0.3);
+      color: #ffffff;
+      font-size: 13px;
       font-weight: 800;
       cursor: pointer;
+      transition: all 0.2s;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
     }
 
-    #liveStartButton:hover { background: rgba(59, 130, 246, 0.32); }
+    #liveStartButton:hover { 
+      background: #3b82f6;
+      box-shadow: 0 0 15px rgba(59, 130, 246, 0.5);
+      transform: translateY(-1px);
+    }
 
   </style>
   
