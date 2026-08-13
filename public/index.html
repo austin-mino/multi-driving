@@ -264,19 +264,147 @@
       /* 쇼룸 시작 메뉴 스타일 */
     #startMenu {
       position: fixed;
-      top: 16px;
+      top: 50%;
       left: 50%;
-      transform: translateX(-50%);
-      background: rgba(8, 12, 20, 0.76);
-      backdrop-filter: blur(8px);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      padding: 12px 16px;
-      border-radius: 8px;
+      transform: translate(-50%, -50%);
+      background: rgba(8, 12, 20, 0.94);
+      backdrop-filter: blur(18px);
+      border: 1px solid rgba(148, 163, 184, 0.22);
+      padding: 28px 32px;
+      border-radius: 16px;
       z-index: 2000;
-      width: 250px;
-      box-shadow: 0 12px 24px rgba(0,0,0,0.38);
+      width: 400px;
+      box-sizing: border-box;
+      box-shadow: 0 24px 70px rgba(0, 0, 0, 0.58), 0 0 0 1px rgba(59, 130, 246, 0.06);
       font-family: 'Inter', sans-serif;
       color: #f8fafc;
+      transition: top 0.28s ease, left 0.28s ease, right 0.28s ease, transform 0.28s ease, width 0.28s ease, padding 0.28s ease, border-radius 0.28s ease;
+    }
+
+    #startMenu.start-menu-compact {
+      top: 24px;
+      right: 24px;
+      left: auto;
+      transform: none;
+      width: 188px;
+      padding: 9px 10px;
+      border-radius: 12px;
+      background: rgba(8, 12, 20, 0.78);
+      border-color: rgba(96, 165, 250, 0.32);
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.38);
+    }
+
+    #startMenu.start-menu-compact .showroom-step {
+      display: none !important;
+    }
+
+    #compactCarPopup {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      min-height: 30px;
+      padding: 2px 3px;
+      box-sizing: border-box;
+      border: 0;
+      background: transparent;
+      color: #e2e8f0;
+      cursor: pointer;
+      text-align: left;
+    }
+
+    #startMenu.start-menu-compact #compactCarPopup {
+      display: flex;
+    }
+
+    #compactCarPopup:hover #compactCarName {
+      color: #93c5fd;
+    }
+
+    #compactCarPopup .compact-car-caption {
+      color: #64748b;
+      font-size: 8px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+    }
+
+    #compactCarName {
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      color: #f8fafc;
+      font-size: 11px;
+      font-weight: 700;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      transition: color 0.18s ease;
+    }
+
+    #compactCarPopup .compact-car-arrow {
+      color: #60a5fa;
+      font-size: 14px;
+      line-height: 1;
+    }
+
+    #startMenu:not(.start-menu-compact) .showroom-step h2 {
+      margin-bottom: 9px;
+      font-size: 20px;
+    }
+
+    #startMenu:not(.start-menu-compact) .step-desc {
+      margin-bottom: 18px;
+      font-size: 12px;
+    }
+
+    #startMenu:not(.start-menu-compact) #nicknameInput {
+      padding: 14px 16px;
+      margin-bottom: 18px;
+      font-size: 16px;
+    }
+
+    #startMenu:not(.start-menu-compact) .current-car-button {
+      padding: 13px 15px;
+    }
+
+    #startMenu:not(.start-menu-compact) #currentCarName {
+      font-size: 16px;
+    }
+
+    #startMenu:not(.start-menu-compact) .car-options-panel {
+      padding: 10px;
+      top: calc(100% + 8px);
+    }
+
+    #startMenu:not(.start-menu-compact) .car-select-grid {
+      gap: 8px;
+    }
+
+    #startMenu:not(.start-menu-compact) .car-option-btn {
+      padding: 12px 8px;
+      font-size: 13px;
+    }
+
+    #startMenu:not(.start-menu-compact) .color-picker-wrapper {
+      gap: 14px;
+      padding: 14px;
+    }
+
+    #startMenu:not(.start-menu-compact) #colorInput {
+      width: 58px;
+      height: 42px;
+      padding: 0;
+      margin: 0;
+    }
+
+    #startMenu:not(.start-menu-compact) #colorHexDisplay {
+      font-size: 15px;
+    }
+
+    #startMenu:not(.start-menu-compact) .showroom-btn,
+    #startMenu:not(.start-menu-compact) .showroom-btn-sec {
+      padding-top: 12px;
+      padding-bottom: 12px;
+      font-size: 13px;
     }
     .showroom-step h2 {
       margin: 0 0 4px 0;
@@ -510,6 +638,13 @@
         <button id="startButton" class="showroom-btn start-action">START DRIVE</button>
       </div>
     </div>
+
+    <!-- 차량 선택 완료 후 표시되는 작은 플로팅 팝업 -->
+    <button id="compactCarPopup" type="button" aria-label="차량 선택 창 다시 열기">
+      <span class="compact-car-caption">CAR</span>
+      <strong id="compactCarName">Ferrari 458</strong>
+      <span class="compact-car-arrow" aria-hidden="true">↗</span>
+    </button>
   </div>
 
   <div id="rotateWarning">가로 모드로 전환해주세요</div>
@@ -3161,8 +3296,8 @@ if (cameraMode === 'third') {
         scene.add(previewCarModel);
         // 그랜저는 85%, 페라리는 95%로 쇼룸에서만 미세 보정합니다.
         const previewScaleMultiplier =
-          modelName === 'GrandeurIG' ? 0.65 :
-          modelName === 'SportsCar' ? 0.85 :
+          modelName === 'GrandeurIG' ? 0.85 :
+          modelName === 'SportsCar' ? 0.95 :
           1;
         normalizePreviewCarScale(previewCarModel, previewScaleMultiplier);
         console.log("Preview model added to isolated showroom scene with normalized scale");
