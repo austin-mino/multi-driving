@@ -569,6 +569,140 @@
     .showroom-btn-sec:hover { background: rgba(255, 255, 255, 0.1); color: #fff; }
     .showroom-nav-btns .showroom-btn { width: 60%; }
 
+    /* 차량 선택 후 화면 가장자리에서만 보이는 플로팅 컨트롤 */
+    #vehicleNameBar {
+      position: fixed;
+      top: 58px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: none;
+      align-items: center;
+      gap: 8px;
+      width: 164px;
+      min-height: 30px;
+      padding: 5px 9px;
+      box-sizing: border-box;
+      background: rgba(15, 20, 28, 0.78);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(148, 163, 184, 0.24);
+      border-radius: 20px;
+      color: #f8fafc;
+      cursor: pointer;
+      z-index: 2100;
+      box-shadow: 0 8px 22px rgba(0, 0, 0, 0.32);
+    }
+
+    #vehicleNameBar.is-visible {
+      display: flex;
+    }
+
+    #vehicleNameBar:hover {
+      border-color: rgba(96, 165, 250, 0.72);
+      background: rgba(20, 30, 44, 0.88);
+    }
+
+    #vehicleNameBar .vehicle-bar-label {
+      color: #64748b;
+      font-size: 8px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+    }
+
+    #vehicleNameBarText {
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      font-size: 11px;
+      font-weight: 700;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      text-align: center;
+    }
+
+    #vehicleNameBar .vehicle-bar-arrow {
+      color: #60a5fa;
+      font-size: 13px;
+      line-height: 1;
+    }
+
+    #liveColorPicker {
+      position: fixed;
+      top: 24px;
+      left: 24px;
+      display: none;
+      flex-direction: column;
+      gap: 7px;
+      width: 178px;
+      padding: 9px 10px;
+      box-sizing: border-box;
+      background: rgba(15, 20, 28, 0.78);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(148, 163, 184, 0.22);
+      border-radius: 10px;
+      z-index: 2100;
+      box-shadow: 0 8px 22px rgba(0, 0, 0, 0.30);
+    }
+
+    #liveColorPicker.is-visible {
+      display: flex;
+    }
+
+    .live-color-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: #94a3b8;
+      font-size: 9px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+    }
+
+    #liveColorHex {
+      color: #e2e8f0;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0;
+    }
+
+    .live-color-control {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    #liveColorInput {
+      width: 34px;
+      height: 24px;
+      padding: 0;
+      border: 0;
+      border-radius: 5px;
+      background: transparent;
+      cursor: pointer;
+    }
+
+    #liveColorInput::-webkit-color-swatch-wrapper { padding: 0; }
+    #liveColorInput::-webkit-color-swatch { border: 1px solid rgba(255,255,255,0.24); border-radius: 5px; }
+
+    .live-color-help {
+      color: #64748b;
+      font-size: 9px;
+      white-space: nowrap;
+    }
+
+    #liveStartButton {
+      width: 100%;
+      padding: 5px 7px;
+      border: 1px solid rgba(96, 165, 250, 0.32);
+      border-radius: 5px;
+      background: rgba(59, 130, 246, 0.18);
+      color: #bfdbfe;
+      font-size: 9px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    #liveStartButton:hover { background: rgba(59, 130, 246, 0.32); }
+
   </style>
   
    <script src="/socket.io/socket.io.js"></script>
@@ -645,6 +779,25 @@
       <strong id="compactCarName">Ferrari 458</strong>
       <span class="compact-car-arrow" aria-hidden="true">↗</span>
     </button>
+  </div>
+
+  <!-- 차량 선택 후 화면 외곽에 표시되는 플로팅 컨트롤 -->
+  <button id="vehicleNameBar" type="button" aria-label="차량 종류 다시 선택">
+    <span class="vehicle-bar-label">CAR</span>
+    <strong id="vehicleNameBarText">Ferrari 458</strong>
+    <span class="vehicle-bar-arrow" aria-hidden="true">⌄</span>
+  </button>
+
+  <div id="liveColorPicker" aria-label="실시간 차량 색상 선택">
+    <div class="live-color-header">
+      <span>LIVE COLOR</span>
+      <span id="liveColorHex">#FFFFFF</span>
+    </div>
+    <div class="live-color-control">
+      <input type="color" id="liveColorInput" value="#ffffff" aria-label="차량 색상" />
+      <span class="live-color-help">차량 선택 후 바로 적용</span>
+    </div>
+    <button id="liveStartButton" type="button">START DRIVE</button>
   </div>
 
   <div id="rotateWarning">가로 모드로 전환해주세요</div>
@@ -3313,29 +3466,91 @@ if (cameraMode === 'third') {
       }
       document.getElementById('step1').style.display = 'none';
       document.getElementById('step2').style.display = 'block';
+      startMenu.classList.remove('start-menu-compact');
+      startMenu.style.display = 'block';
+      setFloatingControlsVisible(false);
       // Step 2 진입 시 미리보기 로드
       initPreviewCar(selectedCarModelName, selectedCarColor);
     });
 
     document.getElementById('btnPrevStep2').addEventListener('click', () => {
+      startMenu.classList.remove('start-menu-compact');
       document.getElementById('step2').style.display = 'none';
       document.getElementById('step1').style.display = 'block';
     });
 
     document.getElementById('btnNextStep2').addEventListener('click', () => {
+      startMenu.classList.remove('start-menu-compact');
       document.getElementById('step2').style.display = 'none';
       document.getElementById('step3').style.display = 'block';
+      setFloatingControlsVisible(true);
+      startMenu.style.display = 'none';
     });
 
     document.getElementById('btnPrevStep3').addEventListener('click', () => {
+      startMenu.classList.remove('start-menu-compact');
       document.getElementById('step3').style.display = 'none';
       document.getElementById('step2').style.display = 'block';
     });
 
-    // 차량 선택 토글 메뉴 이벤트
+    // 차량 선택 및 외곽 플로팅 컨트롤 이벤트
+    const startMenu = document.getElementById('startMenu');
+    const compactCarPopup = document.getElementById('compactCarPopup');
+    const compactCarName = document.getElementById('compactCarName');
+    const vehicleNameBar = document.getElementById('vehicleNameBar');
+    const vehicleNameBarText = document.getElementById('vehicleNameBarText');
+    const liveColorPicker = document.getElementById('liveColorPicker');
+    const liveColorInput = document.getElementById('liveColorInput');
+    const liveColorHex = document.getElementById('liveColorHex');
+    const liveStartButton = document.getElementById('liveStartButton');
     const currentCarButton = document.getElementById('currentCarButton');
     const carOptionsPanel = document.getElementById('carOptionsPanel');
     const currentCarName = document.getElementById('currentCarName');
+
+    function setFloatingControlsVisible(isVisible) {
+      vehicleNameBar.classList.toggle('is-visible', isVisible);
+      liveColorPicker.classList.toggle('is-visible', isVisible);
+    }
+
+    function setShowroomMenuCompact(isCompact) {
+      if (isCompact) {
+        const selectedName = currentCarName.textContent;
+        compactCarName.textContent = selectedName;
+        vehicleNameBarText.textContent = selectedName;
+        carOptionsPanel.setAttribute('hidden', '');
+        currentCarButton.classList.remove('is-open');
+        currentCarButton.setAttribute('aria-expanded', 'false');
+        // 중앙 메뉴는 숨기고 외곽 플로팅 컨트롤만 표시합니다.
+        startMenu.classList.remove('start-menu-compact');
+        startMenu.style.display = 'none';
+        setFloatingControlsVisible(true);
+      } else {
+        startMenu.style.display = 'block';
+        startMenu.classList.remove('start-menu-compact');
+        setFloatingControlsVisible(false);
+      }
+    }
+
+    function openVehicleSelector() {
+      setShowroomMenuCompact(false);
+      document.getElementById('step2').style.display = 'block';
+      document.getElementById('step3').style.display = 'none';
+      carOptionsPanel.removeAttribute('hidden');
+      currentCarButton.classList.add('is-open');
+      currentCarButton.setAttribute('aria-expanded', 'true');
+    }
+
+    // 상단의 차량명 바를 누르면 중앙 차량 목록을 다시 엽니다.
+    vehicleNameBar.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openVehicleSelector();
+    });
+
+    // 이전 버전의 컴팩트 버튼도 호환 처리합니다.
+    compactCarPopup.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openVehicleSelector();
+    });
 
     currentCarButton.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -3368,22 +3583,26 @@ if (cameraMode === 'third') {
         
         selectedCarModelName = e.target.getAttribute('data-model');
         currentCarName.textContent = e.target.textContent;
+        compactCarName.textContent = e.target.textContent;
+        vehicleNameBarText.textContent = e.target.textContent;
         
-        // 메뉴 선택 후 패널 닫기
-        carOptionsPanel.setAttribute('hidden', '');
-        currentCarButton.classList.remove('is-open');
-        currentCarButton.setAttribute('aria-expanded', 'false');
-
+        // 차량을 선택하면 중앙 메뉴는 사라지고 상단 차량명/좌상단 색상만 남깁니다.
+        setShowroomMenuCompact(true);
         await initPreviewCar(selectedCarModelName, selectedCarColor);
       });
     });
 
-    // 컬러 피커 변경 이벤트 (모든 차종 즉시 실시간 반영)
+    // 컬러 피커 변경 이벤트 (좌상단/Step 3 모두 즉시 실시간 반영)
     const colorInput = document.getElementById('colorInput');
     const colorHexDisplay = document.getElementById('colorHexDisplay');
-    colorInput.addEventListener('input', async (e) => {
-      selectedCarColor = e.target.value;
+
+    function applyPreviewColor(nextColor) {
+      selectedCarColor = nextColor;
+      colorInput.value = selectedCarColor;
+      liveColorInput.value = selectedCarColor;
       colorHexDisplay.textContent = selectedCarColor.toUpperCase();
+      liveColorHex.textContent = selectedCarColor.toUpperCase();
+
       if (previewCarModel) {
         previewCarModel.traverse(child => {
           if (child.isMesh && child.material) {
@@ -3400,6 +3619,15 @@ if (cameraMode === 'third') {
           }
         });
       }
+    }
+
+    colorInput.addEventListener('input', (e) => applyPreviewColor(e.target.value));
+    liveColorInput.addEventListener('input', (e) => applyPreviewColor(e.target.value));
+
+    // 좌상단 패널에서도 바로 주행을 시작할 수 있도록 기존 시작 버튼과 연결합니다.
+    liveStartButton.addEventListener('click', (e) => {
+      e.stopPropagation();
+      document.getElementById('startButton').click();
     });
 
     // 게임 시작 버튼
@@ -3426,6 +3654,7 @@ if (cameraMode === 'third') {
         previewCarModel = null;
       }
       document.getElementById('startMenu').style.display = 'none';
+      setFloatingControlsVisible(false);
       startGame(selectedCarModelName, selectedCarColor, nickname);
     });
 
