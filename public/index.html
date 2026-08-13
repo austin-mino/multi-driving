@@ -436,15 +436,15 @@
       <p class="step-desc">차량을 선택하면 360도 미리보기가 제공됩니다</p>
       <div class="vehicle-select-control">
         <button id="currentCarButton" class="current-car-button" type="button" aria-expanded="false" aria-controls="carOptionsPanel">
-          <strong id="currentCarName">Grandeur Sedan</strong>
+          <strong id="currentCarName">Ferrari 458</strong>
         </button>
         <div id="carOptionsPanel" class="car-options-panel" hidden>
           <div class="car-select-grid">
-            <button class="car-option-btn active" type="button" data-model="GrandeurIG">Grandeur Sedan</button>
             <button class="car-option-btn" type="button" data-model="SportsCar">Ferrari 458</button>
             <button class="car-option-btn" type="button" data-model="SUV">Range Rover</button>
             <button class="car-option-btn" type="button" data-model="McLarenP1">McLaren P1</button>
             <button class="car-option-btn" type="button" data-model="PontiacPhoenix">Pontiac Phoenix</button>
+            <button class="car-option-btn active" type="button" data-model="GrandeurIG">Grandeur Sedan</button>
           </div>
         </div>
       </div>
@@ -2930,14 +2930,14 @@ if (cameraMode === 'third') {
   
     // ─── 쇼룸 미리보기 3D 시스템 (고급 3D 쇼룸) ─────────────────────────────
     let previewCarModel = null;
-    let selectedCarModelName = 'GrandeurIG';
+    let selectedCarModelName = 'SportsCar';
     let selectedCarColor = '#ffffff';
     let isPreviewActive = true;
 
     // 쇼룸 차량의 외형 전장 기준. 모델 원본 스케일이 서로 달라도 같은 크기로 보이게 합니다.
     // 단상 폭을 충분히 활용하도록 기존 7.2보다 크게 설정
     const SHOWROOM_VEHICLE_LENGTH = 10.0;
-    function normalizePreviewCarScale(model) {
+    function normalizePreviewCarScale(model, scaleMultiplier = 1) {
       model.updateMatrixWorld(true);
 
       const originalBox = new THREE.Box3().setFromObject(model);
@@ -2945,7 +2945,7 @@ if (cameraMode === 'third') {
       const footprintLength = Math.max(originalSize.x, originalSize.z);
 
       if (footprintLength > 0.001) {
-        const fitScale = SHOWROOM_VEHICLE_LENGTH / footprintLength;
+        const fitScale = (SHOWROOM_VEHICLE_LENGTH / footprintLength) * scaleMultiplier;
         model.scale.multiplyScalar(fitScale);
       }
 
@@ -3001,7 +3001,9 @@ if (cameraMode === 'third') {
         }
 
         scene.add(previewCarModel);
-        normalizePreviewCarScale(previewCarModel);
+        // 그랜저는 차체가 각지고 부피감이 커 보여 85% 크기로 보정합니다.
+        const previewScaleMultiplier = modelName === 'GrandeurIG' ? 0.85 : 1;
+        normalizePreviewCarScale(previewCarModel, previewScaleMultiplier);
         console.log("Preview model added to isolated showroom scene with normalized scale");
       }
     }
