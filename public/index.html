@@ -3159,8 +3159,11 @@ if (cameraMode === 'third') {
         }
 
         scene.add(previewCarModel);
-        // 그랜저는 차체가 각지고 부피감이 커 보여 85% 크기로 보정합니다.
-        const previewScaleMultiplier = modelName === 'GrandeurIG' ? 0.85 : 1;
+        // 그랜저는 85%, 페라리는 95%로 쇼룸에서만 미세 보정합니다.
+        const previewScaleMultiplier =
+          modelName === 'GrandeurIG' ? 0.85 :
+          modelName === 'SportsCar' ? 0.95 :
+          1;
         normalizePreviewCarScale(previewCarModel, previewScaleMultiplier);
         console.log("Preview model added to isolated showroom scene with normalized scale");
       }
