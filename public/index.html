@@ -3161,7 +3161,7 @@ if (cameraMode === 'third') {
         scene.add(previewCarModel);
         // 그랜저는 85%, 페라리는 95%로 쇼룸에서만 미세 보정합니다.
         const previewScaleMultiplier =
-          modelName === 'GrandeurIG' ? 0.75 :
+          modelName === 'GrandeurIG' ? 0.65 :
           modelName === 'SportsCar' ? 0.85 :
           1;
         normalizePreviewCarScale(previewCarModel, previewScaleMultiplier);
