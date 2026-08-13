@@ -216,8 +216,51 @@
       border-radius: 10px;
       z-index: 200;
       display: none;
-      width: 260px;
+      width: 300px;
+      box-sizing: border-box;
     }
+
+    #adminPanel h3 {
+      margin: 0 0 14px;
+      font-size: 15px;
+      white-space: nowrap;
+    }
+
+    #adminPanel .admin-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      min-height: 28px;
+      margin-bottom: 8px;
+    }
+
+    #adminPanel .admin-row label {
+      flex: 0 0 132px;
+      min-width: 0;
+      margin: 0;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      color: #cbd5e1;
+      font-size: 11px;
+      line-height: 1.2;
+    }
+
+    #adminPanel .admin-row label span {
+      display: inline-block;
+      min-width: 24px;
+      text-align: right;
+    }
+
+    #adminPanel .admin-row input[type="range"] {
+      flex: 1 1 auto;
+      width: auto;
+      min-width: 0;
+      margin: 0;
+      display: block;
+    }
+
       /* 쇼룸 시작 메뉴 스타일 */
     #startMenu {
       position: fixed;
@@ -501,7 +544,7 @@
 <button id="btnToggleCam" class="controlBtn">C: 3</button>
     
  <div id="adminPanel">
-    <h3>차량 물리 설정 (Admin)</h3>
+    <h3>차량 설정</h3>
     <div class="admin-row">
       <label>엔진 힘: <span id="valEngine">6000</span></label>
       <input type="range" id="inputEngine" min="1000" max="20000" step="500" value="6000">
