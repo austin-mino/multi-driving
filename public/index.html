@@ -2935,7 +2935,8 @@ if (cameraMode === 'third') {
     let isPreviewActive = true;
 
     // 쇼룸 차량의 외형 전장 기준. 모델 원본 스케일이 서로 달라도 같은 크기로 보이게 합니다.
-    const SHOWROOM_VEHICLE_LENGTH = 7.2;
+    // 단상 폭을 충분히 활용하도록 기존 7.2보다 크게 설정
+    const SHOWROOM_VEHICLE_LENGTH = 10.0;
     function normalizePreviewCarScale(model) {
       model.updateMatrixWorld(true);
 
