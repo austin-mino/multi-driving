@@ -3046,6 +3046,13 @@ setInterval(() => {
 
        requestAnimationFrame(animate);
 
+      // 게임 시작 직후 비동기 차량 생성이 끝나기 전에는 물리 객체가 없습니다.
+      // 이 프레임을 건너뛰어 undefined.position 오류와 초기화 경합을 방지합니다.
+      if (!world || !vehicle || !chassisBody || !carModel) {
+        renderer.render(scene, camera);
+        return;
+      }
+
       // 물리 바디의 이전 위치와 회전 저장 (보간을 위해)
       if (!chassisBody.previousPosition) {
         chassisBody.previousPosition = new THREE.Vector3(chassisBody.position.x, chassisBody.position.y, chassisBody.position.z);
