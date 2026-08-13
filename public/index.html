@@ -590,10 +590,6 @@ renderer.shadowMap.type = THREE.PCFSoftShadowMap; // 부드러운 그림자 설�
 //렌더
 renderer.setPixelRatio(1);
 renderer.setSize(window.innerWidth, window.innerHeight);
-// 쇼룸과 실제 게임에서 동일한 색감이 나오도록 색공간/톤 매핑을 통일합니다.
-renderer.outputColorSpace = THREE.SRGBColorSpace;
-renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.12;
 document.body.appendChild(renderer.domElement);
     // 자유 카메라 각도 변수 (구면좌표)
 // 초기 각도 설정
@@ -688,11 +684,11 @@ const contactMaterial = new CANNON.ContactMaterial(groundMaterial, wheelMaterial
 world.addContactMaterial(contactMaterial);
 
 // ─── 안개 ────────────────────────────────────
-scene.fog = new THREE.Fog(0x87ceeb, 240, 900);
+scene.fog = new THREE.Fog(0x87ceeb, 160, 600);
 scene.background = new THREE.Color(0x87ceeb);
 
 // ─── 조명 ─────────────────────────────────────────────────
-const sun = new THREE.DirectionalLight(0xfff5e0, 0.75);
+const sun = new THREE.DirectionalLight(0xfff5e0, 1.4);
 // --- 그림자 설정 추가 ---
 sun.castShadow = true;
 //빛
@@ -704,8 +700,8 @@ sun.shadow.camera.right = 260;
 sun.shadow.camera.top = 260;
 sun.shadow.camera.bottom = -360;
 scene.add(sun);
-const ambientLight = new THREE.AmbientLight(0xbac7d9, 0.30);
-const hemisphereLight = new THREE.HemisphereLight(0xdce8ff, 0x263224, 0.20);
+const ambientLight = new THREE.AmbientLight(0x88aacc, 0.6);
+const hemisphereLight = new THREE.HemisphereLight(0x87ceeb, 0x4a7a3a, 0.5);
 // 쇼룸 전용 포인트 조명. 게임 중에는 강도를 0으로 유지합니다.
 const showroomKeyLight = new THREE.PointLight(0xffe6b8, 0, 100, 2);
 const showroomFillLight = new THREE.PointLight(0x9fc8ff, 0, 100, 2);
@@ -3090,11 +3086,11 @@ if (cameraMode === 'third') {
       isPreviewActive = false;
       // 게임 화면으로 돌아갈 때 맵용 배경, 안개, 조명 복원
       scene.background = new THREE.Color(0x87ceeb);
-      scene.fog = new THREE.Fog(0x87ceeb, 240, 900);
+      scene.fog = new THREE.Fog(0x87ceeb, 160, 600);
       showroomExhibition.visible = false;
-      sun.intensity = 0.75;
-      ambientLight.intensity = 0.28;
-      hemisphereLight.intensity = 0.22;
+      sun.intensity = 1.4;
+      ambientLight.intensity = 0.6;
+      hemisphereLight.intensity = 0.5;
       showroomKeyLight.intensity = 0;
       showroomFillLight.intensity = 0;
       showroomRimLight.intensity = 0;
