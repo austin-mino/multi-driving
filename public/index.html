@@ -440,11 +440,11 @@
         </button>
         <div id="carOptionsPanel" class="car-options-panel" hidden>
           <div class="car-select-grid">
-            <button class="car-option-btn" type="button" data-model="SportsCar">Ferrari 458</button>
+            <button class="car-option-btn active" type="button" data-model="SportsCar">Ferrari 458</button>
             <button class="car-option-btn" type="button" data-model="SUV">Range Rover</button>
             <button class="car-option-btn" type="button" data-model="McLarenP1">McLaren P1</button>
             <button class="car-option-btn" type="button" data-model="PontiacPhoenix">Pontiac Phoenix</button>
-            <button class="car-option-btn active" type="button" data-model="GrandeurIG">Grandeur Sedan</button>
+            <button class="car-option-btn" type="button" data-model="GrandeurIG">Grandeur Sedan</button>
           </div>
         </div>
       </div>
@@ -1225,7 +1225,7 @@ function addStreetProps(x, z, w, d) {
   
   let carModel; // 선언만
   let carVisualOffsetY = 0;
-  let currentCarModel = 'GrandeurIG'; // 현재 차종 추적
+  let currentCarModel = 'SportsCar'; // 현재 차종 추적
 
   // 바퀴 노드 배열: [FL, FR, RL, RR] 순서 (앞왼쪽, 앞오른쪽, 뒤왼쪽, 뒤오른쪽)
   // CANNON vehicle 인덱스: 0=FL, 1=FR, 2=RL, 3=RR
