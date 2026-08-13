@@ -544,7 +544,7 @@
 <button id="btnToggleCam" class="controlBtn">C: 3</button>
     
  <div id="adminPanel">
-    <h3>차량 설정</h3>
+    <h3>차량 물리 설정 (Admin)</h3>
     <div class="admin-row">
       <label>엔진 힘: <span id="valEngine">6000</span></label>
       <input type="range" id="inputEngine" min="1000" max="20000" step="500" value="6000">
@@ -766,66 +766,178 @@ function createShowroomExhibition() {
   exhibition.name = 'ShowroomExhibition';
   exhibition.position.copy(SHOWROOM_CENTER);
 
+  // 반사율이 높은 바닥과 차분한 벽면으로 차량 실루엣이 돋보이게 구성합니다.
   const floorMat = new THREE.MeshStandardMaterial({
-    color: 0x202d3d,
-    metalness: 0.55,
-    roughness: 0.28
+    color: 0x0b111b,
+    metalness: 0.86,
+    roughness: 0.20
+  });
+  const stageMat = new THREE.MeshStandardMaterial({
+    color: 0x26394f,
+    metalness: 0.78,
+    roughness: 0.18
   });
   const wallMat = new THREE.MeshStandardMaterial({
-    color: 0x182233,
-    metalness: 0.25,
-    roughness: 0.6
+    color: 0x101a29,
+    metalness: 0.34,
+    roughness: 0.58
+  });
+  const panelMat = new THREE.MeshStandardMaterial({
+    color: 0x17273a,
+    metalness: 0.48,
+    roughness: 0.38
   });
   const trimMat = new THREE.MeshStandardMaterial({
-    color: 0x3e6f9e,
-    emissive: 0x0b2340,
-    emissiveIntensity: 0.55,
-    metalness: 0.2,
-    roughness: 0.32
+    color: 0x477da9,
+    emissive: 0x0b2d4d,
+    emissiveIntensity: 0.42,
+    metalness: 0.35,
+    roughness: 0.30
+  });
+  const glowMat = new THREE.MeshBasicMaterial({
+    color: 0x4d9ed0,
+    transparent: true,
+    opacity: 0.62,
+    depthWrite: false
   });
 
-  const floor = new THREE.Mesh(new THREE.CylinderGeometry(11, 11, 0.22, 96), floorMat);
-  floor.position.y = -3.32;
+  // 넓은 반사 바닥
+  const floor = new THREE.Mesh(new THREE.BoxGeometry(32, 0.18, 28), floorMat);
+  floor.position.set(0, -3.48, 0);
   floor.receiveShadow = true;
   exhibition.add(floor);
 
-  const platform = new THREE.Mesh(new THREE.CylinderGeometry(7.1, 7.35, 0.34, 96), new THREE.MeshStandardMaterial({
-    color: 0x2e4055,
-    metalness: 0.7,
-    roughness: 0.22
+  // 차량을 띄워 보여주는 이중 원형 단상
+  const platformBase = new THREE.Mesh(new THREE.CylinderGeometry(8.25, 8.5, 0.38, 96), stageMat);
+  platformBase.position.y = -3.06;
+  platformBase.castShadow = true;
+  platformBase.receiveShadow = true;
+  exhibition.add(platformBase);
+
+  const platformTop = new THREE.Mesh(new THREE.CylinderGeometry(7.9, 8.0, 0.16, 96), new THREE.MeshStandardMaterial({
+    color: 0x344e68,
+    metalness: 0.86,
+    roughness: 0.14
   }));
-  platform.position.y = -3.02;
-  platform.castShadow = true;
-  platform.receiveShadow = true;
-  exhibition.add(platform);
+  platformTop.position.y = -2.79;
+  platformTop.receiveShadow = true;
+  exhibition.add(platformTop);
 
-  const ring = new THREE.Mesh(new THREE.TorusGeometry(7.0, 0.055, 10, 128), trimMat);
-  ring.rotation.x = Math.PI / 2;
-  ring.position.y = -2.83;
-  exhibition.add(ring);
+  const outerRing = new THREE.Mesh(new THREE.TorusGeometry(8.05, 0.055, 12, 160), trimMat);
+  outerRing.rotation.x = Math.PI / 2;
+  outerRing.position.y = -2.57;
+  exhibition.add(outerRing);
 
-  const backWall = new THREE.Mesh(new THREE.BoxGeometry(26, 12, 0.45), wallMat);
-  backWall.position.set(0, 3.0, -12);
+  const innerRing = new THREE.Mesh(new THREE.TorusGeometry(6.0, 0.025, 8, 128), glowMat);
+  innerRing.rotation.x = Math.PI / 2;
+  innerRing.position.y = -2.57;
+  exhibition.add(innerRing);
+
+  // 바닥 그리드: 빈 공간을 줄이고 전시장 깊이감을 만듭니다.
+  const gridMat = new THREE.MeshBasicMaterial({
+    color: 0x284968,
+    transparent: true,
+    opacity: 0.34,
+    depthWrite: false
+  });
+  for (let x = -14; x <= 14; x += 2) {
+    const line = new THREE.Mesh(new THREE.BoxGeometry(0.018, 0.012, 26), gridMat);
+    line.position.set(x, -3.37, 0);
+    exhibition.add(line);
+  }
+  for (let z = -12; z <= 12; z += 2) {
+    const line = new THREE.Mesh(new THREE.BoxGeometry(30, 0.012, 0.018), gridMat);
+    line.position.set(0, -3.36, z);
+    exhibition.add(line);
+  }
+
+  // 후면 벽과 깊이감 있는 중앙 패널
+  const backWall = new THREE.Mesh(new THREE.BoxGeometry(30, 14, 0.42), wallMat);
+  backWall.position.set(0, 3.4, -13.0);
   backWall.receiveShadow = true;
   exhibition.add(backWall);
 
-  const leftWall = new THREE.Mesh(new THREE.BoxGeometry(0.45, 12, 24), wallMat);
-  leftWall.position.set(-13, 3.0, 0);
-  exhibition.add(leftWall);
+  const backPanel = new THREE.Mesh(new THREE.BoxGeometry(19, 9.2, 0.10), panelMat);
+  backPanel.position.set(0, 3.1, -12.72);
+  exhibition.add(backPanel);
 
-  const rightWall = leftWall.clone();
-  rightWall.position.x = 13;
-  exhibition.add(rightWall);
-
-  for (const x of [-8, -4, 4, 8]) {
-    const strip = new THREE.Mesh(new THREE.BoxGeometry(0.10, 7, 0.08), trimMat);
-    strip.position.set(x, 3.0, -11.72);
+  // 대형 수직 라이트 바와 벽면 프레임
+  for (const x of [-12.0, -9.0, -6.0, 6.0, 9.0, 12.0]) {
+    const strip = new THREE.Mesh(new THREE.BoxGeometry(0.075, 9.8, 0.05), glowMat);
+    strip.position.set(x, 3.2, -12.62);
     exhibition.add(strip);
   }
 
-  const ceilingBar = new THREE.Mesh(new THREE.BoxGeometry(22, 0.12, 0.12), trimMat);
-  ceilingBar.position.set(0, 8.1, -11.7);
-  exhibition.add(ceilingBar);
+  const frameTop = new THREE.Mesh(new THREE.BoxGeometry(24, 0.08, 0.06), trimMat);
+  frameTop.position.set(0, 7.95, -12.60);
+  exhibition.add(frameTop);
+  const frameBottom = frameTop.clone();
+  frameBottom.position.y = -1.25;
+  exhibition.add(frameBottom);
+
+  // 카메라를 향한 후면 헤일로 링
+  const haloOuter = new THREE.Mesh(new THREE.TorusGeometry(5.3, 0.10, 16, 128), trimMat);
+  haloOuter.position.set(0, 2.7, -12.45);
+  exhibition.add(haloOuter);
+  const haloInner = new THREE.Mesh(new THREE.TorusGeometry(4.75, 0.025, 10, 128), glowMat);
+  haloInner.position.set(0, 2.7, -12.40);
+  exhibition.add(haloInner);
+
+  // 양쪽의 수직 기둥과 상부 브리지
+  for (const x of [-13.7, 13.7]) {
+    const pillar = new THREE.Mesh(new THREE.BoxGeometry(0.36, 12, 0.42), panelMat);
+    pillar.position.set(x, 2.4, -10.7);
+    pillar.castShadow = true;
+    exhibition.add(pillar);
+    const pillarLight = new THREE.Mesh(new THREE.BoxGeometry(0.055, 8.2, 0.055), glowMat);
+    pillarLight.position.set(x * 0.995, 2.4, -10.45);
+    exhibition.add(pillarLight);
+  }
+  const ceilingBridge = new THREE.Mesh(new THREE.BoxGeometry(28, 0.35, 0.42), panelMat);
+  ceilingBridge.position.set(0, 8.4, -10.7);
+  exhibition.add(ceilingBridge);
+
+  // 상부 헤일로 조명 프레임과 차량 주변의 은은한 광원 빔
+  const overheadHalo = new THREE.Mesh(new THREE.TorusGeometry(6.2, 0.045, 10, 128), trimMat);
+  overheadHalo.rotation.x = Math.PI / 2;
+  overheadHalo.position.set(0, 7.8, -0.2);
+  exhibition.add(overheadHalo);
+
+  const beamMat = new THREE.MeshBasicMaterial({
+    color: 0x5ea8d7,
+    transparent: true,
+    opacity: 0.035,
+    side: THREE.DoubleSide,
+    depthWrite: false
+  });
+  for (const x of [-5.2, 5.2]) {
+    const beam = new THREE.Mesh(new THREE.ConeGeometry(1.7, 7.0, 32, 1, true), beamMat);
+    beam.position.set(x, 3.7, 0.4);
+    exhibition.add(beam);
+  }
+
+  // 전시장에 떠 있는 미세 입자
+  const particlePositions = [];
+  for (let i = 0; i < 90; i++) {
+    const angle = i * 2.39996;
+    const radius = 5.5 + (i % 9) * 0.65;
+    particlePositions.push(
+      Math.cos(angle) * radius,
+      -1.8 + (i % 18) * 0.55,
+      -5.5 + Math.sin(angle) * 2.8
+    );
+  }
+  const particleGeometry = new THREE.BufferGeometry();
+  particleGeometry.setAttribute('position', new THREE.Float32BufferAttribute(particlePositions, 3));
+  const particles = new THREE.Points(particleGeometry, new THREE.PointsMaterial({
+    color: 0x70b9e2,
+    size: 0.055,
+    transparent: true,
+    opacity: 0.42,
+    depthWrite: false
+  }));
+  exhibition.add(particles);
+  exhibition.userData.particles = particles;
 
   exhibition.visible = false;
   scene.add(exhibition);
@@ -2605,7 +2717,10 @@ setInterval(() => {
       
       const showroomCenter = SHOWROOM_CENTER;
       showroomExhibition.visible = true;
-      // 너무 칙칙하지 않은 어두운 스튜디오 톤과 3점 조명
+      if (showroomExhibition.userData.particles) {
+        showroomExhibition.userData.particles.rotation.y += 0.0008;
+      }
+      // 시네마틱 하이테크 스튜디오 톤과 3점 조명
       scene.background = new THREE.Color(0x1d2736);
       scene.fog = null;
       // 톤 매핑을 사용하지 않는 현재 게임 설정 기준으로 쇼룸 조도를 낮춥니다.
