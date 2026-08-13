@@ -734,9 +734,9 @@ function createShowroomExhibition() {
     roughness: 0.6
   });
   const trimMat = new THREE.MeshStandardMaterial({
-    color: 0x5fa8ff,
-    emissive: 0x164a85,
-    emissiveIntensity: 1.8,
+    color: 0x3e6f9e,
+    emissive: 0x0b2340,
+    emissiveIntensity: 0.55,
     metalness: 0.2,
     roughness: 0.32
   });
@@ -2565,12 +2565,13 @@ setInterval(() => {
       // 너무 칙칙하지 않은 어두운 스튜디오 톤과 3점 조명
       scene.background = new THREE.Color(0x1d2736);
       scene.fog = null;
-      sun.intensity = 0.58;
-      ambientLight.intensity = 0.24;
-      hemisphereLight.intensity = 0.18;
-      showroomKeyLight.intensity = 2.6;
-      showroomFillLight.intensity = 1.8;
-      showroomRimLight.intensity = 2.2;
+      // 톤 매핑을 사용하지 않는 현재 게임 설정 기준으로 쇼룸 조도를 낮춥니다.
+      sun.intensity = 0.20;
+      ambientLight.intensity = 0.12;
+      hemisphereLight.intensity = 0.10;
+      showroomKeyLight.intensity = 0.85;
+      showroomFillLight.intensity = 0.45;
+      showroomRimLight.intensity = 0.65;
       showroomKeyLight.position.set(showroomCenter.x + 7, showroomCenter.y + 8, showroomCenter.z + 9);
       showroomFillLight.position.set(showroomCenter.x - 8, showroomCenter.y + 4, showroomCenter.z + 4);
       showroomRimLight.position.set(showroomCenter.x, showroomCenter.y + 6, showroomCenter.z - 10);
