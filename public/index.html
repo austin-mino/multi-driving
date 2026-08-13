@@ -2934,6 +2934,32 @@ if (cameraMode === 'third') {
     let selectedCarColor = '#ffffff';
     let isPreviewActive = true;
 
+    // 쇼룸 차량의 외형 전장 기준. 모델 원본 스케일이 서로 달라도 같은 크기로 보이게 합니다.
+    const SHOWROOM_VEHICLE_LENGTH = 7.2;
+    function normalizePreviewCarScale(model) {
+      model.updateMatrixWorld(true);
+
+      const originalBox = new THREE.Box3().setFromObject(model);
+      const originalSize = originalBox.getSize(new THREE.Vector3());
+      const footprintLength = Math.max(originalSize.x, originalSize.z);
+
+      if (footprintLength > 0.001) {
+        const fitScale = SHOWROOM_VEHICLE_LENGTH / footprintLength;
+        model.scale.multiplyScalar(fitScale);
+      }
+
+      model.updateMatrixWorld(true);
+      const fittedBox = new THREE.Box3().setFromObject(model);
+      const fittedCenter = fittedBox.getCenter(new THREE.Vector3());
+      const stageTopY = SHOWROOM_CENTER.y - 2.83;
+
+      // 중앙 정렬 및 단상 위 바닥 높이 정렬
+      model.position.x += SHOWROOM_CENTER.x - fittedCenter.x;
+      model.position.z += SHOWROOM_CENTER.z - fittedCenter.z;
+      model.position.y += stageTopY - fittedBox.min.y;
+      model.updateMatrixWorld(true);
+    }
+
     async function initPreviewCar(modelName, color) {
       if (previewCarModel) {
         scene.remove(previewCarModel);
@@ -2956,7 +2982,7 @@ if (cameraMode === 'third') {
       
       if (previewCarModel) {
         // 게임 맵과 완전히 격리된 별도의 쇼룸 좌표에 위치 설정
-        previewCarModel.position.set(5000, 1000 - 3.0, 5000);
+        previewCarModel.position.set(SHOWROOM_CENTER.x, SHOWROOM_CENTER.y - 3.0, SHOWROOM_CENTER.z);
         previewCarModel.rotation.set(0, 0, 0);
 
         // 폰티악은 게임용 바퀴 축 보정(90도)을 유지하되, 쇼룸에서는 그 보정만 되돌립니다.
@@ -2974,7 +3000,8 @@ if (cameraMode === 'third') {
         }
 
         scene.add(previewCarModel);
-        console.log("Preview model added to isolated showroom scene");
+        normalizePreviewCarScale(previewCarModel);
+        console.log("Preview model added to isolated showroom scene with normalized scale");
       }
     }
 
