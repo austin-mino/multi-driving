@@ -757,6 +757,7 @@
         <div id="carOptionsPanel" class="car-options-panel" hidden>
           <div class="car-select-grid">
             <button class="car-option-btn active" type="button" data-model="SportsCar">Ferrari 458</button>
+            <button class="car-option-btn" type="button" data-model="DodgeDemon">Dodge Challenger SRT Demon</button>
             <button class="car-option-btn" type="button" data-model="SUV">Range Rover</button>
             <button class="car-option-btn" type="button" data-model="McLarenP1">McLaren P1</button>
             <button class="car-option-btn" type="button" data-model="PontiacPhoenix">Pontiac Phoenix</button>
@@ -2253,6 +2254,89 @@ node.quaternion.multiply(rotation90);
   });
 }
 
+  /* Dodge Challenger SRT Demon 생성 함수 */
+async function createDodgeDemon(color = '#ffffff') {
+  return new Promise((resolve) => {
+    const loader = new GLTFLoader();
+
+    loader.load(
+      'https://raw.githubusercontent.com/austin-mino/multi-driving/main/models/dodge_challenger_srt_demon_sdc.glb',
+      (gltf ) => {
+        const car = gltf.scene;
+        steeringWheelNode = null;
+
+        car.traverse((child) => {
+          child.castShadow = true;
+          child.receiveShadow = true;
+
+          const name = (child.name || '').toLowerCase();
+
+          // 핸들 노드가 있는 경우 저장
+          if (name.includes('steering') || name.includes('volant')) {
+            steeringWheelNode = child;
+          }
+
+          if (!child.isMesh || !child.material) return;
+
+          const materials = Array.isArray(child.material)
+            ? child.material
+            : [child.material];
+
+          // 차체 재질 검색
+          const hasBodyMaterial = materials.some((material) => {
+            const materialName = (material?.name || '').toLowerCase();
+
+            return (
+              materialName.includes('carpaint') ||
+              materialName.includes('body') ||
+              materialName === 'cars'
+            );
+          });
+
+          // 선택한 색상을 차체에 적용
+          if (hasBodyMaterial) {
+            child.material = materials.map((material) => {
+              const clonedMaterial = material.clone();
+              clonedMaterial.color.set(color);
+              clonedMaterial.metalness = 0.8;
+              clonedMaterial.roughness = 0.22;
+              return clonedMaterial;
+            });
+
+            // 다른 플레이어의 차체 색상 동기화용 이름
+            child.name = 'MainBody';
+          }
+        });
+
+        // 모델 크기와 방향
+        car.scale.set(2.5, 2.5, 2.5);
+        car.rotation.y = Math.PI;
+
+        // 차량을 원점 중심으로 정렬
+        const box = new THREE.Box3().setFromObject(car);
+        const center = box.getCenter(new THREE.Vector3());
+
+        car.position.x -= center.x;
+        car.position.z -= center.z;
+        car.position.y -= box.min.y;
+
+        // 이 모델은 Wheel_FL 등의 이름을 사용하지 않으므로
+        // 기존 공통 물리 휠 시스템과 충돌하지 않도록 빈 배열을 지정합니다.
+        car.userData.wheelNodes = [null, null, null, null];
+        car.userData.modelName = 'DodgeDemon';
+        car.userData.visualOffsetY = -0.8;
+        car.userData.steeringNode = steeringWheelNode;
+
+        resolve(car);
+      },
+      undefined,
+      (error) => {
+        console.error('Dodge Challenger SRT Demon 로드 실패:', error);
+        resolve(createGrandeurIGCarDetailed(color));
+      }
+    );
+  });
+}
       
     // 차량용 RaycastVehicle 설정
     const vehicle = new CANNON.RaycastVehicle({
@@ -2912,6 +2996,9 @@ socket.on('updatePlayers', async (players) => {
         case 'PontiacPhoenix':
           otherCar = await createPontiacPhoenix(player.carColor || '#aaaaaa');
           break;
+        case 'DodgeDemon':
+          otherCar = await createDodgeDemon(player.carColor || '#aaaaaa');
+          break;
         default:
           otherCar = createGrandeurIGCarDetailed(player.carColor || '#aaaaaa');
       }
@@ -3443,6 +3530,8 @@ if (cameraMode === 'third') {
         previewCarModel = await createMcLarenP1(color);
       } else if (modelName === 'PontiacPhoenix') {
         previewCarModel = await createPontiacPhoenix(color);
+      } else if (modelName === 'DodgeDemon') {
+        previewCarModel = await createDodgeDemon(color);
       }
       
       if (previewCarModel) {
@@ -3699,6 +3788,9 @@ if (cameraMode === 'third') {
       break;
     case 'PontiacPhoenix':
       carModel = await createPontiacPhoenix(color);
+      break;
+    case 'DodgeDemon':
+      carModel = await createDodgeDemon(color);
       break;
     default:
       carModel = createGrandeurIGCarDetailed(color);
