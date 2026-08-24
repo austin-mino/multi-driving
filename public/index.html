@@ -2253,26 +2253,35 @@ node.quaternion.multiply(rotation90);
     );
   });
 }
-
-  /* Dodge Challenger SRT Demon 생성 함수 */
+  
+/* Dodge Challenger SRT Demon 생성 함수 */
 async function createDodgeDemon(color = '#ffffff') {
   return new Promise((resolve) => {
     const loader = new GLTFLoader();
 
     loader.load(
       'https://raw.githubusercontent.com/austin-mino/multi-driving/main/models/dodge_challenger_srt_demon_sdc.glb',
-      (gltf ) => {
+
+      (gltf) => {
         const car = gltf.scene;
+
         steeringWheelNode = null;
 
+        // =========================================================
+        // 1. 기본 설정 + 재질 처리
+        // =========================================================
         car.traverse((child) => {
+
           child.castShadow = true;
           child.receiveShadow = true;
 
           const name = (child.name || '').toLowerCase();
 
-          // 핸들 노드가 있는 경우 저장
-          if (name.includes('steering') || name.includes('volant')) {
+          // 핸들 찾기
+          if (
+            name.includes('steering') ||
+            name.includes('volant')
+          ) {
             steeringWheelNode = child;
           }
 
@@ -2282,59 +2291,333 @@ async function createDodgeDemon(color = '#ffffff') {
             ? child.material
             : [child.material];
 
-          // 차체 재질 검색
+          // -------------------------------------------------------
+          // 차체 재질만 색상 변경
+          // -------------------------------------------------------
           const hasBodyMaterial = materials.some((material) => {
-            const materialName = (material?.name || '').toLowerCase();
+
+            const materialName =
+              (material?.name || '').toLowerCase();
 
             return (
               materialName.includes('carpaint') ||
               materialName.includes('body') ||
+              materialName.includes('paint') ||
               materialName === 'cars'
             );
           });
 
-          // 선택한 색상을 차체에 적용
           if (hasBodyMaterial) {
+
             child.material = materials.map((material) => {
+
               const clonedMaterial = material.clone();
+
               clonedMaterial.color.set(color);
               clonedMaterial.metalness = 0.8;
               clonedMaterial.roughness = 0.22;
+
+              // 투명 재질 때문에 차체가 사라지는 문제 방지
+              clonedMaterial.transparent = false;
+              clonedMaterial.opacity = 1;
+
               return clonedMaterial;
             });
 
-            // 다른 플레이어의 차체 색상 동기화용 이름
             child.name = 'MainBody';
           }
+
+          // -------------------------------------------------------
+          // 원본 재질의 비정상적인 투명 문제 방지
+          // 차체가 아닌 유리/램프 등은 원래 재질을 최대한 유지
+          // -------------------------------------------------------
+          materials.forEach((material) => {
+
+            if (!material) return;
+
+            const matName =
+              (material.name || '').toLowerCase();
+
+            // body/paint가 아닌데 opacity 0인 재질만 복구
+            if (
+              material.opacity === 0 &&
+              !matName.includes('glass') &&
+              !matName.includes('window')
+            ) {
+              material.transparent = false;
+              material.opacity = 1;
+            }
+
+          });
+
         });
 
-        // 모델 크기와 방향
-        car.scale.set(2.5, 2.5, 2.5);
-        car.rotation.y = Math.PI;
 
-        // 차량을 원점 중심으로 정렬
-        const box = new THREE.Box3().setFromObject(car);
-        const center = box.getCenter(new THREE.Vector3());
+        // =========================================================
+        // 2. Dodge 원본 방향/스케일
+        // =========================================================
+
+        // 기존:
+        // car.scale.set(2.5, 2.5, 2.5);
+        // car.rotation.y = Math.PI;
+
+        // 둘 다 제거하고 원본 기준으로 시작
+        car.scale.set(1, 1, 1);
+        car.rotation.set(0, 0, 0);
+
+
+        // =========================================================
+        // 3. desirefxme_077_43 휠 찾기
+        // =========================================================
+
+        let wheelRoot = null;
+
+        car.traverse((child) => {
+
+          const name =
+            (child.name || '').toLowerCase();
+
+          if (
+            name === 'desirefxme_077_43' ||
+            name.includes('desirefxme_077_43')
+          ) {
+            wheelRoot = child;
+          }
+
+        });
+
+
+        // =========================================================
+        // 4. 휠 4개 분리
+        // =========================================================
+
+        const wheelNodes = [
+          null, // 0 = FL
+          null, // 1 = FR
+          null, // 2 = RL
+          null  // 3 = RR
+        ];
+
+        if (wheelRoot) {
+
+          console.log(
+            'Dodge wheel root 발견:',
+            wheelRoot.name
+          );
+
+          // wheelRoot 바로 아래의 객체들을 확인
+          const wheelChildren = [];
+
+          wheelRoot.children.forEach((child) => {
+            wheelChildren.push(child);
+          });
+
+
+          console.log(
+            'Dodge wheel children:',
+            wheelChildren.map(w => w.name)
+          );
+
+
+          // -------------------------------------------------------
+          // 각 휠을 독립 Group으로 분리
+          // -------------------------------------------------------
+
+          wheelChildren.forEach((wheel, index) => {
+
+            const detachedWheel = new THREE.Group();
+
+            detachedWheel.name =
+              `Dodge_Wheel_${index}`;
+
+            // 현재 월드 위치/회전/스케일 보존
+            wheel.updateMatrixWorld(true);
+
+            const worldPosition =
+              new THREE.Vector3();
+
+            const worldQuaternion =
+              new THREE.Quaternion();
+
+            const worldScale =
+              new THREE.Vector3();
+
+            wheel.getWorldPosition(worldPosition);
+            wheel.getWorldQuaternion(worldQuaternion);
+            wheel.getWorldScale(worldScale);
+
+
+            // 기존 부모에서 제거
+            wheelRoot.remove(wheel);
+
+
+            // 새 부모에 추가
+            detachedWheel.add(wheel);
+
+
+            // 월드 transform 유지
+            detachedWheel.position.copy(worldPosition);
+            detachedWheel.quaternion.copy(worldQuaternion);
+            detachedWheel.scale.copy(worldScale);
+
+
+            // 차량 기준 로컬 좌표로 변환
+            car.worldToLocal(
+              detachedWheel.position
+            );
+
+
+            // 차량의 역회전 적용
+            const carWorldQuaternion =
+              new THREE.Quaternion();
+
+            car.getWorldQuaternion(
+              carWorldQuaternion
+            );
+
+            detachedWheel.quaternion.premultiply(
+              carWorldQuaternion.clone().invert()
+            );
+
+
+            // 그림자
+            detachedWheel.traverse((obj) => {
+
+              obj.castShadow = true;
+              obj.receiveShadow = true;
+
+            });
+
+
+            // ---------------------------------------------------
+            // CANNON 휠 순서
+            //
+            // 0 = Front Left
+            // 1 = Front Right
+            // 2 = Rear Left
+            // 3 = Rear Right
+            // ---------------------------------------------------
+
+            wheelNodes[index] =
+              detachedWheel;
+
+          });
+
+
+          // 빈 wheelRoot 제거
+          if (wheelRoot.children.length === 0) {
+
+            if (wheelRoot.parent) {
+              wheelRoot.parent.remove(wheelRoot);
+            }
+
+          }
+
+        } else {
+
+          console.warn(
+            'Dodge: desirefxme_077_43 휠 그룹을 찾지 못했습니다.'
+          );
+
+        }
+
+
+        // =========================================================
+        // 5. 차량 크기 자동 조정
+        // =========================================================
+
+        car.updateMatrixWorld(true);
+
+        const box =
+          new THREE.Box3().setFromObject(car);
+
+        const size =
+          box.getSize(new THREE.Vector3());
+
+        const vehicleLength =
+          Math.max(size.x, size.z);
+
+
+        // Dodge 물리 차량 길이 약 6
+        const targetLength = 6.0;
+
+        if (vehicleLength > 0.001) {
+
+          const scale =
+            targetLength / vehicleLength;
+
+          car.scale.multiplyScalar(scale);
+
+        }
+
+
+        // =========================================================
+        // 6. 차량 중심점 정렬
+        // =========================================================
+
+        car.updateMatrixWorld(true);
+
+        const fittedBox =
+          new THREE.Box3().setFromObject(car);
+
+        const center =
+          fittedBox.getCenter(
+            new THREE.Vector3()
+          );
+
 
         car.position.x -= center.x;
         car.position.z -= center.z;
-        car.position.y -= box.min.y;
+        car.position.y -= fittedBox.min.y;
 
-        // 이 모델은 Wheel_FL 등의 이름을 사용하지 않으므로
-        // 기존 공통 물리 휠 시스템과 충돌하지 않도록 빈 배열을 지정합니다.
-        car.userData.wheelNodes = [null, null, null, null];
-        car.userData.modelName = 'DodgeDemon';
-        car.userData.visualOffsetY = -0.8;
-        car.userData.steeringNode = steeringWheelNode;
+
+        // =========================================================
+        // 7. Dodge 차량 데이터
+        // =========================================================
+
+        car.userData.wheelNodes =
+          wheelNodes;
+
+        car.userData.modelName =
+          'DodgeDemon';
+
+        car.userData.visualOffsetY =
+          -0.8;
+
+        car.userData.steeringNode =
+          steeringWheelNode;
+
+
+        // 디버깅
+        console.log(
+          'Dodge wheelNodes:',
+          wheelNodes.map(
+            (wheel, i) =>
+              `${i}: ${wheel ? wheel.name : 'NULL'}`
+          )
+        );
+
 
         resolve(car);
+
       },
+
       undefined,
+
       (error) => {
-        console.error('Dodge Challenger SRT Demon 로드 실패:', error);
-        resolve(createGrandeurIGCarDetailed(color));
+
+        console.error(
+          'Dodge Challenger SRT Demon 로드 실패:',
+          error
+        );
+
+        resolve(
+          createGrandeurIGCarDetailed(color)
+        );
+
       }
     );
+
   });
 }
       
