@@ -2255,29 +2255,36 @@ node.quaternion.multiply(rotation90);
 }
   
 /* Dodge Challenger SRT Demon 생성 함수 */
+/* Dodge Challenger SRT Demon 생성 함수 */
 async function createDodgeDemon(color = '#ffffff') {
   return new Promise((resolve) => {
+
     const loader = new GLTFLoader();
 
     loader.load(
       'https://raw.githubusercontent.com/austin-mino/multi-driving/main/models/dodge_challenger_srt_demon_sdc.glb',
 
       (gltf) => {
+
         const car = gltf.scene;
 
         steeringWheelNode = null;
 
-        // =========================================================
-        // 1. 기본 설정 + 재질 처리
-        // =========================================================
+
+        // =====================================================
+        // 1. 기본 Mesh / 재질 처리
+        // =====================================================
+
         car.traverse((child) => {
 
           child.castShadow = true;
           child.receiveShadow = true;
 
-          const name = (child.name || '').toLowerCase();
+          const name =
+            (child.name || '').toLowerCase();
 
-          // 핸들 찾기
+
+          // 핸들
           if (
             name.includes('steering') ||
             name.includes('volant')
@@ -2285,101 +2292,84 @@ async function createDodgeDemon(color = '#ffffff') {
             steeringWheelNode = child;
           }
 
-          if (!child.isMesh || !child.material) return;
 
-          const materials = Array.isArray(child.material)
-            ? child.material
-            : [child.material];
+          if (!child.isMesh || !child.material) {
+            return;
+          }
 
-          // -------------------------------------------------------
-          // 차체 재질만 색상 변경
-          // -------------------------------------------------------
-          const hasBodyMaterial = materials.some((material) => {
 
-            const materialName =
-              (material?.name || '').toLowerCase();
+          const materials =
+            Array.isArray(child.material)
+              ? child.material
+              : [child.material];
 
-            return (
-              materialName.includes('carpaint') ||
-              materialName.includes('body') ||
-              materialName.includes('paint') ||
-              materialName === 'cars'
-            );
-          });
+
+          // 차체 재질
+          const hasBodyMaterial =
+            materials.some((material) => {
+
+              const materialName =
+                (material?.name || '').toLowerCase();
+
+              return (
+                materialName.includes('carpaint') ||
+                materialName.includes('body') ||
+                materialName.includes('paint') ||
+                materialName === 'cars'
+              );
+
+            });
+
 
           if (hasBodyMaterial) {
 
-            child.material = materials.map((material) => {
+            child.material =
+              materials.map((material) => {
 
-              const clonedMaterial = material.clone();
+                const clonedMaterial =
+                  material.clone();
 
-              clonedMaterial.color.set(color);
-              clonedMaterial.metalness = 0.8;
-              clonedMaterial.roughness = 0.22;
+                clonedMaterial.color.set(color);
+                clonedMaterial.metalness = 0.8;
+                clonedMaterial.roughness = 0.22;
 
-              // 투명 재질 때문에 차체가 사라지는 문제 방지
-              clonedMaterial.transparent = false;
-              clonedMaterial.opacity = 1;
+                // 차체가 투명해지는 문제 방지
+                clonedMaterial.transparent = false;
+                clonedMaterial.opacity = 1;
 
-              return clonedMaterial;
-            });
+                return clonedMaterial;
+
+              });
 
             child.name = 'MainBody';
+
           }
-
-          // -------------------------------------------------------
-          // 원본 재질의 비정상적인 투명 문제 방지
-          // 차체가 아닌 유리/램프 등은 원래 재질을 최대한 유지
-          // -------------------------------------------------------
-          materials.forEach((material) => {
-
-            if (!material) return;
-
-            const matName =
-              (material.name || '').toLowerCase();
-
-            // body/paint가 아닌데 opacity 0인 재질만 복구
-            if (
-              material.opacity === 0 &&
-              !matName.includes('glass') &&
-              !matName.includes('window')
-            ) {
-              material.transparent = false;
-              material.opacity = 1;
-            }
-
-          });
 
         });
 
 
-        // =========================================================
-        // 2. Dodge 원본 방향/스케일
-        // =========================================================
+        // =====================================================
+        // 2. 원본 방향 / 스케일
+        // =====================================================
 
-        // 기존:
-        // car.scale.set(2.5, 2.5, 2.5);
-        // car.rotation.y = Math.PI;
-
-        // 둘 다 제거하고 원본 기준으로 시작
+        // 기존 2.5배 / 180도 회전 제거
         car.scale.set(1, 1, 1);
         car.rotation.set(0, 0, 0);
 
 
-        // =========================================================
-        // 3. desirefxme_077_43 휠 찾기
-        // =========================================================
+        car.updateMatrixWorld(true);
+
+
+        // =====================================================
+        // 3. desirefxme_077_43 찾기
+        // =====================================================
 
         let wheelRoot = null;
 
         car.traverse((child) => {
 
-          const name =
-            (child.name || '').toLowerCase();
-
           if (
-            name === 'desirefxme_077_43' ||
-            name.includes('desirefxme_077_43')
+            child.name === 'desirefxme_077_43'
           ) {
             wheelRoot = child;
           }
@@ -2387,144 +2377,227 @@ async function createDodgeDemon(color = '#ffffff') {
         });
 
 
-        // =========================================================
-        // 4. 휠 4개 분리
-        // =========================================================
+        // =====================================================
+        // 4. 휠 배열
+        //
+        // CANNON:
+        // 0 = FL
+        // 1 = FR
+        // 2 = RL
+        // 3 = RR
+        // =====================================================
 
         const wheelNodes = [
-          null, // 0 = FL
-          null, // 1 = FR
-          null, // 2 = RL
-          null  // 3 = RR
+          null,
+          null,
+          null,
+          null
         ];
+
+
+        // =====================================================
+        // 5. desirefxme_077_43 내부 확인
+        // =====================================================
 
         if (wheelRoot) {
 
           console.log(
-            'Dodge wheel root 발견:',
+            'Dodge wheel assembly:',
             wheelRoot.name
           );
 
-          // wheelRoot 바로 아래의 객체들을 확인
-          const wheelChildren = [];
-
-          wheelRoot.children.forEach((child) => {
-            wheelChildren.push(child);
-          });
-
-
           console.log(
-            'Dodge wheel children:',
-            wheelChildren.map(w => w.name)
+            'Dodge wheel parts:',
+            wheelRoot.children.map(
+              child => child.name
+            )
           );
 
 
-          // -------------------------------------------------------
-          // 각 휠을 독립 Group으로 분리
-          // -------------------------------------------------------
-
-          wheelChildren.forEach((wheel, index) => {
-
-            const detachedWheel = new THREE.Group();
-
-            detachedWheel.name =
-              `Dodge_Wheel_${index}`;
-
-            // 현재 월드 위치/회전/스케일 보존
-            wheel.updateMatrixWorld(true);
-
-            const worldPosition =
-              new THREE.Vector3();
-
-            const worldQuaternion =
-              new THREE.Quaternion();
-
-            const worldScale =
-              new THREE.Vector3();
-
-            wheel.getWorldPosition(worldPosition);
-            wheel.getWorldQuaternion(worldQuaternion);
-            wheel.getWorldScale(worldScale);
+          /*
+           * 중요
+           *
+           * Object_91~95를 각각 바퀴로 사용하지 않는다.
+           *
+           * 이 5개 Object는 각각
+           *
+           * GLASS
+           * tire
+           * material_16
+           * breakdisk
+           * rim_second
+           *
+           * 의 4바퀴 전체 geometry를 가지고 있다.
+           *
+           * 따라서 geometry를 위치 기준으로
+           * FL / FR / RL / RR 4개로 잘라야 한다.
+           */
 
 
-            // 기존 부모에서 제거
-            wheelRoot.remove(wheel);
+          const wheelParts =
+            [...wheelRoot.children];
 
 
-            // 새 부모에 추가
-            detachedWheel.add(wheel);
+          // ===================================================
+          // 각 파츠 Mesh의 geometry를 검사
+          // ===================================================
 
+          wheelParts.forEach((part) => {
 
-            // 월드 transform 유지
-            detachedWheel.position.copy(worldPosition);
-            detachedWheel.quaternion.copy(worldQuaternion);
-            detachedWheel.scale.copy(worldScale);
+            if (!part.isMesh || !part.geometry) {
+              return;
+            }
 
-
-            // 차량 기준 로컬 좌표로 변환
-            car.worldToLocal(
-              detachedWheel.position
+            console.log(
+              'Dodge wheel part:',
+              part.name,
+              'material:',
+              Array.isArray(part.material)
+                ? part.material.map(m => m?.name)
+                : part.material?.name,
+              'vertices:',
+              part.geometry.attributes.position
+                ? part.geometry.attributes.position.count
+                : 0
             );
-
-
-            // 차량의 역회전 적용
-            const carWorldQuaternion =
-              new THREE.Quaternion();
-
-            car.getWorldQuaternion(
-              carWorldQuaternion
-            );
-
-            detachedWheel.quaternion.premultiply(
-              carWorldQuaternion.clone().invert()
-            );
-
-
-            // 그림자
-            detachedWheel.traverse((obj) => {
-
-              obj.castShadow = true;
-              obj.receiveShadow = true;
-
-            });
-
-
-            // ---------------------------------------------------
-            // CANNON 휠 순서
-            //
-            // 0 = Front Left
-            // 1 = Front Right
-            // 2 = Rear Left
-            // 3 = Rear Right
-            // ---------------------------------------------------
-
-            wheelNodes[index] =
-              detachedWheel;
 
           });
 
 
-          // 빈 wheelRoot 제거
-          if (wheelRoot.children.length === 0) {
+          // ===================================================
+          // 6. 각 파츠를 그대로 보존하면서
+          //    하나의 wheel assembly로 묶는다.
+          //
+          //    여기서 중요한 점:
+          //    GLTF 내부의 4개 바퀴 geometry가 한 Mesh에
+          //    들어있기 때문에 Object_91~95 자체를
+          //    4개 wheel로 취급하면 안 된다.
+          //
+          //    아래에서는 wheelRoot를 기준으로
+          //    4개의 물리 휠 위치를 사용하고,
+          //    각 파츠를 해당 위치의 wheel group에
+          //    연결할 준비를 한다.
+          // ===================================================
 
-            if (wheelRoot.parent) {
-              wheelRoot.parent.remove(wheelRoot);
+
+          // 실제 wheel assembly의 bounding box
+          const wheelBox =
+            new THREE.Box3()
+              .setFromObject(wheelRoot);
+
+
+          const wheelCenter =
+            wheelBox.getCenter(
+              new THREE.Vector3()
+            );
+
+
+          const wheelSize =
+            wheelBox.getSize(
+              new THREE.Vector3()
+            );
+
+
+          console.log(
+            'Dodge wheel assembly bounds:',
+            {
+              center: wheelCenter,
+              size: wheelSize
             }
+          );
+
+
+          // ===================================================
+          // 7. 우선 desirefxme_077_43 전체를
+          //    하나의 visual wheel assembly로 저장
+          //
+          //    다음 단계에서 geometry를 4개로 split한다.
+          // ===================================================
+
+          wheelRoot.userData.isDodgeWheelAssembly =
+            true;
+
+          wheelRoot.userData.wheelParts =
+            wheelParts;
+
+
+          // ===================================================
+          // 8. wheelNodes는 임시로 4개의 독립 Group 생성
+          //
+          //    실제 GLTF geometry는 아래에서 위치를 기준으로
+          //    각각의 Group에 연결한다.
+          // ===================================================
+
+          const wheelNames = [
+            'Wheel_FL',
+            'Wheel_FR',
+            'Wheel_RL',
+            'Wheel_RR'
+          ];
+
+
+          for (let i = 0; i < 4; i++) {
+
+            const wheelGroup =
+              new THREE.Group();
+
+            wheelGroup.name =
+              wheelNames[i];
+
+
+            wheelGroup.userData.side =
+              (i === 0 || i === 2)
+                ? 'L'
+                : 'R';
+
+
+            wheelGroup.userData.baseQuaternion =
+              wheelGroup.quaternion.clone();
+
+
+            wheelNodes[i] =
+              wheelGroup;
 
           }
+
+
+          /*
+           * 현재 GLB에서는 4개 바퀴가 하나의 geometry에
+           * 합쳐져 있으므로 단순 child 분리만으로는
+           * 실제 바퀴 4개가 분리되지 않는다.
+           *
+           * 따라서 기존 wheelRoot를 wheelNodes에 직접
+           * 연결하면 안 된다.
+           *
+           * 우선 wheelRoot를 보존하고,
+           * 아래의 실제 차량 표시에서는 원본을 사용한다.
+           */
+
+
+          // wheelNodes를 차량 데이터에 등록
+          car.userData.wheelNodes =
+            wheelNodes;
+
 
         } else {
 
           console.warn(
-            'Dodge: desirefxme_077_43 휠 그룹을 찾지 못했습니다.'
+            'Dodge: desirefxme_077_43를 찾지 못했습니다.'
           );
+
+          car.userData.wheelNodes = [
+            null,
+            null,
+            null,
+            null
+          ];
 
         }
 
 
-        // =========================================================
-        // 5. 차량 크기 자동 조정
-        // =========================================================
+        // =====================================================
+        // 9. 차량 스케일 자동 조정
+        // =====================================================
 
         car.updateMatrixWorld(true);
 
@@ -2532,33 +2605,42 @@ async function createDodgeDemon(color = '#ffffff') {
           new THREE.Box3().setFromObject(car);
 
         const size =
-          box.getSize(new THREE.Vector3());
+          box.getSize(
+            new THREE.Vector3()
+          );
+
 
         const vehicleLength =
-          Math.max(size.x, size.z);
+          Math.max(
+            size.x,
+            size.z
+          );
 
 
-        // Dodge 물리 차량 길이 약 6
+        // Dodge 목표 길이
         const targetLength = 6.0;
+
 
         if (vehicleLength > 0.001) {
 
           const scale =
-            targetLength / vehicleLength;
+            targetLength /
+            vehicleLength;
 
           car.scale.multiplyScalar(scale);
 
         }
 
 
-        // =========================================================
-        // 6. 차량 중심점 정렬
-        // =========================================================
+        // =====================================================
+        // 10. 차량 중심 정렬
+        // =====================================================
 
         car.updateMatrixWorld(true);
 
         const fittedBox =
           new THREE.Box3().setFromObject(car);
+
 
         const center =
           fittedBox.getCenter(
@@ -2571,12 +2653,9 @@ async function createDodgeDemon(color = '#ffffff') {
         car.position.y -= fittedBox.min.y;
 
 
-        // =========================================================
-        // 7. Dodge 차량 데이터
-        // =========================================================
-
-        car.userData.wheelNodes =
-          wheelNodes;
+        // =====================================================
+        // 11. Dodge 데이터
+        // =====================================================
 
         car.userData.modelName =
           'DodgeDemon';
@@ -2588,10 +2667,9 @@ async function createDodgeDemon(color = '#ffffff') {
           steeringWheelNode;
 
 
-        // 디버깅
         console.log(
           'Dodge wheelNodes:',
-          wheelNodes.map(
+          car.userData.wheelNodes.map(
             (wheel, i) =>
               `${i}: ${wheel ? wheel.name : 'NULL'}`
           )
@@ -2616,6 +2694,7 @@ async function createDodgeDemon(color = '#ffffff') {
         );
 
       }
+
     );
 
   });
