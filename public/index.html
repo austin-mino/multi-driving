@@ -2262,10 +2262,10 @@ node.quaternion.multiply(rotation90);
   const DODGE_GLB_URL = './models/dodge_demon/dodge_challenger_srt_demon_split_wheels.glb';
 
   // Dodge 전용 표시 보정값. 전장은 기존 8.0에서 약 31% 키워 다른 차량과의
-  // 시각적 비율을 맞춘다. GLB의 전방이 게임의 +Z와 반대이므로 시각 루트에서
-  // 180도 회전한다.
+  // 시각적 비율을 맞춘다. GLB는 Z축이 위쪽이고 Y축이 차량 전후축이므로
+  // X축 +90도 회전으로 위쪽을 유지하면서 차량의 전방(+Y)을 게임의 전방(+Z)에 맞춘다.
   const DODGE_TARGET_LENGTH = 10.5;
-  const DODGE_VISUAL_YAW = Math.PI;
+  const DODGE_VISUAL_ROTATION = new THREE.Euler(Math.PI / 2, 0, 0);
 
   // 원본 통합 휠을 런타임에 정점 단위로 분해하면 material group/draw range가
   // 유실되어 차체 일부가 비어 보일 수 있다. 사전 분리 휠이 없을 때는 원본을
@@ -2377,14 +2377,18 @@ async function createDodgeDemon(color = '#ffffff') {
 
             // GLB마다 차체 재질 이름이 Cars, Body, Material.001 등으로 다르므로
             // 이름을 넓게 판별한다. 유리·타이어·휠·램프·실내 재질은 제외한다.
-            const bodyWords = /(car|body|paint|vehicle|exterior|chassis|shell|metal)/i;
-            const protectedWords = /(glass|window|tire|tyre|wheel|rim|rubber|chrome|light|lamp|brake|disc|seat|interior|steering|dashboard)/i;
+            const bodyWords = /(car|body|paint|vehicle|exterior|chassis|shell|metal|hood|bonnet|roof|door|fender|bumper|scoop|spoiler)/i;
+            const protectedWords = /(glass|window|windshield|tire|tyre|wheel|rim|rubber|chrome|light|lamp|brake|disc|seat|interior|steering|dashboard|engine|exhaust)/i;
             const meshName = child.name || '';
             const isBodyMaterial = (material) => {
               if (!material) return false;
               const materialName = material.name || '';
               if (protectedWords.test(materialName) || protectedWords.test(meshName)) return false;
-              return bodyWords.test(materialName) || /(body|car|chassis|exterior|shell)/i.test(meshName);
+              // 투명/반투명 재질은 유리일 가능성이 높으므로 원본을 보존한다.
+              if (material.transparent || material.opacity < 0.95 || material.transmission > 0.1) return false;
+              // Dodge GLB의 상부 외장 파츠는 이름이 Material.xxx인 경우가 많다.
+              // 보호 대상이 아닌 불투명 외장 재질은 차체 도장으로 취급한다.
+              return bodyWords.test(materialName) || /(body|car|chassis|exterior|shell|hood|roof|door|fender|bumper)/i.test(meshName) || true;
             };
 
             let bodyMaterialIndexes = materials
@@ -2401,6 +2405,10 @@ async function createDodgeDemon(color = '#ffffff') {
               const recoloredMaterials = materials.map((material, index) => {
                 const m = material?.clone ? material.clone() : material;
                 if (m && bodyMaterialIndexes.includes(index) && m.color?.set) {
+                  // 어두운 원본 albedo/vertex color가 새 색상 위에 곱해지지 않도록
+                  // 차체 도장 재질의 색상 텍스처와 vertex color를 제거한다.
+                  m.map = null;
+                  m.vertexColors = false;
                   m.color.set(color);
                   m.needsUpdate = true;
                 }
@@ -2413,7 +2421,7 @@ async function createDodgeDemon(color = '#ffffff') {
             }
           });
 
-          // 차량의 최종 전후 방향은 DODGE_VISUAL_YAW(180도)로 시각 래퍼에만 적용한다.
+          // 차량의 전후축/상하축을 게임 좌표계에 맞추는 보정은 시각 래퍼에만 적용한다.
           // 물리 차체의 쿼터니언은 바깥 시각 루트에 적용되므로 서로 덮어쓰지 않는다.
           car.scale.set(1, 1, 1);
           car.rotation.set(0, 0, 0);
@@ -2535,11 +2543,11 @@ async function createDodgeDemon(color = '#ffffff') {
             car.scale.multiplyScalar(scale);
           }
 
-          // 고정 방향 보정용 래퍼를 사용한다. 매 프레임 물리 회전을 받는 carModel
+          // 고정 축 보정용 래퍼를 사용한다. 매 프레임 물리 회전을 받는 carModel
           // 자체를 회전시키면 wheel transform 계산과 충돌할 수 있기 때문이다.
           const visualRoot = new THREE.Group();
           visualRoot.name = 'DodgeDemonVisualRoot';
-          visualRoot.rotation.y = DODGE_VISUAL_YAW;
+          visualRoot.rotation.copy(DODGE_VISUAL_ROTATION);
           visualRoot.add(car);
 
           // -----------------------------------------------------
