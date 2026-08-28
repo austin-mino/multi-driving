@@ -28,6 +28,7 @@ const io = require('socket.io')(http, {
 const PORT = process.env.PORT || 3000;
 
 // 정적 파일 제공: 클라이언트용 html, js, css 파일은 /public 폴더에 넣고 서비스
+app.use('/models', express.static('models'));
 app.use(express.static('public'));
 
 // 접속한 플레이어 상태 저장 객체
