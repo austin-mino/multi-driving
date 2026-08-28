@@ -2262,11 +2262,10 @@ node.quaternion.multiply(rotation90);
   const DODGE_GLB_URL = './models/dodge_demon/dodge_challenger_srt_demon_split_wheels.glb';
 
   // Dodge 전용 표시 보정값. 전장은 기존 8.0에서 약 31% 키워 다른 차량과의
-  // 시각적 비율을 맞춘다. GLB는 Z축이 위쪽이고 Y축이 차량 전후축이므로
-  // X축 +90도는 GLB의 높이축을 게임의 Y축에 맞추고, Y축 180도는
-  // 차체의 시작 방향을 물리 차체의 +Z 전진 방향에 맞춘다.
+  // 시각적 비율을 맞춘다. 앞뒤 반전은 Y축 기준 180도만 적용한다.
+  // Math.PI / 2는 90도이므로 사용하지 않는다.
   const DODGE_TARGET_LENGTH = 10.5;
-  const DODGE_VISUAL_ROTATION = new THREE.Euler(Math.PI / 2, Math.PI, 0);
+  const DODGE_VISUAL_ROTATION = new THREE.Euler(0, Math.PI, 0);
 
   // 원본 통합 휠을 런타임에 정점 단위로 분해하면 material group/draw range가
   // 유실되어 차체 일부가 비어 보일 수 있다. 사전 분리 휠이 없을 때는 원본을
