@@ -1682,6 +1682,18 @@ function addStreetProps(x, z, w, d) {
   let carVisualOffsetY = 0;
   let currentCarModel = 'SportsCar'; // 현재 차종 추적
 
+  // 차량별 성능 설정. 기본 물리값에 곱해진다.
+  const DEFAULT_VEHICLE_PERFORMANCE = { engineForce: 1.0, brakeForce: 1.0, steeringResponse: 1.0, maxSteering: 1.0, grip: 5.5, drag: 1.0, reverseForce: 0.6 };
+  const VEHICLE_PERFORMANCE = {
+    SportsCar:      { engineForce: 1.18, brakeForce: 1.15, steeringResponse: 1.12, maxSteering: 1.08, grip: 6.2, drag: 0.82, reverseForce: 0.62 },
+    DodgeDemon:     { engineForce: 1.35, brakeForce: 1.08, steeringResponse: 0.92, maxSteering: 0.96, grip: 4.7, drag: 0.78, reverseForce: 0.68 },
+    SUV:            { engineForce: 0.82, brakeForce: 1.00, steeringResponse: 0.76, maxSteering: 0.84, grip: 5.8, drag: 1.18, reverseForce: 0.52 },
+    McLarenP1:      { engineForce: 1.28, brakeForce: 1.30, steeringResponse: 1.20, maxSteering: 1.12, grip: 6.8, drag: 0.72, reverseForce: 0.66 },
+    PontiacPhoenix: { engineForce: 1.05, brakeForce: 0.92, steeringResponse: 0.86, maxSteering: 0.92, grip: 4.3, drag: 1.05, reverseForce: 0.58 },
+    GrandeurIG:     { engineForce: 0.90, brakeForce: 0.98, steeringResponse: 0.88, maxSteering: 0.90, grip: 5.5, drag: 1.08, reverseForce: 0.55 }
+  };
+  function getVehiclePerformance() { return VEHICLE_PERFORMANCE[currentCarModel] || DEFAULT_VEHICLE_PERFORMANCE; }
+
   // 바퀴 노드 배열: [FL, FR, RL, RR] 순서 (앞왼쪽, 앞오른쪽, 뒤왼쪽, 뒤오른쪽)
   // CANNON vehicle 인덱스: 0=FL, 1=FR, 2=RL, 3=RR
   let carWheelNodes = [null, null, null, null];
@@ -2917,15 +2929,17 @@ function updateGearAuto(delta) {
 function updateVehicleControls(delta) {
 
  const speed = getSpeedKmH();
+ const performance = getVehiclePerformance();
 
-  // 조향
-  const steerSpeed = 0.004;
-  const returnSpeed = 0.016;
+  // 조향: 차량별 반응 속도와 최대 조향각 적용
+  const steerSpeed = 0.004 * performance.steeringResponse;
+  const returnSpeed = 0.016 * performance.steeringResponse;
+  const vehicleMaxSteerVal = maxSteerVal * performance.maxSteering;
 
   if (input.left) {
-    steeringValue = Math.max(steeringValue - steerSpeed, -maxSteerVal);
+    steeringValue = Math.max(steeringValue - steerSpeed, -vehicleMaxSteerVal);
   } else if (input.right) {
-    steeringValue = Math.min(steeringValue + steerSpeed, maxSteerVal);
+    steeringValue = Math.min(steeringValue + steerSpeed, vehicleMaxSteerVal);
   } else {
   if (steeringValue > 0)
     steeringValue = Math.max(steeringValue - returnSpeed, 0);
@@ -2960,10 +2974,10 @@ engineForce = 0;
     }
 
 const gearRatio = gearRatios[currentGear] * finalDrive;
-const torque = maxEngineForce * torqueCurve / gearRatios[currentGear];
-engineForce = Math.min(torque, maxEngineForce * 0.9);
+const torque = maxEngineForce * performance.engineForce * torqueCurve / gearRatios[currentGear];
+engineForce = Math.min(torque, maxEngineForce * performance.engineForce * 0.9);
 
-const drag = airDrag * speed * speed;
+const drag = airDrag * performance.drag * speed * speed;
 
 engineForce -= drag;
 engineForce = Math.max(-maxEngineForce * 2, Math.min(engineForce, maxEngineForce * 3));
@@ -2972,11 +2986,11 @@ engineForce = Math.max(-maxEngineForce * 2, Math.min(engineForce, maxEngineForce
     engineForce = 0;
   }
 
-  applyBrake(input.brake ? maxBrakeForce : 0);
+  applyBrake(input.brake ? maxBrakeForce * performance.brakeForce : 0);
 }
 else if (gearState === 'R') {
-  if (input.accel) engineForce = -maxEngineForce * 0.6;
-  if (input.brake) applyBrake(maxBrakeForce);
+  if (input.accel) engineForce = -maxEngineForce * performance.engineForce * performance.reverseForce;
+  if (input.brake) applyBrake(maxBrakeForce * performance.brakeForce);
   else applyBrake(0);
 
 } else if (gearState === 'N') {
@@ -3023,8 +3037,8 @@ if (input.handbrake) {
   vehicle.setBrake(0, 2);
   vehicle.setBrake(0, 3);
 
-  vehicle.wheelInfos[2].frictionSlip = 5.5;
-  vehicle.wheelInfos[3].frictionSlip = 5.5;
+  vehicle.wheelInfos[2].frictionSlip = performance.grip;
+  vehicle.wheelInfos[3].frictionSlip = performance.grip;
 }
  }
  
