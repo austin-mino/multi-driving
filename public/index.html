@@ -2253,9 +2253,7 @@ node.quaternion.multiply(rotation90);
     );
   });
 }
-
-  /* Dodge Challenger SRT Demon 생성 함수 - Dodge 전용 축/스케일/휠 보정 */
-
+  
   // Dodge GLB의 desirefx.me_077_43에는 각 재질 파츠별로 네 바퀴가 하나의 Mesh에
   // 묶여 있다. 원본은 X축이 좌·우, Y축이 앞·뒤, Z축이 위·아래이므로 X/Y 사분면으로
   // 분리해야 한다. Z축으로 나누면 바퀴의 상·하단이 갈라져 독립 회전할 수 없다.
@@ -2534,7 +2532,7 @@ async function createDodgeDemon(color = '#ffffff') {
     });
   }
 
-    // 차량용 RaycastVehicle 설정
+// 차량용 RaycastVehicle 설정
     const vehicle = new CANNON.RaycastVehicle({
       chassisBody,
       indexRightAxis: 0, // x축이 차량 오른쪽
@@ -3457,8 +3455,7 @@ if (currentCarModel.includes('PontiacPhoenix')) {
     }
   }
 
-  // Dodge 원본은 wheelRoot에서 로컬 Z축이 게임의 위쪽 Y축 반대 방향으로 변환된다.
-  // 따라서 네 개의 독립 피벗은 X축으로 굴리고, 앞바퀴만 로컬 Z축으로 조향한다.
+  // Dodge GLB는 차량 축과 wheelRoot 축이 다르므로 별도 회전을 적용한다.
   if (currentCarModel.includes('DodgeDemon')) {
     const dodgeSteering = (i === 0 || i === 1)
       ? physicsSteering * exaggerationFactor
@@ -3616,8 +3613,6 @@ correctionQuat.setFromEuler(new THREE.Euler(0, -Math.PI / 2, 0));
                 wheel.quaternion.copy(finalTransform);
 
                         } else if (remoteModelName.includes('DodgeDemon')) {
-                // Dodge GLB의 wheelRoot 축은 로컬 Z가 게임 Y축의 반대 방향이다.
-                // 이미 분리된 Wheel_FL/FR/RL/RR 각각에 조향·구름을 적용한다.
                 const visualSteering = (i === 0 || i === 1) ? steerAngle * 2.6 : 0;
                 const steerQuat = new THREE.Quaternion().setFromAxisAngle(
                   new THREE.Vector3(0, 0, 1),
