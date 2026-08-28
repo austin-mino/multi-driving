@@ -2263,9 +2263,9 @@ node.quaternion.multiply(rotation90);
 
   // Dodge 전용 표시 보정값. 전장은 기존 8.0에서 약 31% 키워 다른 차량과의
   // 현재 GLB는 차량이 이미 Y축을 위쪽으로 사용하므로 X축 보정은 적용하지 않는다.
-  // 차량을 수평으로 유지한 상태에서 Z축 기준 180도 방향 보정만 적용한다.
+  // 앞뒤만 반전하고 위아래는 유지하도록 Y축 기준 180도 회전을 적용한다.
   const DODGE_TARGET_LENGTH = 10.5;
-  const DODGE_VISUAL_ROTATION = new THREE.Euler(0, 0, Math.PI);
+  const DODGE_VISUAL_ROTATION = new THREE.Euler(0, Math.PI, 0);
 
   // 원본 통합 휠을 런타임에 정점 단위로 분해하면 material group/draw range가
   // 유실되어 차체 일부가 비어 보일 수 있다. 사전 분리 휠이 없을 때는 원본을
