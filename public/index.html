@@ -2407,9 +2407,16 @@ async function createDodgeDemon(color = '#ffffff') {
                 if (m && bodyMaterialIndexes.includes(index) && m.color?.set) {
                   // 어두운 원본 albedo/vertex color가 새 색상 위에 곱해지지 않도록
                   // 차체 도장 재질의 색상 텍스처와 vertex color를 제거한다.
+                  // 원본 색상/텍스처가 새 색상 위에 남지 않도록 색상 관련 맵을 모두 제거한다.
                   m.map = null;
+                  m.normalMap = null;
+                  m.roughnessMap = null;
+                  m.metalnessMap = null;
+                  m.emissiveMap = null;
+                  m.aoMap = null;
                   m.vertexColors = false;
                   m.color.set(color);
+                  if (m.emissive?.set) m.emissive.set(0x000000);
                   m.needsUpdate = true;
                 }
                 return m;
@@ -2447,10 +2454,15 @@ async function createDodgeDemon(color = '#ffffff') {
           // 전달한 수정 GLB는 Wheel_FL/FR/RL/RR 그룹을 이미 포함한다.
           // 통합 휠의 런타임 분리는 기본적으로 비활성화해 원본 메시와 재질을 보존한다.
           if (embeddedWheelNodes.every(Boolean)) {
-            embeddedWheelNodes.forEach((node, index) => {
-              node.userData.side = (index === 0 || index === 2) ? 'L' : 'R';
+            // 모델의 전후축이 물리 차량과 반대이므로 앞/뒤 슬롯을 교환한다.
+            // 물리 순서: [FL, FR, RL, RR]
+            const physicsToModelWheel = [2, 3, 0, 1];
+            physicsToModelWheel.forEach((modelIndex, physicsIndex) => {
+              const node = embeddedWheelNodes[modelIndex];
+              if (!node) return;
+              node.userData.side = (physicsIndex === 0 || physicsIndex === 2) ? 'L' : 'R';
               node.userData.baseQuaternion = node.quaternion.clone();
-              wheelNodes[index] = node;
+              wheelNodes[physicsIndex] = node;
             });
             console.log('Dodge 사전 분리 바퀴 노드 연결 완료:', DODGE_WHEEL_NAMES);
           } else if (wheelRoot && !DODGE_PRESERVE_COMBINED_WHEELS) {
