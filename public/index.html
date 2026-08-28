@@ -1685,12 +1685,12 @@ function addStreetProps(x, z, w, d) {
   // 차량별 성능 설정. 기본 물리값에 곱해진다.
   const DEFAULT_VEHICLE_PERFORMANCE = { engineForce: 1.0, brakeForce: 1.0, steeringResponse: 1.0, maxSteering: 1.0, grip: 5.5, drag: 1.0, reverseForce: 0.6 };
   const VEHICLE_PERFORMANCE = {
-    SportsCar:      { engineForce: 1.18, brakeForce: 1.15, steeringResponse: 1.12, maxSteering: 1.08, grip: 6.2, drag: 0.82, reverseForce: 0.62 },
-    DodgeDemon:     { engineForce: 1.35, brakeForce: 1.08, steeringResponse: 0.92, maxSteering: 0.96, grip: 4.7, drag: 0.78, reverseForce: 0.68 },
-    SUV:            { engineForce: 0.82, brakeForce: 1.00, steeringResponse: 0.76, maxSteering: 0.84, grip: 5.8, drag: 1.18, reverseForce: 0.52 },
-    McLarenP1:      { engineForce: 1.28, brakeForce: 1.30, steeringResponse: 1.20, maxSteering: 1.12, grip: 6.8, drag: 0.72, reverseForce: 0.66 },
-    PontiacPhoenix: { engineForce: 1.05, brakeForce: 0.92, steeringResponse: 0.86, maxSteering: 0.92, grip: 4.3, drag: 1.05, reverseForce: 0.58 },
-    GrandeurIG:     { engineForce: 0.90, brakeForce: 0.98, steeringResponse: 0.88, maxSteering: 0.90, grip: 5.5, drag: 1.08, reverseForce: 0.55 }
+    SportsCar:      { engineForce: 1.05, brakeForce: 1.12, steeringResponse: 1.04, maxSteering: 1.02, grip: 6.0, drag: 0.86, reverseForce: 0.60 },
+    DodgeDemon:     { engineForce: 1.65, brakeForce: 1.10, steeringResponse: 0.92, maxSteering: 0.96, grip: 4.7, drag: 0.58, reverseForce: 0.72 },
+    SUV:            { engineForce: 0.76, brakeForce: 1.00, steeringResponse: 0.76, maxSteering: 0.84, grip: 5.8, drag: 1.22, reverseForce: 0.50 },
+    McLarenP1:      { engineForce: 1.30, brakeForce: 1.25, steeringResponse: 1.06, maxSteering: 1.04, grip: 6.6, drag: 0.74, reverseForce: 0.64 },
+    PontiacPhoenix: { engineForce: 0.92, brakeForce: 0.92, steeringResponse: 0.86, maxSteering: 0.92, grip: 4.3, drag: 1.08, reverseForce: 0.56 },
+    GrandeurIG:     { engineForce: 0.84, brakeForce: 0.98, steeringResponse: 0.88, maxSteering: 0.90, grip: 5.5, drag: 1.12, reverseForce: 0.53 }
   };
   function getVehiclePerformance() { return VEHICLE_PERFORMANCE[currentCarModel] || DEFAULT_VEHICLE_PERFORMANCE; }
 
