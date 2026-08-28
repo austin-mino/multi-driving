@@ -2361,31 +2361,26 @@ async function createDodgeDemon(color = '#ffffff') {
               ? child.material
               : [child.material];
 
+            // 차체 도장 재질만 색상을 바꾼다. clone()은 유지하되,
+            // metalness / roughness / opacity / transparent 등 원본 재질 속성은 건드리지 않는다.
             const hasBodyMaterial = materials.some((material) => {
               const materialName = (material?.name || '').toLowerCase();
-              return (
-                materialName.includes('carpaint') ||
-                materialName.includes('body') ||
-                materialName.includes('paint') ||
-                materialName === 'cars'
-              );
+              return materialName === 'cars' || materialName.includes('carpaint');
             });
 
             if (hasBodyMaterial) {
               child.material = materials.map((material) => {
                 const m = material.clone();
                 m.color.set(color);
-                m.metalness = 0.8;
-                m.roughness = 0.22;
-                m.transparent = false;
-                m.opacity = 1;
+                m.needsUpdate = true;
                 return m;
               });
               child.name = 'MainBody';
             }
           });
 
-          // 기존 Dodge의 2.5배 확대 + 180도 회전 제거
+          // 원본 Dodge가 반대 방향을 향하므로 시각 루트에서 180도 회전한다.
+          // 물리 차체의 쿼터니언은 바깥 시각 루트에 적용되므로 서로 덮어쓰지 않는다.
           car.scale.set(1, 1, 1);
           car.rotation.set(0, 0, 0);
           car.updateMatrixWorld(true);
@@ -2494,13 +2489,22 @@ async function createDodgeDemon(color = '#ffffff') {
           car.updateMatrixWorld(true);
           const box = new THREE.Box3().setFromObject(car);
           const size = box.getSize(new THREE.Vector3());
-          const vehicleLength = Math.max(size.x, size.z);
-          const targetLength = 6.0;
+          // 이 GLB는 Y축 방향으로 차량 길이가 저장돼 있으므로 세 축 중
+          // 가장 긴 축을 차량 전장으로 사용한다.
+          const vehicleLength = Math.max(size.x, size.y, size.z);
+          const targetLength = 8.0;
 
           if (vehicleLength > 0.001) {
             const scale = targetLength / vehicleLength;
             car.scale.multiplyScalar(scale);
           }
+
+          // 고정 회전용 래퍼를 사용한다. 매 프레임 물리 회전을 받는 carModel
+          // 자체를 180도 돌리면 wheel transform 계산과 충돌할 수 있기 때문이다.
+          const visualRoot = new THREE.Group();
+          visualRoot.name = 'DodgeDemonVisualRoot';
+          visualRoot.rotation.y = Math.PI;
+          visualRoot.add(car);
 
           // -----------------------------------------------------
           // 중심/바닥 정렬
@@ -2513,7 +2517,13 @@ async function createDodgeDemon(color = '#ffffff') {
           car.position.z -= center.z;
           car.position.y -= fittedBox.min.y;
 
-          resolve(car);
+          // startGame()/멀티플레이 코드가 기존 계약을 그대로 사용할 수 있도록
+          // 사용자 데이터와 독립 바퀴 배열을 180도 래퍼에도 전달한다.
+          visualRoot.userData.wheelNodes = wheelNodes;
+          visualRoot.userData.modelName = 'DodgeDemon';
+          visualRoot.userData.visualOffsetY = -0.8;
+          visualRoot.userData.steeringNode = steeringWheelNode;
+          resolve(visualRoot);
         },
         undefined,
         (error) => {
