@@ -2263,7 +2263,7 @@ node.quaternion.multiply(rotation90);
 
   // Dodge 전용 표시 보정값. 전장은 기존 8.0에서 약 31% 키워 다른 차량과의
   // GLB는 Z축이 위쪽이고 Y축이 차량 전후축이다. 게임은 Y축이 위쪽이고
-  // Z축이 전후축이므로 X축 -90도로 축을 바꾼 뒤 Y축 180도로 앞뒤를 반전한다.
+  // Z축이 전후축이므로 X축 -90도로 축을 바꾼 뒤 Z축 180도 보정을 적용한다.
   const DODGE_TARGET_LENGTH = 10.5;
   const DODGE_VISUAL_ROTATION = new THREE.Euler(-Math.PI / 2, 0, Math.PI);
 
@@ -2547,7 +2547,14 @@ async function createDodgeDemon(color = '#ffffff') {
           // 자체를 회전시키면 wheel transform 계산과 충돌할 수 있기 때문이다.
           const visualRoot = new THREE.Group();
           visualRoot.name = 'DodgeDemonVisualRoot';
-          visualRoot.rotation.copy(DODGE_VISUAL_ROTATION);
+
+          // visualRoot는 매 프레임 물리 차체의 회전을 받으므로,
+          // 고정 방향 보정은 실제 GLB인 car에 적용해야 덮어써지지 않는다.
+          car.rotation.copy(DODGE_VISUAL_ROTATION);
+          car.updateMatrixWorld(true);
+
+          // 물리 회전 전용 루트는 초기 회전 0으로 둔다.
+          visualRoot.rotation.set(0, 0, 0);
           visualRoot.add(car);
 
           // -----------------------------------------------------
