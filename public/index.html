@@ -2369,8 +2369,12 @@ async function createDodgeDemon(color = '#ffffff') {
             if (hasBodyMaterial) {
               child.material = materials.map((material) => {
                 const m = material.clone();
-                m.color.set(color);
-                m.needsUpdate = true;
+                const materialName = (material?.name || '').toLowerCase();
+                // CARS/carpaint만 도색하고 GLASS, tire, rim 등은 원본 유지
+                if (materialName === 'cars' || materialName.includes('carpaint')) {
+                  m.color.set(color);
+                  m.needsUpdate = true;
+                }
                 return m;
               });
               child.name = 'MainBody';
