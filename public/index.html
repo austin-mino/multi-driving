@@ -2259,134 +2259,47 @@ node.quaternion.multiply(rotation90);
   // Dodge GLTF의 desirefxme_077_43는 4개 바퀴가 한 Mesh/재질 파츠 안에
   // 합쳐져 있다. 각 파츠의 연결된 geometry component를 분리한 뒤,
   // tire 위치를 기준으로 같은 위치의 GLASS/tire/brake/rim을 한 Wheel Group으로 묶는다.
-  function splitDodgeGeometryComponents(mesh) {
+  function splitDodgeMeshIntoFour(mesh) {
     const src = mesh.geometry;
-    if (!src || !src.attributes || !src.attributes.position) return [];
-
-    const pos = src.attributes.position;
-    const vertexCount = pos.count;
-    const index = src.index;
-    const triangles = [];
-
-    if (index) {
-      for (let i = 0; i < index.count; i += 3) {
-        triangles.push([
-          index.getX(i),
-          index.getX(i + 1),
-          index.getX(i + 2)
-        ]);
-      }
-    } else {
-      for (let i = 0; i < vertexCount; i += 3) {
-        triangles.push([i, i + 1, i + 2]);
-      }
+    if (!src || !src.attributes.position) return [null, null, null, null];
+    src.computeBoundingBox();
+    const box = src.boundingBox;
+    const midX = (box.min.x + box.max.x) * 0.5;
+    const midZ = (box.min.z + box.max.z) * 0.5;
+    const pos = src.attributes.position, index = src.index;
+    const buckets = [[], [], [], []];
+    const triCount = index ? index.count / 3 : pos.count / 3;
+    for (let t=0;t<triCount;t++) {
+      const ids = index ? [index.getX(t*3),index.getX(t*3+1),index.getX(t*3+2)] : [t*3,t*3+1,t*3+2];
+      const cx=(pos.getX(ids[0])+pos.getX(ids[1])+pos.getX(ids[2]))/3;
+      const cz=(pos.getZ(ids[0])+pos.getZ(ids[1])+pos.getZ(ids[2]))/3;
+      const slot = cz >= midZ ? (cx < midX ? 0 : 1) : (cx < midX ? 2 : 3);
+      buckets[slot].push(ids);
     }
-
-    // vertex -> triangles adjacency
-    const vertexTriangles = Array.from({ length: vertexCount }, () => []);
-    triangles.forEach((tri, ti) => {
-      tri.forEach(v => {
-        if (vertexTriangles[v]) vertexTriangles[v].push(ti);
+    const names=Object.keys(src.attributes);
+    return buckets.map(tris=>{
+      if(!tris.length) return null;
+      const map=new Map(), verts=[];
+      tris.flat().forEach(v=>{if(!map.has(v)){map.set(v,verts.length);verts.push(v)}});
+      const g=new THREE.BufferGeometry();
+      names.forEach(name=>{
+        const at=src.attributes[name], arr=new at.array.constructor(verts.length*at.itemSize);
+        verts.forEach((old,n)=>{for(let k=0;k<at.itemSize;k++)arr[n*at.itemSize+k]=at.array[old*at.itemSize+k]});
+        g.setAttribute(name,new THREE.BufferAttribute(arr,at.itemSize,at.normalized));
       });
+      g.setIndex(tris.flatMap(tri=>tri.map(v=>map.get(v))));
+      g.computeVertexNormals(); g.computeBoundingBox(); g.computeBoundingSphere();
+      return g;
     });
-
-    const visited = new Uint8Array(triangles.length);
-    const components = [];
-
-    for (let startTri = 0; startTri < triangles.length; startTri++) {
-      if (visited[startTri]) continue;
-
-      const stack = [startTri];
-      visited[startTri] = 1;
-      const triIds = [];
-      const vertices = new Set();
-
-      while (stack.length) {
-        const ti = stack.pop();
-        triIds.push(ti);
-        const tri = triangles[ti];
-
-        tri.forEach(v => vertices.add(v));
-
-        tri.forEach(v => {
-          for (const otherTi of vertexTriangles[v]) {
-            if (!visited[otherTi]) {
-              visited[otherTi] = 1;
-              stack.push(otherTi);
-            }
-          }
-        });
-      }
-
-      components.push({ triIds, vertices: [...vertices] });
-    }
-
-    const attributeNames = Object.keys(src.attributes);
-    const results = [];
-
-    for (const component of components) {
-      const oldToNew = new Map();
-      component.vertices.forEach((oldIndex, newIndex) => {
-        oldToNew.set(oldIndex, newIndex);
-      });
-
-      const geometry = new THREE.BufferGeometry();
-
-      for (const attrName of attributeNames) {
-        const attr = src.attributes[attrName];
-        const array = new attr.array.constructor(
-          component.vertices.length * attr.itemSize
-        );
-
-        component.vertices.forEach((oldIndex, newIndex) => {
-          for (let k = 0; k < attr.itemSize; k++) {
-            array[newIndex * attr.itemSize + k] =
-              attr.array[oldIndex * attr.itemSize + k];
-          }
-        });
-
-        geometry.setAttribute(
-          attrName,
-          new THREE.BufferAttribute(array, attr.itemSize, attr.normalized)
-        );
-      }
-
-      const indices = [];
-      for (const triId of component.triIds) {
-        const tri = triangles[triId];
-        indices.push(
-          oldToNew.get(tri[0]),
-          oldToNew.get(tri[1]),
-          oldToNew.get(tri[2])
-        );
-      }
-      geometry.setIndex(indices);
-      geometry.computeBoundingBox();
-      geometry.computeBoundingSphere();
-
-      results.push(geometry);
-    }
-
-    return results;
   }
-
   function makeDodgeComponentMesh(sourceMesh, geometry) {
-    const material = Array.isArray(sourceMesh.material)
-      ? sourceMesh.material.map(m => m && m.clone ? m.clone() : m)
-      : (sourceMesh.material && sourceMesh.material.clone
-          ? sourceMesh.material.clone()
-          : sourceMesh.material);
-
-    const mesh = new THREE.Mesh(geometry, material);
-    mesh.position.copy(sourceMesh.position);
-    mesh.quaternion.copy(sourceMesh.quaternion);
-    mesh.scale.copy(sourceMesh.scale);
-    mesh.castShadow = true;
-    mesh.receiveShadow = true;
+    const material=Array.isArray(sourceMesh.material)?sourceMesh.material.map(m=>m?.clone?m.clone():m):(sourceMesh.material?.clone?sourceMesh.material.clone():sourceMesh.material);
+    const mesh=new THREE.Mesh(geometry,material);
+    mesh.castShadow=true; mesh.receiveShadow=true;
     return mesh;
   }
 
-  async function createDodgeDemon(color = '#ffffff') {
+async function createDodgeDemon(color = '#ffffff') {
     return new Promise((resolve) => {
       const loader = new GLTFLoader();
 
@@ -2465,147 +2378,39 @@ node.quaternion.multiply(rotation90);
               sourceParts.map(p => `${p.name} / ${Array.isArray(p.material) ? p.material.map(m => m?.name).join(',') : p.material?.name}`)
             );
 
-            // 각 material-part를 연결된 geometry component로 분해
-            const allParts = [];
+            // Object_91~95 각각을 geometry 기준으로 FL/FR/RL/RR로 실제 분할
+            const wheelNames = ['Wheel_FL','Wheel_FR','Wheel_RL','Wheel_RR'];
+            const wheelGroups = wheelNames.map((name,i)=>{
+              const g=new THREE.Group();
+              g.name=name;
+              g.userData.side=(i===0||i===2)?'L':'R';
+              g.userData.baseQuaternion=g.quaternion.clone();
+              return g;
+            });
+
             for (const sourceMesh of sourceParts) {
-              const geometries = splitDodgeGeometryComponents(sourceMesh);
-              geometries.forEach((geometry, componentIndex) => {
-                const partMesh = makeDodgeComponentMesh(sourceMesh, geometry);
-
-                // sourceMesh는 desirefxme_077_43 아래에 있으므로
-                // 그 부모의 transform까지 포함한 월드 위치를 보존한다.
-                sourceMesh.updateMatrixWorld(true);
-                car.updateMatrixWorld(true);
-                const relativeToCar = car.matrixWorld.clone().invert().multiply(sourceMesh.matrixWorld.clone());
-                partMesh.matrixAutoUpdate = false;
-                partMesh.matrix.copy(relativeToCar);
-                partMesh.matrix.decompose(partMesh.position, partMesh.quaternion, partMesh.scale);
-                partMesh.matrixAutoUpdate = true;
-
-                partMesh.userData.sourcePart = sourceMesh.name;
-                partMesh.userData.componentIndex = componentIndex;
-                allParts.push(partMesh);
+              const split = splitDodgeMeshIntoFour(sourceMesh);
+              split.forEach((geometry,i)=>{
+                if(!geometry) return;
+                const part=makeDodgeComponentMesh(sourceMesh,geometry);
+                part.position.copy(sourceMesh.position);
+                part.quaternion.copy(sourceMesh.quaternion);
+                part.scale.copy(sourceMesh.scale);
+                part.name=`${sourceMesh.name}_${wheelNames[i]}`;
+                wheelGroups[i].add(part);
               });
             }
 
-            console.log(
-              'Dodge 분리된 geometry component 수:',
-              allParts.length
-            );
-
-            // tire 파츠의 4개 component를 기준점으로 사용
-            const tireParts = allParts.filter(p => {
-              const source = (p.userData.sourcePart || '').toLowerCase();
-              const materialName = Array.isArray(p.material)
-                ? p.material.map(m => (m?.name || '').toLowerCase()).join(' ')
-                : (p.material?.name || '').toLowerCase();
-              return source === 'object_92' || materialName.includes('tire');
+            const parent=wheelRoot.parent;
+            wheelGroups.forEach((g,i)=>{
+              g.position.copy(wheelRoot.position);
+              g.quaternion.copy(wheelRoot.quaternion);
+              g.scale.copy(wheelRoot.scale);
+              parent.add(g);
+              wheelNodes[i]=g;
             });
 
-            // wheelRoot를 제외한 차량 로컬 좌표에서 각 component 중심 계산
-            const getCarLocalCenter = (mesh) => {
-              mesh.updateMatrixWorld(true);
-              const box = new THREE.Box3().setFromObject(mesh);
-              const worldCenter = box.getCenter(new THREE.Vector3());
-              return car.worldToLocal(worldCenter.clone());
-            };
-
-            const reference = tireParts.length >= 4
-              ? tireParts.slice().sort((a, b) => {
-                  const ca = getCarLocalCenter(a);
-                  const cb = getCarLocalCenter(b);
-                  return cb.z - ca.z || ca.x - cb.x;
-                }).slice(0, 4)
-              : allParts.slice().sort((a, b) => {
-                  const ca = getCarLocalCenter(a);
-                  const cb = getCarLocalCenter(b);
-                  return cb.z - ca.z || ca.x - cb.x;
-                }).slice(0, 4);
-
-            const centers = reference.map(getCarLocalCenter);
-
-            // 네 기준점의 위치를 FL/FR/RL/RR로 결정
-            const front = centers
-              .map((center, i) => ({ center, i }))
-              .sort((a, b) => b.center.z - a.center.z)
-              .slice(0, 2)
-              .sort((a, b) => a.center.x - b.center.x);
-
-            const rear = centers
-              .map((center, i) => ({ center, i }))
-              .sort((a, b) => b.center.z - a.center.z)
-              .slice(2)
-              .sort((a, b) => a.center.x - b.center.x);
-
-            // 모델의 실제 z축이 반대인 경우를 자동 보정
-            let orderedCenters;
-            if (front.length === 2 && rear.length === 2) {
-              orderedCenters = [
-                centers[front[0].i],
-                centers[front[1].i],
-                centers[rear[0].i],
-                centers[rear[1].i]
-              ];
-            } else {
-              orderedCenters = centers;
-            }
-
-            // 만약 중심 배치가 비정상이라도 x/z 사분면을 이용한 fallback
-            if (orderedCenters.length !== 4) {
-              orderedCenters = centers.slice(0, 4);
-            }
-
-            const wheelNames = [
-              'Wheel_FL',
-              'Wheel_FR',
-              'Wheel_RL',
-              'Wheel_RR'
-            ];
-
-            // wheelRoot는 제거하고 새 4개 Wheel Group을 차량 아래에 생성
-            const wheelParent = wheelRoot.parent;
-
-            for (let i = 0; i < 4; i++) {
-              const center = orderedCenters[i].clone();
-              const wheelGroup = new THREE.Group();
-              wheelGroup.name = wheelNames[i];
-              wheelGroup.position.copy(center);
-              wheelGroup.quaternion.identity();
-              wheelGroup.userData.side = (i === 0 || i === 2) ? 'L' : 'R';
-              wheelGroup.userData.baseQuaternion = wheelGroup.quaternion.clone();
-
-              car.add(wheelGroup);
-              wheelNodes[i] = wheelGroup;
-            }
-
-            // 각 분리 파츠를 가장 가까운 wheel center에 배치
-            for (const partMesh of allParts) {
-              const center = getCarLocalCenter(partMesh);
-
-              let bestIndex = 0;
-              let bestDistance = Infinity;
-
-              for (let i = 0; i < orderedCenters.length; i++) {
-                const d = center.distanceToSquared(orderedCenters[i]);
-                if (d < bestDistance) {
-                  bestDistance = d;
-                  bestIndex = i;
-                }
-              }
-
-              const wheelGroup = wheelNodes[bestIndex];
-              if (!wheelGroup) continue;
-
-              // partMesh의 현재 월드 transform을 wheelGroup 로컬 transform으로 변환
-              partMesh.updateMatrixWorld(true);
-              const worldMatrix = partMesh.matrixWorld.clone();
-              wheelGroup.updateMatrixWorld(true);
-              const relativeMatrix = wheelGroup.matrixWorld.clone().invert().multiply(worldMatrix);
-              partMesh.matrix.copy(relativeMatrix);
-              partMesh.matrix.decompose(partMesh.position, partMesh.quaternion, partMesh.scale);
-
-              wheelGroup.add(partMesh);
-            }
+            console.log('Dodge 실제 분리 완료:',wheelGroups.map(g=>({name:g.name,parts:g.children.map(c=>c.name)})));
 
             // 기존 통합 wheelRoot 제거
             if (wheelRoot.parent) {
