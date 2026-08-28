@@ -2265,7 +2265,7 @@ node.quaternion.multiply(rotation90);
   // GLB는 Z축이 위쪽이고 Y축이 차량 전후축이다. 게임은 Y축이 위쪽이고
   // Z축이 전후축이므로 X축 -90도로 축을 바꾼 뒤 Y축 180도로 앞뒤를 반전한다.
   const DODGE_TARGET_LENGTH = 10.5;
-  const DODGE_VISUAL_ROTATION = new THREE.Euler(-Math.PI / 2, Math.PI, 0);
+  const DODGE_VISUAL_ROTATION = new THREE.Euler(-Math.PI / 2, 0, Math.PI);
 
   // 원본 통합 휠을 런타임에 정점 단위로 분해하면 material group/draw range가
   // 유실되어 차체 일부가 비어 보일 수 있다. 사전 분리 휠이 없을 때는 원본을
