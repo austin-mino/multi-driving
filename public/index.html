@@ -2256,46 +2256,80 @@ node.quaternion.multiply(rotation90);
 
   /* Dodge Challenger SRT Demon 생성 함수 - Dodge 전용 축/스케일/휠 보정 */
 
-  // Dodge GLTF의 desirefxme_077_43는 4개 바퀴가 한 Mesh/재질 파츠 안에
-  // 합쳐져 있다. 각 파츠의 연결된 geometry component를 분리한 뒤,
-  // tire 위치를 기준으로 같은 위치의 GLASS/tire/brake/rim을 한 Wheel Group으로 묶는다.
+  // Dodge GLB의 desirefx.me_077_43에는 각 재질 파츠별로 네 바퀴가 하나의 Mesh에
+  // 묶여 있다. 원본은 X축이 좌·우, Y축이 앞·뒤, Z축이 위·아래이므로 X/Y 사분면으로
+  // 분리해야 한다. Z축으로 나누면 바퀴의 상·하단이 갈라져 독립 회전할 수 없다.
+  const DODGE_WHEEL_NAMES = ['Wheel_FL', 'Wheel_FR', 'Wheel_RL', 'Wheel_RR'];
+  // 이 HTML과 같은 경로에 전달된 수정 GLB를 둔다.
+  const DODGE_GLB_URL = './dodge_challenger_srt_demon_split_wheels.glb';
+
+  function getDodgeWheelSlot(x, y, midX, midY) {
+    const isLeft = x < midX;
+    const isFront = y >= midY;
+    if (isFront) return isLeft ? 0 : 1; // FL / FR
+    return isLeft ? 2 : 3;              // RL / RR
+  }
+
   function splitDodgeMeshIntoFour(mesh) {
     const src = mesh.geometry;
     if (!src || !src.attributes.position) return [null, null, null, null];
+
     src.computeBoundingBox();
     const box = src.boundingBox;
     const midX = (box.min.x + box.max.x) * 0.5;
-    const midZ = (box.min.z + box.max.z) * 0.5;
-    const pos = src.attributes.position, index = src.index;
+    const midY = (box.min.y + box.max.y) * 0.5;
+    const position = src.attributes.position;
+    const index = src.index;
     const buckets = [[], [], [], []];
-    const triCount = index ? index.count / 3 : pos.count / 3;
-    for (let t=0;t<triCount;t++) {
-      const ids = index ? [index.getX(t*3),index.getX(t*3+1),index.getX(t*3+2)] : [t*3,t*3+1,t*3+2];
-      const cx=(pos.getX(ids[0])+pos.getX(ids[1])+pos.getX(ids[2]))/3;
-      const cz=(pos.getZ(ids[0])+pos.getZ(ids[1])+pos.getZ(ids[2]))/3;
-      const slot = cz >= midZ ? (cx < midX ? 0 : 1) : (cx < midX ? 2 : 3);
-      buckets[slot].push(ids);
+    const triangleCount = index ? index.count / 3 : position.count / 3;
+
+    for (let triangle = 0; triangle < triangleCount; triangle++) {
+      const vertexIds = index
+        ? [index.getX(triangle * 3), index.getX(triangle * 3 + 1), index.getX(triangle * 3 + 2)]
+        : [triangle * 3, triangle * 3 + 1, triangle * 3 + 2];
+      const centerX = (position.getX(vertexIds[0]) + position.getX(vertexIds[1]) + position.getX(vertexIds[2])) / 3;
+      const centerY = (position.getY(vertexIds[0]) + position.getY(vertexIds[1]) + position.getY(vertexIds[2])) / 3;
+      buckets[getDodgeWheelSlot(centerX, centerY, midX, midY)].push(vertexIds);
     }
-    const names=Object.keys(src.attributes);
-    return buckets.map(tris=>{
-      if(!tris.length) return null;
-      const map=new Map(), verts=[];
-      tris.flat().forEach(v=>{if(!map.has(v)){map.set(v,verts.length);verts.push(v)}});
-      const g=new THREE.BufferGeometry();
-      names.forEach(name=>{
-        const at=src.attributes[name], arr=new at.array.constructor(verts.length*at.itemSize);
-        verts.forEach((old,n)=>{for(let k=0;k<at.itemSize;k++)arr[n*at.itemSize+k]=at.array[old*at.itemSize+k]});
-        g.setAttribute(name,new THREE.BufferAttribute(arr,at.itemSize,at.normalized));
+
+    const attributeNames = Object.keys(src.attributes);
+    return buckets.map((triangles) => {
+      if (!triangles.length) return null;
+
+      const vertexMap = new Map();
+      const vertices = [];
+      triangles.flat().forEach((oldIndex) => {
+        if (!vertexMap.has(oldIndex)) {
+          vertexMap.set(oldIndex, vertices.length);
+          vertices.push(oldIndex);
+        }
       });
-      g.setIndex(tris.flatMap(tri=>tri.map(v=>map.get(v))));
-      g.computeVertexNormals(); g.computeBoundingBox(); g.computeBoundingSphere();
-      return g;
+
+      const geometry = new THREE.BufferGeometry();
+      attributeNames.forEach((name) => {
+        const attribute = src.attributes[name];
+        const array = new attribute.array.constructor(vertices.length * attribute.itemSize);
+        vertices.forEach((oldIndex, newIndex) => {
+          for (let component = 0; component < attribute.itemSize; component++) {
+            array[newIndex * attribute.itemSize + component] = attribute.array[oldIndex * attribute.itemSize + component];
+          }
+        });
+        geometry.setAttribute(name, new THREE.BufferAttribute(array, attribute.itemSize, attribute.normalized));
+      });
+      geometry.setIndex(triangles.flatMap((triangle) => triangle.map((oldIndex) => vertexMap.get(oldIndex))));
+      geometry.computeBoundingBox();
+      geometry.computeBoundingSphere();
+      return geometry;
     });
   }
+
   function makeDodgeComponentMesh(sourceMesh, geometry) {
-    const material=Array.isArray(sourceMesh.material)?sourceMesh.material.map(m=>m?.clone?m.clone():m):(sourceMesh.material?.clone?sourceMesh.material.clone():sourceMesh.material);
-    const mesh=new THREE.Mesh(geometry,material);
-    mesh.castShadow=true; mesh.receiveShadow=true;
+    const material = Array.isArray(sourceMesh.material)
+      ? sourceMesh.material.map((m) => m?.clone ? m.clone() : m)
+      : (sourceMesh.material?.clone ? sourceMesh.material.clone() : sourceMesh.material);
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
     return mesh;
   }
 
@@ -2304,7 +2338,7 @@ async function createDodgeDemon(color = '#ffffff') {
       const loader = new GLTFLoader();
 
       loader.load(
-        'https://raw.githubusercontent.com/austin-mino/multi-driving/main/models/dodge_challenger_srt_demon_sdc.glb',
+        DODGE_GLB_URL,
         (gltf) => {
           const car = gltf.scene;
           steeringWheelNode = null;
@@ -2357,72 +2391,96 @@ async function createDodgeDemon(color = '#ffffff') {
           car.updateMatrixWorld(true);
 
           // -----------------------------------------------------
-          // desirefxme_077_43 검색
+          // 통합 바퀴 루트 검색 및 네 개의 독립 피벗 생성
           // -----------------------------------------------------
           let wheelRoot = null;
           car.traverse((child) => {
-            if (child.name === 'desirefxme_077_43') wheelRoot = child;
+            // 실제 GLB 이름은 desirefx.me_077_43이다. 점(.) 유무가 다른
+            // 내보내기본도 허용해 모델 교체 시에도 바퀴 분리가 유지되게 한다.
+            if (/^desirefx\.?me_077_43$/i.test(child.name || '')) wheelRoot = child;
           });
 
           const wheelNodes = [null, null, null, null];
+          const embeddedWheelNodes = [null, null, null, null];
+          car.traverse((child) => {
+            const slot = DODGE_WHEEL_NAMES.indexOf(child.name);
+            if (slot !== -1) embeddedWheelNodes[slot] = child;
+          });
 
-          if (wheelRoot) {
+          // 전달한 수정 GLB는 Wheel_FL/FR/RL/RR 그룹을 이미 포함한다.
+          // 원본 GLB를 다시 지정했을 때만 아래 런타임 분리 경로가 실행된다.
+          if (embeddedWheelNodes.every(Boolean)) {
+            embeddedWheelNodes.forEach((node, index) => {
+              node.userData.side = (index === 0 || index === 2) ? 'L' : 'R';
+              node.userData.baseQuaternion = node.quaternion.clone();
+              wheelNodes[index] = node;
+            });
+            console.log('Dodge 사전 분리 바퀴 노드 연결 완료:', DODGE_WHEEL_NAMES);
+          } else if (wheelRoot) {
             console.log('Dodge wheel root 발견:', wheelRoot.name);
+            const sourceParts = wheelRoot.children.filter((child) => child.isMesh && child.geometry);
 
-            const sourceParts = [...wheelRoot.children].filter(
-              child => child.isMesh && child.geometry
-            );
+            if (!sourceParts.length) {
+              console.warn('Dodge: 통합 바퀴 루트에 분리할 Mesh가 없습니다.');
+            } else {
+              const splitParts = [[], [], [], []];
+              const wheelBounds = DODGE_WHEEL_NAMES.map(() => new THREE.Box3().makeEmpty());
 
-            console.log(
-              'Dodge wheel parts:',
-              sourceParts.map(p => `${p.name} / ${Array.isArray(p.material) ? p.material.map(m => m?.name).join(',') : p.material?.name}`)
-            );
-
-            // Object_91~95 각각을 geometry 기준으로 FL/FR/RL/RR로 실제 분할
-            const wheelNames = ['Wheel_FL','Wheel_FR','Wheel_RL','Wheel_RR'];
-            const wheelGroups = wheelNames.map((name,i)=>{
-              const g=new THREE.Group();
-              g.name=name;
-              g.userData.side=(i===0||i===2)?'L':'R';
-              g.userData.baseQuaternion=g.quaternion.clone();
-              return g;
-            });
-
-            for (const sourceMesh of sourceParts) {
-              const split = splitDodgeMeshIntoFour(sourceMesh);
-              split.forEach((geometry,i)=>{
-                if(!geometry) return;
-                const part=makeDodgeComponentMesh(sourceMesh,geometry);
-                part.position.copy(sourceMesh.position);
-                part.quaternion.copy(sourceMesh.quaternion);
-                part.scale.copy(sourceMesh.scale);
-                part.name=`${sourceMesh.name}_${wheelNames[i]}`;
-                wheelGroups[i].add(part);
+              // 각 재질 파츠(Object_91~95)를 FL/FR/RL/RR로 나누어 임시 저장한다.
+              // 아직 그룹에 넣지 않아, 네 바퀴 공통의 축 중심을 먼저 계산할 수 있다.
+              sourceParts.forEach((sourceMesh) => {
+                splitDodgeMeshIntoFour(sourceMesh).forEach((geometry, index) => {
+                  if (!geometry) return;
+                  splitParts[index].push({ sourceMesh, geometry });
+                  wheelBounds[index].union(geometry.boundingBox);
+                });
               });
+
+              const wheelGroups = DODGE_WHEEL_NAMES.map((name, index) => {
+                const group = new THREE.Group();
+                group.name = name;
+                group.userData.side = (index === 0 || index === 2) ? 'L' : 'R';
+                group.userData.baseQuaternion = group.quaternion.clone();
+
+                // 분리된 정점 좌표는 원래 통합 Mesh의 로컬 좌표를 유지한다.
+                // 이 좌표를 축 중심만큼 이동시키고 Group을 같은 위치에 두면,
+                // 각 Group이 해당 바퀴의 축을 중심으로 독립 회전한다.
+                const pivot = wheelBounds[index].getCenter(new THREE.Vector3());
+                group.position.copy(pivot);
+                group.userData.pivot = pivot.clone();
+
+                splitParts[index].forEach(({ sourceMesh, geometry }) => {
+                  geometry.translate(-pivot.x, -pivot.y, -pivot.z);
+                  geometry.computeBoundingBox();
+                  geometry.computeBoundingSphere();
+
+                  const part = makeDodgeComponentMesh(sourceMesh, geometry);
+                  part.name = `${sourceMesh.name}_${name}`;
+                  group.add(part);
+                });
+
+                return group;
+              });
+
+              // wheelRoot의 변환을 보존한다. 원본 Mesh만 제거하고 새 그룹을 같은
+              // 부모 아래에 넣어, 차체와 바퀴의 좌표계가 달라지지 않게 한다.
+              sourceParts.forEach((sourceMesh) => wheelRoot.remove(sourceMesh));
+              wheelGroups.forEach((group, index) => {
+                wheelRoot.add(group);
+                wheelNodes[index] = group;
+              });
+
+              console.log(
+                'Dodge 네 바퀴 분리 완료:',
+                wheelGroups.map((group) => ({
+                  name: group.name,
+                  pivot: group.userData.pivot.toArray(),
+                  parts: group.children.map((part) => part.name)
+                }))
+              );
             }
-
-            const parent=wheelRoot.parent;
-            wheelGroups.forEach((g,i)=>{
-              g.position.copy(wheelRoot.position);
-              g.quaternion.copy(wheelRoot.quaternion);
-              g.scale.copy(wheelRoot.scale);
-              parent.add(g);
-              wheelNodes[i]=g;
-            });
-
-            console.log('Dodge 실제 분리 완료:',wheelGroups.map(g=>({name:g.name,parts:g.children.map(c=>c.name)})));
-
-            // 기존 통합 wheelRoot 제거
-            if (wheelRoot.parent) {
-              wheelRoot.parent.remove(wheelRoot);
-            }
-
-            console.log(
-              'Dodge wheelNodes:',
-              wheelNodes.map((w, i) => `${i}: ${w?.name || 'NULL'}`)
-            );
           } else {
-            console.warn('Dodge: desirefxme_077_43를 찾지 못했습니다.');
+            console.warn('Dodge: desirefx.me_077_43 통합 바퀴 루트를 찾지 못했습니다.');
           }
 
           car.userData.wheelNodes = wheelNodes;
@@ -3389,6 +3447,21 @@ if (currentCarModel.includes('PontiacPhoenix')) {
     }
   }
 
+  // Dodge 원본은 wheelRoot에서 로컬 Z축이 게임의 위쪽 Y축 반대 방향으로 변환된다.
+  // 따라서 네 개의 독립 피벗은 X축으로 굴리고, 앞바퀴만 로컬 Z축으로 조향한다.
+  if (currentCarModel.includes('DodgeDemon')) {
+    const dodgeSteering = (i === 0 || i === 1)
+      ? physicsSteering * exaggerationFactor
+      : 0;
+    const dodgeSteeringQuat = new THREE.Quaternion().setFromAxisAngle(
+      new THREE.Vector3(0, 0, 1),
+      -dodgeSteering
+    );
+    node.quaternion.copy(dodgeSteeringQuat.multiply(rollingQuat));
+    node.updateMatrix();
+    continue;
+  }
+
   // 5. 새로 계산된 시각적 조향 쿼터니언 생성
   let visualSteeringQuat = new THREE.Quaternion();
   
@@ -3532,7 +3605,21 @@ correctionQuat.setFromEuler(new THREE.Euler(0, -Math.PI / 2, 0));
                 }
                 wheel.quaternion.copy(finalTransform);
 
-                        } else if (remoteModelName.includes('PontiacPhoenix')) {
+                        } else if (remoteModelName.includes('DodgeDemon')) {
+                // Dodge GLB의 wheelRoot 축은 로컬 Z가 게임 Y축의 반대 방향이다.
+                // 이미 분리된 Wheel_FL/FR/RL/RR 각각에 조향·구름을 적용한다.
+                const visualSteering = (i === 0 || i === 1) ? steerAngle * 2.6 : 0;
+                const steerQuat = new THREE.Quaternion().setFromAxisAngle(
+                  new THREE.Vector3(0, 0, 1),
+                  -visualSteering
+                );
+                const rollQuat = new THREE.Quaternion().setFromAxisAngle(
+                  new THREE.Vector3(1, 0, 0),
+                  pData.accumulatedRoll
+                );
+                wheel.quaternion.copy(steerQuat.multiply(rollQuat));
+
+            } else if (remoteModelName.includes('PontiacPhoenix')) {
 
               const visualSteering = (i === 0 || i === 1) ? -steerAngle * 2.6 : 0;
                 // ─── [3] 폰티악 전용 바퀴 정렬 로직 (조향 및 반전 수정) ───
