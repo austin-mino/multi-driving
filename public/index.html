@@ -2266,6 +2266,9 @@ node.quaternion.multiply(rotation90);
   // X축 +90도 회전으로 위쪽을 유지하면서 차량의 전방(+Y)을 게임의 전방(+Z)에 맞춘다.
   const DODGE_TARGET_LENGTH = 10.5;
   const DODGE_VISUAL_ROTATION = new THREE.Euler(Math.PI / 2, 0, 0);
+  // Dodge GLB의 로컬 전진축과 물리 차체의 +Z 방향이 반대이므로
+  // 최종 엔진 힘만 반전한다. D는 전진, R은 후진이 되도록 맞춘다.
+  const DODGE_DRIVE_DIRECTION = -1;
 
   // 원본 통합 휠을 런타임에 정점 단위로 분해하면 material group/draw range가
   // 유실되어 차체 일부가 비어 보일 수 있다. 사전 분리 휠이 없을 때는 원본을
@@ -2966,6 +2969,12 @@ else if (gearState === 'R') {
   applyBrake(maxBrakeForce * 1.5);
 }
 
+
+// Dodge는 시각 전방과 물리 전진축이 반대이므로 최종 엔진 힘만 반전한다.
+// 기어 판정, RPM 계산, 브레이크 로직은 그대로 유지한다.
+if (currentCarModel === 'DodgeDemon') {
+  engineForce *= DODGE_DRIVE_DIRECTION;
+}
 
 // 마지막 (이건 항상 맨 끝)
 vehicle.applyEngineForce(engineForce, 2);
