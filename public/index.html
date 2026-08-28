@@ -2261,6 +2261,17 @@ node.quaternion.multiply(rotation90);
   // 이 HTML과 같은 경로에 전달된 수정 GLB를 둔다.
   const DODGE_GLB_URL = './models/dodge_demon/dodge_challenger_srt_demon_split_wheels.glb';
 
+  // Dodge 전용 표시 보정값. 전장은 기존 8.0에서 약 31% 키워 다른 차량과의
+  // 시각적 비율을 맞춘다. 현재 내보내기본은 이미 반대 방향 보정이 포함되어 있어
+  // 래퍼에 추가 180도 회전을 적용하지 않는다.
+  const DODGE_TARGET_LENGTH = 10.5;
+  const DODGE_VISUAL_YAW = 0;
+
+  // 원본 통합 휠을 런타임에 정점 단위로 분해하면 material group/draw range가
+  // 유실되어 차체 일부가 비어 보일 수 있다. 사전 분리 휠이 없을 때는 원본을
+  // 그대로 보존해 차량 외관이 사라지거나 뚫리는 현상을 막는다.
+  const DODGE_PRESERVE_COMBINED_WHEELS = true;
+
   function getDodgeWheelSlot(x, y, midX, midY) {
     const isLeft = x < midX;
     const isFront = y >= midY;
@@ -2353,35 +2364,42 @@ async function createDodgeDemon(color = '#ffffff') {
               steeringWheelNode = child;
             }
 
-            if (!child.isMesh || !child.material) return;
+            if (!child.isMesh) return;
 
-            const materials = Array.isArray(child.material)
-              ? child.material
-              : [child.material];
+            // GLB의 일부 파츠는 transform/geometry 변경 후 bounding sphere가 정확하지 않아
+            // 카메라 각도에 따라 사라질 수 있다. Dodge는 차체 파츠 수가 적어 컬링을 끄는
+            // 편이 외관 안정성 측면에서 안전하다.
+            child.frustumCulled = false;
+            if (!child.material) return;
 
-            // 차체 도장 재질만 색상을 바꾼다. clone()은 유지하되,
-            // metalness / roughness / opacity / transparent 등 원본 재질 속성은 건드리지 않는다.
+            const hadMaterialArray = Array.isArray(child.material);
+            const materials = hadMaterialArray ? child.material : [child.material];
+
+            // 차체 도장 재질만 복제하여 색상을 바꾼다. 단일 재질 Mesh에 배열을 대입하면
+            // geometry.group이 없는 경우 Three.js가 그 Mesh를 그리지 않아 구멍이 생긴다.
+            // 따라서 원래가 단일 재질이면 반드시 단일 재질로 다시 대입한다.
             const hasBodyMaterial = materials.some((material) => {
               const materialName = (material?.name || '').toLowerCase();
               return materialName === 'cars' || materialName.includes('carpaint');
             });
 
             if (hasBodyMaterial) {
-              child.material = materials.map((material) => {
+              const recoloredMaterials = materials.map((material) => {
                 const m = material.clone();
                 const materialName = (material?.name || '').toLowerCase();
-                // CARS/carpaint만 도색하고 GLASS, tire, rim 등은 원본 유지
+                // CARS/carpaint만 도색하고 GLASS, tire, rim 등은 원본 속성 그대로 유지
                 if (materialName === 'cars' || materialName.includes('carpaint')) {
                   m.color.set(color);
                   m.needsUpdate = true;
                 }
                 return m;
               });
+              child.material = hadMaterialArray ? recoloredMaterials : recoloredMaterials[0];
               child.name = 'MainBody';
             }
           });
 
-          // 원본 Dodge가 반대 방향을 향하므로 시각 루트에서 180도 회전한다.
+          // 차량의 최종 전후 방향은 DODGE_VISUAL_YAW로 시각 래퍼에만 적용한다.
           // 물리 차체의 쿼터니언은 바깥 시각 루트에 적용되므로 서로 덮어쓰지 않는다.
           car.scale.set(1, 1, 1);
           car.rotation.set(0, 0, 0);
@@ -2405,7 +2423,7 @@ async function createDodgeDemon(color = '#ffffff') {
           });
 
           // 전달한 수정 GLB는 Wheel_FL/FR/RL/RR 그룹을 이미 포함한다.
-          // 원본 GLB를 다시 지정했을 때만 아래 런타임 분리 경로가 실행된다.
+          // 통합 휠의 런타임 분리는 기본적으로 비활성화해 원본 메시와 재질을 보존한다.
           if (embeddedWheelNodes.every(Boolean)) {
             embeddedWheelNodes.forEach((node, index) => {
               node.userData.side = (index === 0 || index === 2) ? 'L' : 'R';
@@ -2413,7 +2431,7 @@ async function createDodgeDemon(color = '#ffffff') {
               wheelNodes[index] = node;
             });
             console.log('Dodge 사전 분리 바퀴 노드 연결 완료:', DODGE_WHEEL_NAMES);
-          } else if (wheelRoot) {
+          } else if (wheelRoot && !DODGE_PRESERVE_COMBINED_WHEELS) {
             console.log('Dodge wheel root 발견:', wheelRoot.name);
             const sourceParts = wheelRoot.children.filter((child) => child.isMesh && child.geometry);
 
@@ -2476,6 +2494,8 @@ async function createDodgeDemon(color = '#ffffff') {
                 }))
               );
             }
+          } else if (wheelRoot) {
+            console.warn('Dodge: 사전 분리 휠을 찾지 못해 원본 통합 휠을 그대로 유지합니다.');
           } else {
             console.warn('Dodge: desirefx.me_077_43 통합 바퀴 루트를 찾지 못했습니다.');
           }
@@ -2494,18 +2514,18 @@ async function createDodgeDemon(color = '#ffffff') {
           // 이 GLB는 Y축 방향으로 차량 길이가 저장돼 있으므로 세 축 중
           // 가장 긴 축을 차량 전장으로 사용한다.
           const vehicleLength = Math.max(size.x, size.y, size.z);
-          const targetLength = 8.0;
+          const targetLength = DODGE_TARGET_LENGTH;
 
           if (vehicleLength > 0.001) {
             const scale = targetLength / vehicleLength;
             car.scale.multiplyScalar(scale);
           }
 
-          // 고정 회전용 래퍼를 사용한다. 매 프레임 물리 회전을 받는 carModel
-          // 자체를 180도 돌리면 wheel transform 계산과 충돌할 수 있기 때문이다.
+          // 고정 방향 보정용 래퍼를 사용한다. 매 프레임 물리 회전을 받는 carModel
+          // 자체를 회전시키면 wheel transform 계산과 충돌할 수 있기 때문이다.
           const visualRoot = new THREE.Group();
           visualRoot.name = 'DodgeDemonVisualRoot';
-          visualRoot.rotation.y = Math.PI;
+          visualRoot.rotation.y = DODGE_VISUAL_YAW;
           visualRoot.add(car);
 
           // -----------------------------------------------------
