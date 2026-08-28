@@ -2377,7 +2377,7 @@ async function createDodgeDemon(color = '#ffffff') {
 
             // GLB마다 차체 재질 이름이 Cars, Body, Material.001 등으로 다르므로
             // 이름을 넓게 판별한다. 유리·타이어·휠·램프·실내 재질은 제외한다.
-            const bodyWords = /(car|body|paint|vehicle|exterior|chassis|shell|metal|hood|bonnet|roof|door|fender|bumper|scoop|spoiler)/i;
+            const bodyWords = /(car|body|paint|vehicle|exterior|chassis|shell|hood|bonnet|roof|door|fender|bumper|scoop|spoiler)/i;
             const protectedWords = /(glass|window|windshield|tire|tyre|wheel|rim|rubber|chrome|light|lamp|brake|disc|seat|interior|steering|dashboard|engine|exhaust)/i;
             const meshName = child.name || '';
             const isBodyMaterial = (material) => {
@@ -2388,18 +2388,17 @@ async function createDodgeDemon(color = '#ffffff') {
               if (material.transparent || material.opacity < 0.95 || material.transmission > 0.1) return false;
               // Dodge GLB의 상부 외장 파츠는 이름이 Material.xxx인 경우가 많다.
               // 보호 대상이 아닌 불투명 외장 재질은 차체 도장으로 취급한다.
-              return bodyWords.test(materialName) || /(body|car|chassis|exterior|shell|hood|roof|door|fender|bumper)/i.test(meshName) || true;
+              // 차체로 명시된 재질 또는 Mesh만 색상을 변경한다.
+              // 마지막의 무조건 true 조건은 바퀴/유리/램프까지 색칠하는 원인이므로 사용하지 않는다.
+              return bodyWords.test(materialName) || bodyWords.test(meshName);
             };
 
             let bodyMaterialIndexes = materials
               .map((material, index) => isBodyMaterial(material) ? index : -1)
               .filter((index) => index !== -1);
 
-            // 이름이 전혀 없는 단일 재질 차체도 색상 변경이 가능하도록 안전한 fallback을 둔다.
-            // 보호 키워드가 없는 경우에만 첫 번째 색상 재질을 차체 도장으로 간주한다.
-            if (!bodyMaterialIndexes.length && materials.length === 1 && !protectedWords.test(meshName)) {
-              bodyMaterialIndexes = [0];
-            }
+            // 이름이 없는 재질은 차체라고 추정하지 않는다.
+            // 바퀴·유리·램프·실내가 우연히 단일 재질일 때 색칠되는 것을 방지한다.
 
             if (bodyMaterialIndexes.length) {
               const recoloredMaterials = materials.map((material, index) => {
