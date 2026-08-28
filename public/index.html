@@ -2262,10 +2262,10 @@ node.quaternion.multiply(rotation90);
   const DODGE_GLB_URL = './models/dodge_demon/dodge_challenger_srt_demon_split_wheels.glb';
 
   // Dodge 전용 표시 보정값. 전장은 기존 8.0에서 약 31% 키워 다른 차량과의
-  // 시각적 비율을 맞춘다. 현재 내보내기본은 이미 반대 방향 보정이 포함되어 있어
-  // 래퍼에 추가 180도 회전을 적용하지 않는다.
+  // 시각적 비율을 맞춘다. GLB의 전방이 게임의 +Z와 반대이므로 시각 루트에서
+  // 180도 회전한다.
   const DODGE_TARGET_LENGTH = 10.5;
-  const DODGE_VISUAL_YAW = 0;
+  const DODGE_VISUAL_YAW = Math.PI;
 
   // 원본 통합 휠을 런타임에 정점 단위로 분해하면 material group/draw range가
   // 유실되어 차체 일부가 비어 보일 수 있다. 사전 분리 휠이 없을 때는 원본을
@@ -2375,31 +2375,45 @@ async function createDodgeDemon(color = '#ffffff') {
             const hadMaterialArray = Array.isArray(child.material);
             const materials = hadMaterialArray ? child.material : [child.material];
 
-            // 차체 도장 재질만 복제하여 색상을 바꾼다. 단일 재질 Mesh에 배열을 대입하면
-            // geometry.group이 없는 경우 Three.js가 그 Mesh를 그리지 않아 구멍이 생긴다.
-            // 따라서 원래가 단일 재질이면 반드시 단일 재질로 다시 대입한다.
-            const hasBodyMaterial = materials.some((material) => {
-              const materialName = (material?.name || '').toLowerCase();
-              return materialName === 'cars' || materialName.includes('carpaint');
-            });
+            // GLB마다 차체 재질 이름이 Cars, Body, Material.001 등으로 다르므로
+            // 이름을 넓게 판별한다. 유리·타이어·휠·램프·실내 재질은 제외한다.
+            const bodyWords = /(car|body|paint|vehicle|exterior|chassis|shell|metal)/i;
+            const protectedWords = /(glass|window|tire|tyre|wheel|rim|rubber|chrome|light|lamp|brake|disc|seat|interior|steering|dashboard)/i;
+            const meshName = child.name || '';
+            const isBodyMaterial = (material) => {
+              if (!material) return false;
+              const materialName = material.name || '';
+              if (protectedWords.test(materialName) || protectedWords.test(meshName)) return false;
+              return bodyWords.test(materialName) || /(body|car|chassis|exterior|shell)/i.test(meshName);
+            };
 
-            if (hasBodyMaterial) {
-              const recoloredMaterials = materials.map((material) => {
-                const m = material.clone();
-                const materialName = (material?.name || '').toLowerCase();
-                // CARS/carpaint만 도색하고 GLASS, tire, rim 등은 원본 속성 그대로 유지
-                if (materialName === 'cars' || materialName.includes('carpaint')) {
+            let bodyMaterialIndexes = materials
+              .map((material, index) => isBodyMaterial(material) ? index : -1)
+              .filter((index) => index !== -1);
+
+            // 이름이 전혀 없는 단일 재질 차체도 색상 변경이 가능하도록 안전한 fallback을 둔다.
+            // 보호 키워드가 없는 경우에만 첫 번째 색상 재질을 차체 도장으로 간주한다.
+            if (!bodyMaterialIndexes.length && materials.length === 1 && !protectedWords.test(meshName)) {
+              bodyMaterialIndexes = [0];
+            }
+
+            if (bodyMaterialIndexes.length) {
+              const recoloredMaterials = materials.map((material, index) => {
+                const m = material?.clone ? material.clone() : material;
+                if (m && bodyMaterialIndexes.includes(index) && m.color?.set) {
                   m.color.set(color);
                   m.needsUpdate = true;
                 }
                 return m;
               });
+              // 원래 단일 재질이었던 Mesh에 배열을 대입하면 geometry.group이 없는 경우
+              // Mesh 전체가 렌더링되지 않을 수 있으므로 반드시 원래 형태를 유지한다.
               child.material = hadMaterialArray ? recoloredMaterials : recoloredMaterials[0];
               child.name = 'MainBody';
             }
           });
 
-          // 차량의 최종 전후 방향은 DODGE_VISUAL_YAW로 시각 래퍼에만 적용한다.
+          // 차량의 최종 전후 방향은 DODGE_VISUAL_YAW(180도)로 시각 래퍼에만 적용한다.
           // 물리 차체의 쿼터니언은 바깥 시각 루트에 적용되므로 서로 덮어쓰지 않는다.
           car.scale.set(1, 1, 1);
           car.rotation.set(0, 0, 0);
