@@ -2264,7 +2264,7 @@ node.quaternion.multiply(rotation90);
   // Dodge 전용 표시 보정값. 전장은 기존 8.0에서 약 31% 키워 다른 차량과의
   // 현재 GLB는 차량이 이미 Y축을 위쪽으로 사용하므로 X축 보정은 적용하지 않는다.
   // 앞뒤만 반전하고 위아래는 유지하도록 Y축 기준 180도 회전을 적용한다.
-  const DODGE_TARGET_LENGTH = 10.5;
+  const DODGE_TARGET_LENGTH = 13.0; // 기존 10.5보다 약 24% 크게 표시
   const DODGE_VISUAL_ROTATION = new THREE.Euler(0, Math.PI, 0);
 
   // 원본 통합 휠을 런타임에 정점 단위로 분해하면 material group/draw range가
@@ -2415,6 +2415,8 @@ async function createDodgeDemon(color = '#ffffff') {
                   m.aoMap = null;
                   m.vertexColors = false;
                   m.color.set(color);
+                  // 차체 색상만 약간 밝게 보정하고, 바퀴·유리·램프에는 적용하지 않는다.
+                  if (m.offsetHSL) m.offsetHSL(0, 0, 0.12);
                   if (m.emissive?.set) m.emissive.set(0x000000);
                   m.needsUpdate = true;
                 }
