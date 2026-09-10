@@ -2271,7 +2271,7 @@ node.quaternion.multiply(rotation90);
   // 분리해야 한다. Z축으로 나누면 바퀴의 상·하단이 갈라져 독립 회전할 수 없다.
   const DODGE_WHEEL_NAMES = ['Wheel_FL', 'Wheel_FR', 'Wheel_RL', 'Wheel_RR'];
   // 이 HTML과 같은 경로에 전달된 수정 GLB를 둔다.
-  const DODGE_GLB_URL = './models/dodge_demon/dodge_challenger_srt_demon_split_wheels.glb';
+  const DODGE_GLB_URL = './models/dodge_demon/dodge_challenger_srt_demon_handle_pivot.glb';
 
   // Dodge 전용 표시 보정값. 전장은 기존 8.0에서 약 31% 키워 다른 차량과의
   // 현재 GLB는 차량이 이미 Y축을 위쪽으로 사용하므로 X축 보정은 적용하지 않는다.
@@ -2353,7 +2353,6 @@ node.quaternion.multiply(rotation90);
     mesh.receiveShadow = true;
     return mesh;
   }
-
 async function createDodgeDemon(color = '#ffffff') {
     return new Promise((resolve) => {
       const loader = new GLTFLoader();
@@ -2370,15 +2369,6 @@ async function createDodgeDemon(color = '#ffffff') {
           car.traverse((child) => {
             child.castShadow = true;
             child.receiveShadow = true;
-
-            const name = (child.name || '').toLowerCase();
-            if (name.includes('steering') || name.includes('volant')) {
-  steeringWheelNode = child;
-
-  // GLB 원본 핸들 방향 보존
-  child.userData.baseQuaternion = child.quaternion.clone();
-}
-
 
             if (!child.isMesh) return;
 
@@ -2468,6 +2458,18 @@ async function createDodgeDemon(color = '#ffffff') {
             if (slot !== -1) embeddedWheelNodes[slot] = child;
           });
 
+          // -----------------------------------------------------
+          // 수정된 GLB의 핸들 중앙 피벗 노드를 연결한다.
+          steeringWheelNode = car.getObjectByName(
+            'Dodge_SteeringWheel_Pivot_Box'
+          );
+          if (steeringWheelNode) {
+            steeringWheelNode.userData.baseQuaternion =
+              steeringWheelNode.quaternion.clone();
+            console.log('Dodge 핸들 피벗 연결:', steeringWheelNode.name);
+          } else {
+            console.warn('Dodge 핸들 피벗을 찾지 못했습니다.');
+          }
           // 전달한 수정 GLB는 Wheel_FL/FR/RL/RR 그룹을 이미 포함한다.
           // 통합 휠의 런타임 분리는 기본적으로 비활성화해 원본 메시와 재질을 보존한다.
           if (embeddedWheelNodes.every(Boolean)) {
@@ -3479,17 +3481,18 @@ visualSteeringLag += (steeringValue - visualSteeringLag) * 0.1;
 
 // ★ 내 차 전용 핸들 업데이트
 if (carModel && carModel.userData.steeringNode) {
-  const steeringNode = carModel.userData.steeringNode;
+  const steeringNode =
+    carModel.userData.steeringNode;
 
   if (cameraMode === 'first') {
     if (currentCarModel === 'DodgeDemon') {
-      // Dodge 핸들은 Y축 회전이 아니라
-      // 핸들 노드 자체의 로컬 Z축을 기준으로 회전시킨다.
       const baseQuaternion =
         steeringNode.userData.baseQuaternion ||
         steeringNode.quaternion.clone();
 
-      const steeringAngle = visualSteeringLag * 15.0;
+      // Dodge 핸들은 로컬 Z축을 기준으로 회전
+      const steeringAngle =
+        visualSteeringLag * 15.0;
 
       const steeringQuaternion =
         new THREE.Quaternion().setFromAxisAngle(
@@ -3497,22 +3500,23 @@ if (carModel && carModel.userData.steeringNode) {
           steeringAngle
         );
 
-      // 원래 핸들 방향을 유지한 상태에서 조향 회전 적용
       steeringNode.quaternion
         .copy(baseQuaternion)
         .multiply(steeringQuaternion);
 
-    } else if (currentCarModel === 'PontiacPhoenix') {
-      // 폰티악은 기존 방식 유지
-      steeringNode.rotation.y = -visualSteeringLag * 15.0;
+    } else if (
+      currentCarModel === 'PontiacPhoenix'
+    ) {
+      steeringNode.rotation.y =
+        -visualSteeringLag * 15.0;
 
     } else {
-      // 나머지 차량은 기존 방식 유지
-      steeringNode.rotation.y = visualSteeringLag * 15.0;
+      steeringNode.rotation.y =
+        visualSteeringLag * 15.0;
     }
 
   } else {
-    // 3인칭에서는 핸들을 원래 중앙 방향으로 복원
+    // 3인칭에서는 원래 위치로 복원
     if (
       currentCarModel === 'DodgeDemon' &&
       steeringNode.userData.baseQuaternion
