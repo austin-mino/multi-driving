@@ -2373,8 +2373,12 @@ async function createDodgeDemon(color = '#ffffff') {
 
             const name = (child.name || '').toLowerCase();
             if (name.includes('steering') || name.includes('volant')) {
-              steeringWheelNode = child;
-            }
+  steeringWheelNode = child;
+
+  // GLB 원본 핸들 방향 보존
+  child.userData.baseQuaternion = child.quaternion.clone();
+}
+
 
             if (!child.isMesh) return;
 
@@ -3473,20 +3477,55 @@ setInterval(() => {
 // 실제 핸들 회전 시스템 (매 프레임마다 시각값이 물리값을 부드럽게 추적)
 visualSteeringLag += (steeringValue - visualSteeringLag) * 0.1;
 
-// ★ 내 차 전용 변수(steeringNode) 업데이트
+// ★ 내 차 전용 핸들 업데이트
 if (carModel && carModel.userData.steeringNode) {
+  const steeringNode = carModel.userData.steeringNode;
+
   if (cameraMode === 'first') {
-    // 폰티악 모델인 경우에만 핸들 회전 방향을 반대로(-) 설정
-    if (currentCarModel === 'PontiacPhoenix') {
-      carModel.userData.steeringNode.rotation.y = -visualSteeringLag * 15.0;
+    if (currentCarModel === 'DodgeDemon') {
+      // Dodge 핸들은 Y축 회전이 아니라
+      // 핸들 노드 자체의 로컬 Z축을 기준으로 회전시킨다.
+      const baseQuaternion =
+        steeringNode.userData.baseQuaternion ||
+        steeringNode.quaternion.clone();
+
+      const steeringAngle = visualSteeringLag * 15.0;
+
+      const steeringQuaternion =
+        new THREE.Quaternion().setFromAxisAngle(
+          new THREE.Vector3(0, 0, 1),
+          steeringAngle
+        );
+
+      // 원래 핸들 방향을 유지한 상태에서 조향 회전 적용
+      steeringNode.quaternion
+        .copy(baseQuaternion)
+        .multiply(steeringQuaternion);
+
+    } else if (currentCarModel === 'PontiacPhoenix') {
+      // 폰티악은 기존 방식 유지
+      steeringNode.rotation.y = -visualSteeringLag * 15.0;
+
     } else {
-      carModel.userData.steeringNode.rotation.y = visualSteeringLag * 15.0;
+      // 나머지 차량은 기존 방식 유지
+      steeringNode.rotation.y = visualSteeringLag * 15.0;
     }
+
   } else {
-    // 3인칭 시점으로 바꾸면 핸들을 정중앙(0)으로 리셋하여 고정시킵니다.
-    carModel.userData.steeringNode.rotation.y = 0;
+    // 3인칭에서는 핸들을 원래 중앙 방향으로 복원
+    if (
+      currentCarModel === 'DodgeDemon' &&
+      steeringNode.userData.baseQuaternion
+    ) {
+      steeringNode.quaternion.copy(
+        steeringNode.userData.baseQuaternion
+      );
+    } else {
+      steeringNode.rotation.y = 0;
+    }
   }
 }
+
       // ─── GLTF/GLB 모델 바퀴 노드 회전 업데이트 ───────────────────────────
       // carWheelNodes[i]는 모델 내부 바퀴 부모 노드를 가리킨다.
       // CANNON의 worldTransform.quaternion에서 차체 회전을 제거하여
