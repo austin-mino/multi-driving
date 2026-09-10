@@ -3091,7 +3091,9 @@ if (input.handbrake) {
     offset = new THREE.Vector3(0, 0.5, -4); // mclaren
   } else if (currentCarModel === 'PontiacPhoenix') {
     offset = new THREE.Vector3(-0.97, 2.66, 0.26); // Pontiac Phoenix
-  } else {
+  } else if (currentCarModel === 'DodgeDemon') {
+    offset = new THREE.Vector3(-0.97, 2.66, 0.26); // DodgeDemon
+    else {
     offset = new THREE.Vector3(-0.85, 2.5, -0.4); // 그랜저 기본
   }
 
