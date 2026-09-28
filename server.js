@@ -10,6 +10,7 @@
  * 단순히 상태 중계만 담당
  */
 
+const path = require('path');
 const express = require('express');
 const app = express();
 
@@ -28,12 +29,19 @@ const io = require('socket.io')(http, {
 const PORT = process.env.PORT || 3000;
 
 // 정적 파일 제공: 클라이언트용 html, js, css 파일은 /public 폴더에 넣고 서비스
-app.use('/models', express.static('models'));
-app.use(express.static('public'));
+app.use('/models', express.static(path.join(__dirname, 'models'), { maxAge: '7d' }));
+app.use(express.static(path.join(__dirname, 'public')));
 
 // 접속한 플레이어 상태 저장 객체
 // 키: socket.id, 값: 플레이어 상태 객체
 const players = {};
+
+// 클라이언트 입력 검증 — 임의의 문자열/객체가 모든 클라이언트로 중계되지 않도록 한다.
+const CAR_MODELS = new Set(['SportsCar', 'DodgeDemon', 'SUV', 'McLarenP1', 'PontiacPhoenix', 'GrandeurIG']);
+const GEARS = new Set(['P', 'R', 'N', 'D']);
+const isFiniteNum = (v) => typeof v === 'number' && Number.isFinite(v);
+const cleanNickname = (v) => (typeof v === 'string' ? v.replace(/[\u0000-\u001f]/g, '').trim().slice(0, 16) : '') || 'Unknown';
+const cleanColor = (v) => (typeof v === 'string' && /^#[0-9a-fA-F]{6}$/.test(v) ? v : '#ffffff');
 
 /**
  * 소켓 연결 이벤트 처리
@@ -48,19 +56,19 @@ io.on('connection', (socket) => {
    */
   socket.on('joinGame', (data) => {
     try {
-      console.log(`🚗 플레이어 참가: ${data.nickname || 'Unknown'}`);
+      data = data || {};
+      const nickname = cleanNickname(data.nickname);
+      console.log(`🚗 플레이어 참가: ${nickname}`);
 
       // 서버에 플레이어 초기 상태 등록
       players[socket.id] = {
-        nickname: data.nickname || 'Unknown',
-        carModel: data.carModel || 'DefaultCar',
-        carColor: data.carColor || '#ffffff',
+        nickname,
+        carModel: CAR_MODELS.has(data.carModel) ? data.carModel : 'GrandeurIG',
+        carColor: cleanColor(data.carColor),
         // 초기 위치 (예: 게임 시작 지점)
         position: { x: 0, y: 0, z: 0 },
         // 초기 회전 (쿼터니언)
         rotation: { x: 0, y: 0, z: 0, w: 1 },
-        // 입력 상태 (예: 가속, 감속, 좌우)
-        input: {},
         // 기어 상태 (예: P, D, R)
         gear: 'P',
       };
@@ -86,61 +94,38 @@ io.on('connection', (socket) => {
    * }
    */
   socket.on('updatePosition', (data) => {
-  if (!players[socket.id]) {
-    // 플레이어가 등록 안 됐으면 무시
-    return;
-  }
+    const player = players[socket.id];
+    if (!player || !data) return; // 플레이어가 등록 안 됐으면 무시
 
-  if (
-    data.position &&
-    typeof data.position.x === 'number' &&
-    typeof data.position.y === 'number' &&
-    typeof data.position.z === 'number'
-  ) {
-    players[socket.id].position = data.position;
-  }
+    const p = data.position;
+    if (p && isFiniteNum(p.x) && isFiniteNum(p.y) && isFiniteNum(p.z)) {
+      // 필요한 필드만 복사한다 (클라이언트 객체를 그대로 저장하면 임의 필드가 중계됨)
+      player.position = { x: p.x, y: p.y, z: p.z };
+    }
 
-  if (
-    data.rotation &&
-    typeof data.rotation.x === 'number' &&
-    typeof data.rotation.y === 'number' &&
-    typeof data.rotation.z === 'number' &&
-    typeof data.rotation.w === 'number'
-  ) {
-    players[socket.id].rotation = data.rotation;
-  }
+    const r = data.rotation;
+    if (r && isFiniteNum(r.x) && isFiniteNum(r.y) && isFiniteNum(r.z) && isFiniteNum(r.w)) {
+      player.rotation = { x: r.x, y: r.y, z: r.z, w: r.w };
+    }
 
-  if (typeof data.gear === 'string') {
-    players[socket.id].gear = data.gear;
-  }
+    if (GEARS.has(data.gear)) player.gear = data.gear;
 
-  // 클라이언트가 보낸 조향각(steeringValue)을 서버에 저장합니다.
-  if (typeof data.steeringValue === 'number') {
-    players[socket.id].steeringValue = data.steeringValue;
-  }
-
-  // (선택) 클라이언트에서 wheels 데이터도 보내고 계시니, 나중을 위해 같이 저장해 둡니다.
-  if (data.wheels) {
-    players[socket.id].wheels = data.wheels;
-  }
-});
-
-
-  /**
-   * 클라이언트가 별도로 입력 상태만 보낼 수도 있음 (선택 사항)
-   */
-  socket.on('updateInput', (input) => {
-    if (players[socket.id]) {
-      players[socket.id].input = input;
+    // 클라이언트가 보낸 조향각(steeringValue)을 서버에 저장합니다.
+    if (isFiniteNum(data.steeringValue)) {
+      player.steeringValue = Math.max(-1, Math.min(1, data.steeringValue));
     }
   });
+
+
+  
 
   /**
    * 채팅 메시지 이벤트 처리 (선택)
    */
   socket.on('chatMessage', (msg) => {
+    if (typeof msg !== 'string' || !msg.trim()) return;
     const nickname = players[socket.id]?.nickname || 'Unknown';
-    io.emit('chatMessage', { sender: nickname, message: msg });
+    io.emit('chatMessage', { sender: nickname, message: msg.slice(0, 200) });
   });
 
   /**
@@ -162,7 +147,8 @@ io.on('connection', (socket) => {
  * 50ms마다 (약 20FPS) 모든 플레이어 위치/회전 정보를 브로드캐스트
  */
 setInterval(() => {
-  io.emit('updatePlayers', players);
+  // 아무도 없으면 브로드캐스트하지 않는다
+  if (Object.keys(players).length) io.emit('updatePlayers', players);
 }, 50);
 
 /**
