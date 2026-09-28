@@ -714,6 +714,69 @@
       transform: translateY(-1px);
     }
 
+
+
+    /* ===== CITY MINIMAP ===== */
+    #minimapWrap {
+      position: fixed;
+      top: 25px;
+      left: 25px;
+      width: 218px;
+      height: 218px;
+      padding: 7px;
+      box-sizing: border-box;
+      background: rgba(6, 10, 16, 0.78);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255,255,255,0.14);
+      border-radius: 14px;
+      z-index: 160;
+      box-shadow: 0 14px 35px rgba(0,0,0,0.35);
+      pointer-events: none;
+    }
+    #minimapCanvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      border-radius: 9px;
+    }
+    #minimapHeader {
+      position: absolute;
+      left: 13px;
+      top: 10px;
+      color: rgba(255,255,255,0.72);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-shadow: 0 2px 8px rgba(0,0,0,0.65);
+    }
+    #minimapLegend {
+      position: absolute;
+      left: 13px;
+      bottom: 10px;
+      display: flex;
+      gap: 8px;
+      color: rgba(255,255,255,0.65);
+      font-family: 'Inter', sans-serif;
+      font-size: 8px;
+      font-weight: 700;
+      text-shadow: 0 2px 8px rgba(0,0,0,0.65);
+    }
+    .miniLegendDot {
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      vertical-align: 0;
+      margin-right: 3px;
+      box-shadow: 0 0 6px currentColor;
+    }
+    @media (max-width: 760px) {
+      #minimapWrap { width: 176px; height: 176px; top: 12px; left: 12px; }
+      #minimapHeader { left: 11px; top: 9px; }
+      #minimapLegend { left: 11px; bottom: 8px; gap: 6px; }
+    }
+
   </style>
   
    <script src="/socket.io/socket.io.js"></script>
@@ -814,6 +877,16 @@
 
   <div id="rotateWarning">가로 모드로 전환해주세요</div>
   <div id="timerDisplay">TIME: 0.00s</div>
+
+  <div id="minimapWrap" aria-label="CITY MINIMAP">
+    <canvas id="minimapCanvas" width="420" height="420"></canvas>
+    <div id="minimapHeader">CITY MAP · LIVE</div>
+    <div id="minimapLegend">
+      <span><span class="miniLegendDot" style="color:#60a5fa;background:#60a5fa"></span>YOU</span>
+      <span><span class="miniLegendDot" style="color:#ff5b5b;background:#ff5b5b"></span>RIVAL</span>
+    </div>
+  </div>
+
   <div id="hudContainer">
     <div id="hud">0 KM/H</div>
     <div id="gearDisplay">P</div>
@@ -989,6 +1062,7 @@ window.addEventListener('keydown', e => {
 });
 
 function resetCar() {
+  if (!chassisBody) return;
   // 위치는 그대로, 높이 약간 위로
   const pos = chassisBody.position;
   chassisBody.position.set(pos.x, pos.y + 1.5, pos.z);
@@ -1282,6 +1356,15 @@ function makeSidewalkTexture() {
   return t;
 }
 
+const buildingTextureCache = new Map();
+function getBuildingTexture(hexColor, floors = 10, cols = 5) {
+  const key = `${hexColor}|${floors}|${cols}`;
+  if (buildingTextureCache.has(key)) return buildingTextureCache.get(key);
+  const texture = makeBuildingTexture(hexColor, floors, cols);
+  buildingTextureCache.set(key, texture);
+  return texture;
+}
+
 function makeBuildingTexture(hexColor, floors = 10, cols = 5) {
   const w = 256, h = 512;
   const c = document.createElement('canvas');
@@ -1331,13 +1414,17 @@ scene.add(floorMesh);
 
 // ─── 도시 설정 ─────────────────────────────────────────────
 const BLOCK_SIZE = 100;
-const ROAD_WIDTH = 20;
-const GRID_COUNT = 4;
+const ROAD_WIDTH = 24;
+const GRID_COUNT = 5;
 
 const roadGroup = new THREE.Group();
 const buildingGroup = new THREE.Group();
 const parkGroup = new THREE.Group();
 scene.add(roadGroup, buildingGroup, parkGroup);
+
+// 미니맵/도시 장면이 같은 좌표를 바라보도록 블록 메타데이터를 저장합니다.
+const cityBlocks = [];
+const CITY_HALF_EXTENT = (GRID_COUNT + 0.5) * BLOCK_SIZE;
 
 // 차선 재질 (공유)
 const laneMat   = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.8 });
@@ -1349,6 +1436,99 @@ function seededRandom(seed) {
 }
 let seedCounter = 0;
 function rng() { return seededRandom(++seedCounter); }
+
+// ─── 실제 도시처럼 보이는 도로 네트워크 ───────────────────────
+const roadSurfaceMat = new THREE.MeshStandardMaterial({
+  color: 0x252a30,
+  roughness: 0.94,
+  metalness: 0.02
+});
+const roadEdgeMat = new THREE.MeshStandardMaterial({
+  color: 0xc8cdd2,
+  roughness: 0.86,
+  metalness: 0.02
+});
+const parkingMat = new THREE.MeshStandardMaterial({
+  color: 0x8f979e,
+  roughness: 0.9
+});
+const medianMat = new THREE.MeshStandardMaterial({
+  color: 0xffd43b,
+  roughness: 0.85
+});
+
+function addUrbanRoadNetwork() {
+  const extent = CITY_HALF_EXTENT + BLOCK_SIZE;
+  for (let i = -GRID_COUNT; i <= GRID_COUNT; i++) {
+    const coord = i * BLOCK_SIZE;
+    const vertical = new THREE.Mesh(
+      new THREE.BoxGeometry(ROAD_WIDTH, 0.08, extent * 2),
+      roadSurfaceMat
+    );
+    vertical.position.set(coord, -4.94, 0);
+    vertical.receiveShadow = true;
+    roadGroup.add(vertical);
+
+    const horizontal = new THREE.Mesh(
+      new THREE.BoxGeometry(extent * 2, 0.08, ROAD_WIDTH),
+      roadSurfaceMat
+    );
+    horizontal.position.set(0, -4.935, coord);
+    horizontal.receiveShadow = true;
+    roadGroup.add(horizontal);
+
+    // 도로 가장자리의 밝은 실선
+    for (const edge of [-1, 1]) {
+      const vz = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.025, extent * 2), roadEdgeMat);
+      vz.position.set(coord + edge * (ROAD_WIDTH * 0.42), -4.885, 0);
+      roadGroup.add(vz);
+      const hz = new THREE.Mesh(new THREE.BoxGeometry(extent * 2, 0.025, 0.16), roadEdgeMat);
+      hz.position.set(0, -4.884, coord + edge * (ROAD_WIDTH * 0.42));
+      roadGroup.add(hz);
+    }
+  }
+
+  // 중앙 교차축에만 낮은 중앙분리대를 넣어 도시 중심부의 간선도로 느낌을 줍니다.
+  // 중앙 간선도로는 차가 올라타는 구조물이 아니라 얇은 이중 중앙선으로 표현합니다.
+  const boulevardWidth = 0.42;
+  const verticalMedian = new THREE.Mesh(
+    new THREE.BoxGeometry(boulevardWidth, 0.025, extent * 2),
+    medianMat
+  );
+  verticalMedian.position.set(0, -4.875, 0);
+  roadGroup.add(verticalMedian);
+  const horizontalMedian = new THREE.Mesh(
+    new THREE.BoxGeometry(extent * 2, 0.025, boulevardWidth),
+    medianMat
+  );
+  horizontalMedian.position.set(0, -4.874, 0);
+  roadGroup.add(horizontalMedian);
+
+  // 블록마다 평행 주차선과 노상 주차 공간을 시각적으로 표시합니다.
+  for (let i = -GRID_COUNT; i <= GRID_COUNT; i++) {
+    for (let j = -GRID_COUNT; j <= GRID_COUNT; j++) {
+      const x = i * BLOCK_SIZE;
+      const z = j * BLOCK_SIZE;
+      if (i !== 0) {
+        const sideZ = z - ROAD_WIDTH * 0.26;
+        for (let k = -2; k <= 2; k++) {
+          const slot = new THREE.Mesh(new THREE.BoxGeometry(8, 0.018, 0.10), parkingMat);
+          slot.position.set(x + k * 11, -4.88, sideZ);
+          roadGroup.add(slot);
+        }
+      }
+      if (j !== 0) {
+        const sideX = x - ROAD_WIDTH * 0.26;
+        for (let k = -2; k <= 2; k++) {
+          const slot = new THREE.Mesh(new THREE.BoxGeometry(0.10, 0.018, 8), parkingMat);
+          slot.position.set(sideX, -4.879, z + k * 11);
+          roadGroup.add(slot);
+        }
+      }
+    }
+  }
+}
+addUrbanRoadNetwork();
 
 // ─── 블록 생성 루프 ────────────────────────────────────────
 const buildingPalette = [
@@ -1368,7 +1548,8 @@ for (let i = -GRID_COUNT; i <= GRID_COUNT; i++) {
     createSidewalk(x, z);
     addLaneMarkings(x, z);
     if (i % 2 === 0 && j % 2 === 0) addCrosswalk(x, z);
-    const isPark = rng() < 0.12;
+    const isPark = rng() < 0.16;
+    cityBlocks.push({ x, z, isPark });
     if (isPark) createPark(x, z);
     else createBuilding(x, z);
   }
@@ -1451,16 +1632,14 @@ function createBuilding(x, z) {
   const distFromCenter = Math.sqrt(x*x + z*z);
   const isDowntown = distFromCenter < 160;
   
-  const w = 20 + rng() * (maxArea - 20);
-  const d = 20 + rng() * (maxArea - 20);
+  const w = 24 + rng() * Math.min(34, maxArea - 24);
+  const d = 24 + rng() * Math.min(34, maxArea - 24);
   // 실제 도시 형태: 중심부는 고층 스카이라인(최대 220m), 외곽은 중·저층 건물
   const h = isDowntown ? (70 + rng() * 150) : (20 + rng() * 60);
   const baseColor = buildingPalette[Math.floor(rng() * buildingPalette.length)];
 
-  const buildingTexPool = buildingPalette.map(color =>
-    makeBuildingTexture(color, isDowntown ? 14 : 8, isDowntown ? 6 : 4)
-  );
-  const tex = buildingTexPool[Math.floor(rng() * buildingTexPool.length)];
+  const texColor = buildingPalette[Math.floor(rng() * buildingPalette.length)];
+  const tex = getBuildingTexture(texColor, isDowntown ? 14 : 8, isDowntown ? 6 : 4);
   const geo = new THREE.BoxGeometry(w, h, d);
   const mat = new THREE.MeshStandardMaterial({ 
     map: tex, 
@@ -1475,6 +1654,31 @@ function createBuilding(x, z) {
 
   // 옥상 디테일
   addRooftop(x, z, w, d, h);
+
+  // 큰 단일 박스 대신 블록 안쪽에 작은 별동 건물을 하나 더 배치해 도시형 밀도를 만듭니다.
+  if (w < maxArea - 16 && d < maxArea - 16 && rng() > 0.38) {
+    const sideW = 14 + rng() * 16;
+    const sideD = 14 + rng() * 16;
+    const sideH = Math.max(16, h * (0.35 + rng() * 0.28));
+    const ox = (rng() > 0.5 ? 1 : -1) * Math.min(14, (maxArea - w) * 0.22);
+    const oz = (rng() > 0.5 ? 1 : -1) * Math.min(14, (maxArea - d) * 0.22);
+    const sideMat = new THREE.MeshStandardMaterial({
+      map: getBuildingTexture(buildingPalette[Math.floor(rng() * buildingPalette.length)], isDowntown ? 10 : 6, 3),
+      roughness: isDowntown ? 0.28 : 0.78,
+      metalness: isDowntown ? 0.45 : 0.08
+    });
+    const sideMesh = new THREE.Mesh(new THREE.BoxGeometry(sideW, sideH, sideD), sideMat);
+    sideMesh.position.set(x + ox, -5 + sideH / 2, z + oz);
+    sideMesh.castShadow = true;
+    sideMesh.receiveShadow = true;
+    buildingGroup.add(sideMesh);
+    addRooftop(x + ox, z + oz, sideW, sideD, sideH);
+
+    const sideBody = new CANNON.Body({ mass: 0 });
+    sideBody.addShape(new CANNON.Box(new CANNON.Vec3(sideW / 2, sideH / 2, sideD / 2)));
+    sideBody.position.set(x + ox, -5 + sideH / 2, z + oz);
+    world.addBody(sideBody);
+  }
 
   // 물리
   const body = new CANNON.Body({ mass: 0 });
@@ -3150,6 +3354,127 @@ let accumulator = 0;
 
 let playerId = null; 
   let otherPlayers = {};  
+
+  // ================= MINI MAP =================
+  const minimapCanvas = document.getElementById('minimapCanvas');
+  const minimapCtx = minimapCanvas.getContext('2d');
+  const MINI_SIZE = minimapCanvas.width;
+  const MINI_MIN = -CITY_HALF_EXTENT;
+  const MINI_MAX = CITY_HALF_EXTENT;
+  const MINI_RANGE = MINI_MAX - MINI_MIN;
+  let minimapFrame = 0;
+
+  function miniMapPoint(x, z) {
+    const px = ((x - MINI_MIN) / MINI_RANGE) * MINI_SIZE;
+    const py = ((z - MINI_MIN) / MINI_RANGE) * MINI_SIZE;
+    return { x: px, y: py };
+  }
+
+  function drawMiniCar(x, z, heading, fill, radius, outline = null) {
+    const p = miniMapPoint(x, z);
+    const r = radius;
+    minimapCtx.save();
+    minimapCtx.translate(p.x, p.y);
+    minimapCtx.rotate(-heading);
+    minimapCtx.beginPath();
+    minimapCtx.moveTo(r * 1.45, 0);
+    minimapCtx.lineTo(-r * 0.9, r * 0.72);
+    minimapCtx.lineTo(-r * 0.9, -r * 0.72);
+    minimapCtx.closePath();
+    minimapCtx.fillStyle = fill;
+    minimapCtx.shadowColor = fill;
+    minimapCtx.shadowBlur = r * 1.4;
+    minimapCtx.fill();
+    if (outline) {
+      minimapCtx.shadowBlur = 0;
+      minimapCtx.lineWidth = 2.2;
+      minimapCtx.strokeStyle = outline;
+      minimapCtx.stroke();
+    }
+    minimapCtx.restore();
+  }
+
+  function getBodyYRotation(bodyLike) {
+    if (!bodyLike?.quaternion) return 0;
+    return getYRotation(bodyLike.quaternion);
+  }
+
+  function renderMinimap() {
+    const ctx = minimapCtx;
+    ctx.clearRect(0, 0, MINI_SIZE, MINI_SIZE);
+
+    // 도시 바탕
+    ctx.fillStyle = '#11161c';
+    ctx.fillRect(0, 0, MINI_SIZE, MINI_SIZE);
+
+    // 블록과 공원
+    for (const block of cityBlocks) {
+      const a = miniMapPoint(block.x - BLOCK_SIZE / 2 + ROAD_WIDTH / 2, block.z - BLOCK_SIZE / 2 + ROAD_WIDTH / 2);
+      const b = miniMapPoint(block.x + BLOCK_SIZE / 2 - ROAD_WIDTH / 2, block.z + BLOCK_SIZE / 2 - ROAD_WIDTH / 2);
+      ctx.fillStyle = block.isPark ? '#214f35' : '#2a3037';
+      ctx.fillRect(a.x, a.y, b.x - a.x, b.y - a.y);
+      ctx.strokeStyle = block.isPark ? 'rgba(99, 220, 141, 0.26)' : 'rgba(255,255,255,0.055)';
+      ctx.strokeRect(a.x, a.y, b.x - a.x, b.y - a.y);
+    }
+
+    // 도로망
+    ctx.fillStyle = '#3d454d';
+    for (let i = -GRID_COUNT; i <= GRID_COUNT; i++) {
+      const x = miniMapPoint(i * BLOCK_SIZE, 0).x;
+      const z = miniMapPoint(0, i * BLOCK_SIZE).y;
+      const halfRoad = (ROAD_WIDTH / MINI_RANGE) * MINI_SIZE / 2;
+      ctx.fillRect(x - halfRoad, 0, halfRoad * 2, MINI_SIZE);
+      ctx.fillRect(0, z - halfRoad, MINI_SIZE, halfRoad * 2);
+    }
+
+    // 간선도로 중앙분리대
+    ctx.fillStyle = 'rgba(148,163,184,0.30)';
+    const boulevard = (3 / MINI_RANGE) * MINI_SIZE;
+    const center = miniMapPoint(0, 0);
+    ctx.fillRect(center.x - boulevard / 2, 0, boulevard, MINI_SIZE);
+    ctx.fillRect(0, center.y - boulevard / 2, MINI_SIZE, boulevard);
+
+    // 주요 교차로 / 횡단보도
+    ctx.strokeStyle = 'rgba(245,245,245,0.65)';
+    ctx.lineWidth = 2;
+    for (let i = -GRID_COUNT; i <= GRID_COUNT; i += 2) {
+      for (let j = -GRID_COUNT; j <= GRID_COUNT; j += 2) {
+        const p = miniMapPoint(i * BLOCK_SIZE, j * BLOCK_SIZE);
+        ctx.strokeRect(p.x - 5, p.y - 5, 10, 10);
+      }
+    }
+
+    // 다른 차량 — 서버의 updatePlayers 데이터 그대로 사용
+    for (const [id, pData] of Object.entries(otherPlayers)) {
+      if (!pData || pData.loading || !pData.targetPosition) continue;
+      const q = pData.targetQuaternion;
+      const heading = q ? getYRotation(q) : 0;
+      drawMiniCar(pData.targetPosition.x, pData.targetPosition.z, heading, '#ff5b5b', 6, 'rgba(255,255,255,0.7)');
+    }
+
+    // 내 차량
+    if (chassisBody) {
+      const meHeading = getBodyYRotation(chassisBody);
+      drawMiniCar(chassisBody.position.x, chassisBody.position.z, meHeading, '#60a5fa', 7, '#ffffff');
+    }
+
+    // 미니맵 테두리 / 북쪽 표시
+    ctx.strokeStyle = 'rgba(255,255,255,0.18)';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(1, 1, MINI_SIZE - 2, MINI_SIZE - 2);
+    ctx.fillStyle = 'rgba(255,255,255,0.55)';
+    ctx.font = '700 12px JetBrains Mono, monospace';
+    ctx.fillText('N', MINI_SIZE - 18, 18);
+  }
+
+  function requestMinimapRender() {
+    minimapFrame++;
+    // 30fps 정도로 제한해 본 렌더링 성능을 보호합니다.
+    if (minimapFrame % 2 === 0) renderMinimap();
+  }
+
+  renderMinimap();
+
   socket.on('playerId', (id) => {
   playerId = id; // 저장용
   console.log('내 ID:', id); // 디버깅용
@@ -3194,7 +3519,7 @@ async function createTextMesh(text) {
 
 // 서버로 내 현재 위치, 회전, 입력, 기어 상태를 주기적으로 보내는 함수
 function sendPlayerState() {
-  if (!playerId) return;
+  if (!playerId || !vehicle || !chassisBody) return;
 
   const wheels = vehicle.wheelInfos.map((w, i) => {
     vehicle.updateWheelTransform(i);
@@ -3419,6 +3744,7 @@ setInterval(() => {
       // 이 프레임을 건너뛰어 undefined.position 오류와 초기화 경합을 방지합니다.
       if (!world || !vehicle || !chassisBody || !carModel) {
         renderer.render(scene, camera);
+        requestMinimapRender();
         return;
       }
 
