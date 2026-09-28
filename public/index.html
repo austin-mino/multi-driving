@@ -4,7 +4,7 @@
   <link rel="icon" href="data:,">
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>multi driving</title>
+  <title>multi driving — city/minimap fixed v2</title>
           <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@500;700&display=swap');
     
@@ -951,6 +951,7 @@
   </div>
     
 <script type="module">
+// SYNTAX-CLEAN-V2
 import * as THREE from 'three';
 import { FontLoader } from 'https://cdn.jsdelivr.net/npm/three@0.152.2/examples/jsm/loaders/FontLoader.js';
 import { TextGeometry } from 'https://cdn.jsdelivr.net/npm/three@0.152.2/examples/jsm/geometries/TextGeometry.js';
@@ -3452,105 +3453,90 @@ let playerId = null;
 
   renderMinimap();
 
-  socket.on('playerId', async (id) => {
+  socket.on('playerId', (id) => {
     playerId = id;
     console.log('내 ID:', id);
-    if (Object.keys(latestPlayersSnapshot).length) {
-      await syncRemotePlayers(latestPlayersSnapshot);
+    if (Object.keys(latestPlayersSnapshot).length > 0) {
+      syncRemotePlayers(latestPlayersSnapshot);
     }
   });
 
   let loadedFont = null;
-  
-function loadFontAsync() {
-  return new Promise((resolve, reject) => {
-    if (loadedFont) {
-      resolve(loadedFont);
-    } else {
+
+  function loadFontAsync() {
+    return new Promise((resolve, reject) => {
+      if (loadedFont) {
+        resolve(loadedFont);
+        return;
+      }
       fontLoader.load(
         'https://threejs.org/examples/fonts/helvetiker_regular.typeface.json',
-        (font) => {
-          loadedFont = font;
-          resolve(font);
+        (loaded) => {
+          loadedFont = loaded;
+          resolve(loaded);
         },
         undefined,
         (err) => reject(err)
       );
-    }
-  });
-}
+    });
+  }
 
-// text를 받아서 Promise로 텍스쳐 메쉬를 반환하는 함수
-async function createTextMesh(text) {
-  const font = await loadFontAsync();
+  async function createTextMesh(text) {
+    const loaded = await loadFontAsync();
+    const geometry = new TextGeometry(text, {
+      font: loaded,
+      size: 0.6,
+      height: 0.1,
+      curveSegments: 12
+    });
+    const material = new THREE.MeshStandardMaterial({ color: 0xffffff });
+    return new THREE.Mesh(geometry, material);
+  }
 
-  const geometry = new TextGeometry(text, {
-    font: font,
-    size: 0.6,
-    height: 0.1,
-    curveSegments: 12,
-  });
+  function sendPlayerState() {
+    if (!playerId || !vehicle || !chassisBody) return;
 
-  const material = new THREE.MeshStandardMaterial({ color: 0xffffff });
-  const mesh = new THREE.Mesh(geometry, material);
+    const wheels = vehicle.wheelInfos.map((w, i) => {
+      vehicle.updateWheelTransform(i);
+      const t = vehicle.wheelInfos[i].worldTransform;
+      return {
+        position: { x: t.position.x, y: t.position.y, z: t.position.z },
+        quaternion: { x: t.quaternion.x, y: t.quaternion.y, z: t.quaternion.z, w: t.quaternion.w }
+      };
+    });
 
-  return mesh;
-}
+    socket.emit('updatePosition', {
+      position: { x: chassisBody.position.x, y: chassisBody.position.y, z: chassisBody.position.z },
+      rotation: { x: chassisBody.quaternion.x, y: chassisBody.quaternion.y, z: chassisBody.quaternion.z, w: chassisBody.quaternion.w },
+      gear: gearState,
+      wheels: wheels,
+      steeringValue: steeringValue
+    });
+  }
 
-// 서버로 내 현재 위치, 회전, 입력, 기어 상태를 주기적으로 보내는 함수
-function sendPlayerState() {
-  if (!playerId || !vehicle || !chassisBody) return;
+  async function syncRemotePlayers(players) {
+    if (!playerId) return;
+    const snapshot = players || {};
 
-  const wheels = vehicle.wheelInfos.map((w, i) => {
-    vehicle.updateWheelTransform(i);
-    const t = vehicle.wheelInfos[i].worldTransform;
-    return {
-      position: { x: t.position.x, y: t.position.y, z: t.position.z },
-      quaternion: { x: t.quaternion.x, y: t.quaternion.y, z: t.quaternion.z, w: t.quaternion.w }
-    };
-  });
+    for (const [id, player] of Object.entries(snapshot)) {
+      if (id === playerId) continue;
+      if (!player || !player.position || !player.rotation) continue;
+      if (typeof player.position.x !== 'number' || typeof player.position.y !== 'number' || typeof player.position.z !== 'number') continue;
+      if (typeof player.rotation.x !== 'number' || typeof player.rotation.y !== 'number' || typeof player.rotation.z !== 'number' || typeof player.rotation.w !== 'number') continue;
 
-  socket.emit('updatePosition', {
-    position: { x: chassisBody.position.x, y: chassisBody.position.y, z: chassisBody.position.z },
-    rotation: { x: chassisBody.quaternion.x, y: chassisBody.quaternion.y, z: chassisBody.quaternion.z, w: chassisBody.quaternion.w },
-    gear: gearState,
-    wheels: wheels,
-    steeringValue: steeringValue
-  });
-}
-// 예시: 키 입력 처리 후
-  const targetQuaternion = new THREE.Quaternion(); // 회전 보간용
-async function syncRemotePlayers(players) {
-  if (!playerId) return;
-
-  for (const [id, player] of Object.entries(players || {})) {
-    if (id === playerId) continue;
-
-    // 잘못된 데이터 검증
-    if (!player?.position || typeof player.position.x !== 'number' ||
-        !player?.rotation || typeof player.rotation.w !== 'number') {
-      continue;
-    }
-
-    // [중요] 이미 존재하는 플레이어 처리
-    if (remotePlayers[id]) {
-      const pData = remotePlayers[id];
-      
-      // 로딩 중이라면 데이터를 업데이트하지 않고 다음 플레이어로 넘어감 (중복 생성 차단)
-      if (pData.loading) continue;
-
-      // 로딩이 완료된 경우에만 위치/회전 타겟 업데이트
-      if (pData.targetPosition && pData.targetQuaternion) {
-        pData.targetPosition.set(player.position.x, player.position.y, player.position.z);
-        pData.targetQuaternion.set(player.rotation.x, player.rotation.y, player.rotation.z, player.rotation.w);
-        pData.wheels = player.wheels || [];
-        pData.steeringValue = player.steeringValue || 0;
-        
-        // 차량 색상 실시간 업데이트 (필요시)
-        if (pData.model) {
-          pData.model.traverse(child => {
+      if (remotePlayers[id]) {
+        const pData = remotePlayers[id];
+        if (pData.loading) continue;
+        if (pData.targetPosition && pData.targetQuaternion) {
+          pData.targetPosition.set(player.position.x, player.position.y, player.position.z);
+          pData.targetQuaternion.set(player.rotation.x, player.rotation.y, player.rotation.z, player.rotation.w);
+          pData.wheels = Array.isArray(player.wheels) ? player.wheels : [];
+          pData.steeringValue = Number(player.steeringValue) || 0;
+        }
+        if (pData.model && player.carColor) {
+          pData.model.traverse((child) => {
             if (child.isMesh && child.name === 'MainBody' && child.material && child.material.color) {
-              const newColor = new THREE.Color(player.carColor || '#888888');
+              const newColor = new THREE.Color(player.carColor);
               if (!child.material.color.equals(newColor)) {
                 child.material = child.material.clone();
                 child.material.color.copy(newColor);
@@ -3558,113 +3544,83 @@ async function syncRemotePlayers(players) {
             }
           });
         }
+        continue;
       }
-      continue; // 이미 있는 플레이어는 여기서 끝내야 중복 생성이 안 됨
+
+      remotePlayers[id] = { loading: true };
+      console.log('새 플레이어 접속:', player.nickname || id);
+
+      try {
+        let otherCar;
+        switch (player.carModel) {
+          case 'SportsCar': otherCar = await createSportsCar(player.carColor || '#aaaaaa'); break;
+          case 'SUV': otherCar = await createSUVCar(player.carColor || '#aaaaaa'); break;
+          case 'McLarenP1': otherCar = await createMcLarenP1(player.carColor || '#aaaaaa'); break;
+          case 'PontiacPhoenix': otherCar = await createPontiacPhoenix(player.carColor || '#aaaaaa'); break;
+          case 'DodgeDemon': otherCar = await createDodgeDemon(player.carColor || '#aaaaaa'); break;
+          default: otherCar = createGrandeurIGCarDetailed(player.carColor || '#aaaaaa'); break;
+        }
+
+        if (player.nickname) {
+          const nicknameText = await createTextMesh(player.nickname);
+          nicknameText.position.set(0, 2.5, 0);
+          otherCar.add(nicknameText);
+        }
+        otherCar.position.set(player.position.x, player.position.y, player.position.z);
+        otherCar.quaternion.set(player.rotation.x, player.rotation.y, player.rotation.z, player.rotation.w);
+        otherCar.userData.remotePlayerId = id;
+        scene.add(otherCar);
+
+        const otherWheelHolders = [];
+        const wheelPositions = [
+          [-1.2, 0.2, 2.4], [1.2, 0.2, 2.4],
+          [-1.2, 0.2, -2.4], [1.2, 0.2, -2.4]
+        ];
+        for (let i = 0; i < 4; i++) {
+          const holder = new THREE.Group();
+          holder.position.set(wheelPositions[i][0], wheelPositions[i][1], wheelPositions[i][2]);
+          otherCar.add(holder);
+          otherWheelHolders.push(holder);
+        }
+
+        const otherChassisShape = new CANNON.Box(new CANNON.Vec3(1.5, 0.5, 3));
+        const otherChassisBody = new CANNON.Body({ mass: 1200 });
+        otherChassisBody.type = CANNON.Body.KINEMATIC;
+        otherChassisBody.addShape(otherChassisShape);
+        otherChassisBody.position.set(player.position.x, player.position.y, player.position.z);
+        otherChassisBody.quaternion.set(player.rotation.x, player.rotation.y, player.rotation.z, player.rotation.w);
+        world.addBody(otherChassisBody);
+
+        remotePlayers[id] = {
+          loading: false,
+          model: otherCar,
+          chassisBody: otherChassisBody,
+          wheelHolders: otherWheelHolders,
+          targetPosition: new THREE.Vector3(player.position.x, player.position.y, player.position.z),
+          targetQuaternion: new THREE.Quaternion(player.rotation.x, player.rotation.y, player.rotation.z, player.rotation.w),
+          wheels: Array.isArray(player.wheels) ? player.wheels : [],
+          steeringValue: Number(player.steeringValue) || 0
+        };
+      } catch (err) {
+        console.error('플레이어 로딩 중 에러 발생:', id, err);
+        delete remotePlayers[id];
+      }
     }
 
-    // --- 새로운 플레이어 생성 시작 ---
-    // 로딩 상태를 즉시 true로 설정하여 다음 패킷이 들어와도 중복 생성을 막음
-    remotePlayers[id] = { loading: true };
-    console.log("새 플레이어 접속:", player.nickname);
-
-    try {
-      let otherCar;
-      // 모델 생성
-      switch (player.carModel) {
-        case 'SportsCar':
-          otherCar = await createSportsCar(player.carColor || '#aaaaaa');
-          break;
-        case 'SUV':
-          otherCar = await createSUVCar(player.carColor || '#aaaaaa');
-          break;
-        case 'McLarenP1':
-          otherCar = await createMcLarenP1(player.carColor || '#aaaaaa');
-          break;
-        case 'PontiacPhoenix':
-          otherCar = await createPontiacPhoenix(player.carColor || '#aaaaaa');
-          break;
-        case 'DodgeDemon':
-          otherCar = await createDodgeDemon(player.carColor || '#aaaaaa');
-          break;
-        default:
-          otherCar = createGrandeurIGCarDetailed(player.carColor || '#aaaaaa');
+    for (const id of Object.keys(remotePlayers)) {
+      if (!snapshot[id]) {
+        const pData = remotePlayers[id];
+        if (pData.model) scene.remove(pData.model);
+        if (pData.chassisBody) world.removeBody(pData.chassisBody);
+        delete remotePlayers[id];
       }
-
-      // 닉네임 텍스트 생성 및 추가
-      const nicknameText = await createTextMesh(player.nickname);
-      nicknameText.position.set(0, 2.5, 0); // 차 지붕 위에 표시
-      otherCar.add(nicknameText);
-      scene.add(otherCar);
-
-      // 바퀴 메시 생성 (기본 휠)
-      const otherWheelHolders = [];
-      const wheelPositions = [
-        [-1.2, 0.2, 2.4], [1.2, 0.2, 2.4],
-        [-1.2, 0.2, -2.4], [1.2, 0.2, -2.4]
-      ];
-      for (let i = 0; i < 4; i++) {
-        const holder = new THREE.Group();
-        const tireGeo = new THREE.CylinderGeometry(0.65, 0.65, 0.4, 24);
-        
-        // 방법 1: 투명하게 만들기 (Material 속성 변경)
-        const tireMat = new THREE.MeshStandardMaterial({ 
-          color: 0x222222, metalness: 0.7, roughness: 0.4,
-          transparent: true,
-          opacity: 0 // 투명도 0으로 설정
-        });
-        const tireMesh = new THREE.Mesh(tireGeo, tireMat);
-        tireMesh.rotation.z = Math.PI / 2;
-        
-        // 방법 2: 렌더링에서 제외하기 (이 방법을 더 추천합니다)
-        tireMesh.visible = false; 
-
-        holder.add(tireMesh);
-        holder.position.set(...wheelPositions[i]);
-        otherCar.add(holder);
-        otherWheelHolders.push(holder);
-      }
-
-      // 충돌 물리 바디 생성 (킨메틱 타입으로 설정하여 부드럽게 동기화)
-      const otherChassisShape = new CANNON.Box(new CANNON.Vec3(1.5, 0.5, 3));
-      const otherChassisBody = new CANNON.Body({ mass: 1200 });
-      otherChassisBody.type = CANNON.Body.KINEMATIC;
-      otherChassisBody.addShape(otherChassisShape);
-      otherChassisBody.position.set(player.position.x, player.position.y, player.position.z);
-      world.addBody(otherChassisBody);
-
-      // 데이터 최종 저장 (로딩 완료)
-      remotePlayers[id] = {
-        loading: false,
-        model: otherCar,
-        chassisBody: otherChassisBody,
-        wheelHolders: otherWheelHolders,
-        targetPosition: new THREE.Vector3(player.position.x, player.position.y, player.position.z),
-        targetQuaternion: new THREE.Quaternion(player.rotation.x, player.rotation.y, player.rotation.z, player.rotation.w),
-        wheels: player.wheels || [],
-        steeringValue: player.steeringValue || 0
-      };
-    } catch (err) {
-      console.error("플레이어 로딩 중 에러 발생:", err);
-      delete remotePlayers[id]; // 에러 시 다시 시도할 수 있도록 삭제
     }
   }
 
-  // 제거된 플레이어 처리
-  for (const id of Object.keys(remotePlayers)) {
-    if (!players[id]) {
-      if (remotePlayers[id].model) scene.remove(remotePlayers[id].model);
-      if (remotePlayers[id].chassisBody) world.removeBody(remotePlayers[id].chassisBody);
-      delete remotePlayers[id];
-    }
-  }
-});
-
-}
-
-socket.on('updatePlayers', async (players) => {
-  latestPlayersSnapshot = players || {};
-  await syncRemotePlayers(latestPlayersSnapshot);
-});
+  socket.on('updatePlayers', (players) => {
+    latestPlayersSnapshot = players || {};
+    syncRemotePlayers(latestPlayersSnapshot);
+  });
 
 
 // 매 프레임 또는 50ms 간격으로 내 위치/상태 서버 전송
@@ -3724,8 +3680,6 @@ setInterval(() => {
       return;
     }
 
-
-       requestAnimationFrame(animate);
 
       // 게임 시작 직후 비동기 차량 생성이 끝나기 전에는 물리 객체가 없습니다.
       // 이 프레임을 건너뛰어 undefined.position 오류와 초기화 경합을 방지합니다.
