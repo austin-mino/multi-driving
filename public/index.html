@@ -4,7 +4,7 @@
   <link rel="icon" href="data:,">
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Multi Driving — Metropole City Live</title>
+  <title>TIDELINE — Harbor City Driving</title>
           <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@500;700&display=swap');
     
@@ -1088,6 +1088,10 @@ function getYRotation(q) {
 const world = new CANNON.World({
   gravity: new CANNON.Vec3(0, -9.82, 0),
 });
+// 도시 정적 콜라이더가 많아도 매 프레임 전수검사하지 않도록 축 정렬 공간분할을 사용합니다.
+world.broadphase = new CANNON.SAPBroadphase(world);
+world.broadphase.axisIndex = 0;
+world.allowSleep = true;
 
 // 마찰 재질 설정
 const groundMaterial = new CANNON.Material("groundMaterial");
@@ -1102,7 +1106,7 @@ const contactMaterial = new CANNON.ContactMaterial(groundMaterial, wheelMaterial
 world.addContactMaterial(contactMaterial);
 
 // ─── 안개 ────────────────────────────────────
-scene.fog = new THREE.Fog(0x87ceeb, 160, 600);
+scene.fog = new THREE.Fog(0x87ceeb, 220, 1050);
 scene.background = new THREE.Color(0x87ceeb);
 
 // ─── 조명 ─────────────────────────────────────────────────
@@ -1130,7 +1134,7 @@ scene.add(showroomKeyLight);
 scene.add(showroomFillLight);
 scene.add(showroomRimLight);
 
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.25));
 
 // ─── 쇼룸 전시장 세트 ───────────────────────────────────────
 // 실제 게임 맵과 분리된 좌표에 바닥, 단상, 벽, 라이트 스트립을 구성합니다.
@@ -1413,44 +1417,52 @@ floorMesh.position.y = -5;
 floorMesh.receiveShadow = true;
 scene.add(floorMesh);
 
-// ─── METROPOLE : 실제 도시 구조를 바탕으로 한 새 레이아웃 ───────────
-// 규칙적인 도로망 위에 용도별 지구, 중심광장, 수변 공원과 교량을 배치합니다.
-const CITY_BOUNDS = { minX: -920, maxX: 960, minZ: -720, maxZ: 720 };
+// ─── TIDELINE : 해안 항구와 방사형 구도심으로 다시 만든 새 맵 ───────
+// 이전 사각 격자는 제거했습니다. 도심 순환도로, 방사형 대로, 절벽 해안과 항만
+// 반도를 중심으로 지형·도로·건물·미니맵·물리 충돌이 같은 좌표 데이터를 공유합니다.
+const CITY_BOUNDS = { minX: -1080, maxX: 1040, minZ: -900, maxZ: 860 };
+const CITY_MAP_EXTENT = 2300;
 const CITY_HALF_EXTENT = 950;
-const CITY_MAP_EXTENT = 2100;
-const BLOCK_SIZE = 180;
-const ROAD_WIDTH = 18;
+const BLOCK_SIZE = 96;
+const ROAD_WIDTH = 22;
 const GRID_COUNT = 0;
-const CITY_CENTER = { x: -90, z: 0 };
-const RIVER = { x: 740, width: 160 };
+const CITY_CENTER = { x: 0, z: 0 };
+const CITY_COASTLINE = [
+  [-1080, -900], [240, -900], [470, -790], [400, -635], [585, -490],
+  [465, -345], [640, -190], [570, -76], [715, 0], [1018, 44],
+  [1035, 185], [920, 294], [695, 310], [600, 445], [420, 690],
+  [180, 860], [-1080, 860]
+];
 
 const roadGroup = new THREE.Group();
 const buildingGroup = new THREE.Group();
 const parkGroup = new THREE.Group();
 const landmarkGroup = new THREE.Group();
 scene.add(roadGroup, buildingGroup, parkGroup, landmarkGroup);
-
 const cityBlocks = [];
 const cityRoads = [];
 const cityLandmarks = [];
 const cityBuildings = [];
+const cityStaticBodies = [];
+const cityRoadMarks = [];
+const cityPortContainers = [];
 
-const roadSurfaceMat = new THREE.MeshStandardMaterial({ color: 0x252a2f, roughness: 0.94, metalness: 0.02 });
-const roadEdgeMat = new THREE.MeshStandardMaterial({ color: 0xcbd0d3, roughness: 0.82 });
-const laneWhiteMat = new THREE.MeshStandardMaterial({ color: 0xe8e7df, roughness: 0.78 });
-const laneYellowMat = new THREE.MeshStandardMaterial({ color: 0xf0c94d, roughness: 0.78 });
-const sidewalkMat = new THREE.MeshStandardMaterial({ color: 0x747d82, roughness: 0.96 });
-const curbMat = new THREE.MeshStandardMaterial({ color: 0xb9bec0, roughness: 0.86 });
-const grassMat = new THREE.MeshStandardMaterial({ color: 0x31583b, roughness: 0.98 });
-const waterMat = new THREE.MeshStandardMaterial({ color: 0x1d5870, roughness: 0.2, metalness: 0.06 });
-const bridgeMat = new THREE.MeshStandardMaterial({ color: 0x424a50, roughness: 0.78, metalness: 0.18 });
-const railMat = new THREE.MeshStandardMaterial({ color: 0x9da8ac, roughness: 0.58, metalness: 0.58 });
-const medianMat = new THREE.MeshStandardMaterial({ color: 0x466448, roughness: 0.94 });
-const plazaMat = new THREE.MeshStandardMaterial({ color: 0xa49d8d, roughness: 0.9 });
-const treeTrunkMat = new THREE.MeshStandardMaterial({ color: 0x554332, roughness: 0.94 });
-const treeCanopyMat = new THREE.MeshStandardMaterial({ color: 0x35684a, roughness: 0.94 });
-const treeTrunkGeo = new THREE.CylinderGeometry(0.32, 0.48, 4.2, 7);
-const treeCanopyGeo = new THREE.IcosahedronGeometry(2.6, 1);
+const roadSurfaceMat = new THREE.MeshStandardMaterial({ color: 0x252a2f, roughness: 0.95, metalness: 0.02 });
+const roadEdgeMat = new THREE.MeshStandardMaterial({ color: 0xc0c5c6, roughness: 0.82 });
+const sidewalkMat = new THREE.MeshStandardMaterial({ color: 0x777f7f, roughness: 0.94 });
+const curbMat = new THREE.MeshStandardMaterial({ color: 0xb4b7b3, roughness: 0.88 });
+const grassMat = new THREE.MeshStandardMaterial({ color: 0x344e3d, roughness: 0.98 });
+const cityGroundMat = new THREE.MeshStandardMaterial({ color: 0x35413d, roughness: 1 });
+const seaMat = new THREE.MeshStandardMaterial({ color: 0x17485d, roughness: 0.26, metalness: 0.08 });
+const bridgeMat = new THREE.MeshStandardMaterial({ color: 0x454e52, roughness: 0.82, metalness: 0.16 });
+const railMat = new THREE.MeshStandardMaterial({ color: 0xa6adae, roughness: 0.62, metalness: 0.42 });
+const medianMat = new THREE.MeshStandardMaterial({ color: 0x3f5b43, roughness: 0.96 });
+const plazaMat = new THREE.MeshStandardMaterial({ color: 0x948f82, roughness: 0.94 });
+const treeTrunkMat = new THREE.MeshStandardMaterial({ color: 0x594534, roughness: 0.98 });
+const treeCanopyMat = new THREE.MeshStandardMaterial({ color: 0x3a6848, roughness: 0.96 });
+const treeTrunkGeo = new THREE.CylinderGeometry(0.28, 0.42, 3.8, 6);
+const treeCanopyGeo = new THREE.IcosahedronGeometry(2.45, 1);
+const roofMat = new THREE.MeshStandardMaterial({ color: 0x566166, roughness: 0.78, metalness: 0.16 });
 const rng = () => Math.random();
 
 function seeded(value) {
@@ -1459,375 +1471,502 @@ function seeded(value) {
 }
 function cityRnd(i, salt = 0) { return seeded(i * 17.173 + salt * 31.77); }
 
-function createTree(x, z, scale = 1) {
-  const tree = new THREE.Group();
-  const trunk = new THREE.Mesh(treeTrunkGeo, treeTrunkMat);
-  trunk.position.y = -5 + 2.1 * scale;
-  trunk.scale.setScalar(scale);
-  const crown = new THREE.Mesh(treeCanopyGeo, treeCanopyMat);
-  crown.position.y = -5 + 4.0 * scale;
-  crown.scale.set(scale, 1.12 * scale, scale);
-  tree.add(trunk, crown);
-  tree.position.set(x, 0, z);
-  tree.castShadow = true;
-  parkGroup.add(tree);
-  return tree;
+function pointInCityLand(x, z) {
+  let inside = false;
+  for (let i = 0, j = CITY_COASTLINE.length - 1; i < CITY_COASTLINE.length; j = i++) {
+    const [xi, zi] = CITY_COASTLINE[i];
+    const [xj, zj] = CITY_COASTLINE[j];
+    const intersects = ((zi > z) !== (zj > z)) && (x < (xj - xi) * (z - zi) / ((zj - zi) || 1e-9) + xi);
+    if (intersects) inside = !inside;
+  }
+  return inside;
+}
+
+function makePolygonMesh(points, material, y) {
+  const shape = new THREE.Shape();
+  points.forEach(([x, z], i) => {
+    if (i === 0) shape.moveTo(x, -z);
+    else shape.lineTo(x, -z);
+  });
+  shape.closePath();
+  const mesh = new THREE.Mesh(new THREE.ShapeGeometry(shape), material);
+  mesh.rotation.x = -Math.PI / 2;
+  mesh.position.y = y;
+  mesh.receiveShadow = true;
+  return mesh;
+}
+
+// 배경 바다 + 실제 불규칙한 해안선 형태의 도시 지형
+const seaMesh = new THREE.Mesh(new THREE.PlaneGeometry(2400, 2050), seaMat);
+seaMesh.rotation.x = -Math.PI / 2;
+seaMesh.position.set(0, -4.985, 0);
+seaMesh.receiveShadow = true;
+roadGroup.add(seaMesh);
+roadGroup.add(makePolygonMesh(CITY_COASTLINE, cityGroundMat, -4.955));
+
+function addCityCollider(position, halfExtents, rotationY = 0, kind = 'city-solid') {
+  const body = new CANNON.Body({ mass: 0, type: CANNON.Body.STATIC, material: groundMaterial });
+  body.addShape(new CANNON.Box(new CANNON.Vec3(halfExtents.x, halfExtents.y, halfExtents.z)));
+  body.position.set(position.x, position.y, position.z);
+  body.quaternion.setFromEuler(0, rotationY, 0);
+  body.collisionFilterGroup = 2;
+  body.collisionFilterMask = 1;
+  body.userData = { kind };
+  world.addBody(body);
+  cityStaticBodies.push(body);
+  return body;
 }
 
 function addRoadSegment(x1, z1, x2, z2, width, options = {}) {
-  const dx = x2 - x1;
-  const dz = z2 - z1;
+  const dx = x2 - x1, dz = z2 - z1;
   const length = Math.hypot(dx, dz);
   if (length < 1) return;
   const angle = Math.atan2(dz, dx);
-  const midX = (x1 + x2) * 0.5;
-  const midZ = (z1 + z2) * 0.5;
+  const midX = (x1 + x2) * 0.5, midZ = (z1 + z2) * 0.5;
   const isBridge = Boolean(options.bridge);
-  const surface = new THREE.Mesh(new THREE.BoxGeometry(length, 0.12, width), isBridge ? bridgeMat : roadSurfaceMat);
-  surface.position.set(midX, -4.93, midZ);
-  surface.rotation.y = -angle;
-  surface.receiveShadow = true;
-  roadGroup.add(surface);
+  const road = new THREE.Mesh(new THREE.BoxGeometry(length, 0.12, width), isBridge ? bridgeMat : roadSurfaceMat);
+  road.position.set(midX, -4.91, midZ);
+  road.rotation.y = -angle;
+  road.receiveShadow = true;
+  roadGroup.add(road);
 
-  const across = (along, side) => ({
+  const at = (along, side) => ({
     x: midX + Math.cos(angle) * along - Math.sin(angle) * side,
     z: midZ + Math.sin(angle) * along + Math.cos(angle) * side
   });
   for (const side of [-1, 1]) {
-    const edgePos = across(0, side * (width * 0.5 - 0.55));
-    const edge = new THREE.Mesh(new THREE.BoxGeometry(length, 0.035, 0.16), roadEdgeMat);
-    edge.position.set(edgePos.x, -4.855, edgePos.z);
+    const curbPoint = at(0, side * (width * 0.5 - 0.42));
+    const edge = new THREE.Mesh(new THREE.BoxGeometry(length, 0.035, 0.13), roadEdgeMat);
+    edge.position.set(curbPoint.x, -4.835, curbPoint.z);
     edge.rotation.y = -angle;
     roadGroup.add(edge);
   }
 
-  // 간선도로의 중앙 분리선, 생활도로의 점선 차선을 실제 월드 좌표에 맞춰 그림
   if (options.divided) {
     for (const side of [-1, 1]) {
-      const p = across(0, side * 0.34);
-      const line = new THREE.Mesh(new THREE.BoxGeometry(length, 0.025, 0.12), laneYellowMat);
-      line.position.set(p.x, -4.84, p.z);
+      const p = at(0, side * 0.42);
+      const line = new THREE.Mesh(new THREE.BoxGeometry(length, 0.028, 0.13), roadEdgeMat);
+      line.position.set(p.x, -4.83, p.z);
       line.rotation.y = -angle;
       roadGroup.add(line);
     }
-    const median = new THREE.Mesh(new THREE.BoxGeometry(length, 0.18, Math.min(2.6, width * 0.09)), medianMat);
-    median.position.set(midX, -4.80, midZ);
+    const median = new THREE.Mesh(new THREE.BoxGeometry(length, 0.16, Math.min(2.4, width * 0.075)), medianMat);
+    median.position.set(midX, -4.82, midZ);
     median.rotation.y = -angle;
     roadGroup.add(median);
   } else if (width >= 20) {
-    const dashLength = 5.5;
-    for (let along = -length * 0.5 + 10; along < length * 0.5 - 5; along += 13) {
-      const p = across(along, 0);
-      const dash = new THREE.Mesh(new THREE.BoxGeometry(dashLength, 0.025, 0.12), laneYellowMat);
-      dash.position.set(p.x, -4.84, p.z);
-      dash.rotation.y = -angle;
-      roadGroup.add(dash);
+    for (let along = -length * 0.5 + 12; along < length * 0.5 - 6; along += 22) {
+      const p = at(along, 0);
+      cityRoadMarks.push({ x: p.x, z: p.z, y: -4.82, angle, length: 5, width: 0.16, color: 0xe8cf7b });
     }
   }
 
-  if (options.sidewalk !== false && !isBridge) {
+  if (options.sidewalk !== false && width >= 20 && !isBridge) {
     for (const side of [-1, 1]) {
-      const sidewalkOffset = width * 0.5 + 2.2;
-      const swPos = across(0, side * sidewalkOffset);
-      const sidewalk = new THREE.Mesh(new THREE.BoxGeometry(length, 0.18, 4.0), sidewalkMat);
-      sidewalk.position.set(swPos.x, -4.80, swPos.z);
+      const offset = width * 0.5 + 2.0;
+      const p = at(0, side * offset);
+      const sidewalk = new THREE.Mesh(new THREE.BoxGeometry(length, 0.16, 3.6), sidewalkMat);
+      sidewalk.position.set(p.x, -4.82, p.z);
       sidewalk.rotation.y = -angle;
       sidewalk.receiveShadow = true;
       roadGroup.add(sidewalk);
-      const curbPos = across(0, side * (width * 0.5 + 0.25));
-      const curb = new THREE.Mesh(new THREE.BoxGeometry(length, 0.22, 0.32), curbMat);
-      curb.position.set(curbPos.x, -4.77, curbPos.z);
+      const cp = at(0, side * (width * 0.5 + 0.18));
+      const curb = new THREE.Mesh(new THREE.BoxGeometry(length, 0.16, 0.28), curbMat);
+      curb.position.set(cp.x, -4.80, cp.z);
       curb.rotation.y = -angle;
       roadGroup.add(curb);
+    }
+  }
+
+  if (isBridge) {
+    const railOffset = width * 0.5 + 0.55;
+    for (const side of [-1, 1]) {
+      const p = at(0, side * railOffset);
+      const rail = new THREE.Mesh(new THREE.BoxGeometry(length, 1.15, 0.16), railMat);
+      rail.position.set(p.x, -4.0, p.z);
+      rail.rotation.y = -angle;
+      rail.castShadow = true;
+      landmarkGroup.add(rail);
+      for (let u = -length * 0.5 + 10; u < length * 0.5; u += 24) {
+        const postPoint = at(u, side * railOffset);
+        const post = new THREE.Mesh(new THREE.BoxGeometry(0.16, 1.35, 0.18), railMat);
+        post.position.set(postPoint.x, -4.12, postPoint.z);
+        post.rotation.y = -angle;
+        landmarkGroup.add(post);
+      }
     }
   }
   cityRoads.push({ type: 'segment', x1, z1, x2, z2, width, name: options.name || '', bridge: isBridge, divided: Boolean(options.divided) });
 }
 
-function addCrosswalk(cx, cz, direction = 'horizontal', roadWidth = 28) {
-  const stripeMat = new THREE.MeshStandardMaterial({ color: 0xe3e4dc, roughness: 0.82 });
-  for (const approach of [-1, 1]) {
-    for (let i = 0; i < 7; i++) {
-      const offset = (i - 3) * 1.65;
-      const stripe = new THREE.Mesh(new THREE.BoxGeometry(direction === 'horizontal' ? 1.05 : roadWidth * 0.54, 0.035, direction === 'horizontal' ? roadWidth * 0.54 : 1.05), stripeMat);
-      stripe.position.set(
-        cx + (direction === 'horizontal' ? offset : approach * (roadWidth * 0.5 + 4.2)),
-        -4.82,
-        cz + (direction === 'horizontal' ? approach * (roadWidth * 0.5 + 4.2) : offset)
-      );
-      roadGroup.add(stripe);
-    }
+function addRingRoad(cx, cz, radius, width, name) {
+  const inner = radius - width * 0.5, outer = radius + width * 0.5;
+  const ring = new THREE.Mesh(new THREE.RingGeometry(inner, outer, 144), roadSurfaceMat);
+  ring.rotation.x = -Math.PI / 2;
+  ring.position.set(cx, -4.91, cz);
+  ring.receiveShadow = true;
+  roadGroup.add(ring);
+  for (const r of [inner + 0.24, outer - 0.24]) {
+    const line = new THREE.Mesh(new THREE.RingGeometry(r - 0.09, r + 0.09, 144), roadEdgeMat);
+    line.rotation.x = -Math.PI / 2;
+    line.position.set(cx, -4.835, cz);
+    roadGroup.add(line);
   }
+  cityRoads.push({ type: 'circle', x: cx, z: cz, radius, width, name, divided: false, bridge: false });
 }
 
-// 강과 양쪽 둔치
-const river = new THREE.Mesh(new THREE.BoxGeometry(RIVER.width, 0.14, CITY_BOUNDS.maxZ - CITY_BOUNDS.minZ + 80), waterMat);
-river.position.set(RIVER.x, -4.99, 0);
-river.receiveShadow = true;
-roadGroup.add(river);
-for (const x of [RIVER.x - RIVER.width * 0.5 - 3, RIVER.x + RIVER.width * 0.5 + 3]) {
-  const bank = new THREE.Mesh(new THREE.BoxGeometry(7, 0.2, CITY_BOUNDS.maxZ - CITY_BOUNDS.minZ + 80), grassMat);
-  bank.position.set(x, -4.83, 0);
-  roadGroup.add(bank);
-}
-
-// 생활도로를 기본으로 깔고, 도심의 간선축만 폭을 넓혀 위계 있는 도로망을 만듭니다.
-const streetX = [-900, -720, -540, -360, -180, 0, 180, 360, 540, 660];
-const streetZ = [-720, -540, -360, -180, 0, 180, 360, 540, 720];
-for (const x of streetX) {
-  const major = x === 0 || x === -360;
-  addRoadSegment(x, -720, x, 720, major ? 30 : (x % 360 === 0 ? 20 : 15), {
-    name: major ? (x === 0 ? 'CENTRAL NORTH-SOUTH AVENUE' : 'CIVIC AVENUE') : 'LOCAL STREET',
-    divided: x === 0
-  });
-}
-for (const z of streetZ) {
-  const arterial = z === 0 || Math.abs(z) === 540;
-  const width = z === 0 ? 36 : arterial ? 25 : 15;
-  // 강 서쪽 시가지의 길. 강을 건너지 않는 도로는 둔치에서 자연스럽게 끝납니다.
-  addRoadSegment(-920, z, 657, z, width, {
-    name: z === 0 ? 'GRAND BOULEVARD' : arterial ? 'DISTRICT AVENUE' : 'NEIGHBORHOOD STREET',
-    divided: z === 0
-  });
-}
-
-// 강을 건너는 교량은 간선도로 세 곳에만 두어 실제 도시의 접근성을 표현합니다.
-for (const z of [-540, 0, 540]) {
-  const width = z === 0 ? 32 : 25;
-  addRoadSegment(642, z, 838, z, width, { name: z === 0 ? 'RIVER BRIDGE' : 'RIVER CROSSING', bridge: true, sidewalk: false, divided: z === 0 });
-  addRoadSegment(838, z, 960, z, 14, { name: 'EAST BANK ACCESS', sidewalk: false });
-  const railOffset = width * 0.5 + 0.7;
-  for (const side of [-1, 1]) {
-    const rail = new THREE.Mesh(new THREE.BoxGeometry(190, 1.05, 0.18), railMat);
-    rail.position.set(740, -3.95, z + side * railOffset);
-    rail.castShadow = true;
-    landmarkGroup.add(rail);
-    for (let x = 650; x <= 830; x += 18) {
-      const post = new THREE.Mesh(new THREE.BoxGeometry(0.16, 1.25, 0.2), railMat);
-      post.position.set(x, -4.08, z + side * railOffset);
-      landmarkGroup.add(post);
-    }
+// 도로 차선 점선은 한 번에 인스턴싱하여 수백 개의 개별 드로콜을 없앱니다.
+function buildRoadMarkings() {
+  if (!cityRoadMarks.length) return;
+  const geometry = new THREE.BoxGeometry(1, 1, 1);
+  const material = new THREE.MeshBasicMaterial({ color: 0xffffff });
+  const batch = new THREE.InstancedMesh(geometry, material, cityRoadMarks.length);
+  const node = new THREE.Object3D();
+  for (let i = 0; i < cityRoadMarks.length; i++) {
+    const mark = cityRoadMarks[i];
+    node.position.set(mark.x, mark.y, mark.z);
+    node.rotation.set(0, -mark.angle, 0);
+    node.scale.set(mark.length, 0.035, mark.width);
+    node.updateMatrix();
+    batch.setMatrixAt(i, node.matrix);
+    batch.setColorAt(i, new THREE.Color(mark.color));
   }
+  batch.instanceMatrix.needsUpdate = true;
+  if (batch.instanceColor) batch.instanceColor.needsUpdate = true;
+  roadGroup.add(batch);
 }
 
-// 소규모 교차로의 횡단보도: 주요 교차점에만 넣어 성능을 유지합니다.
-for (const x of [-540, -180, 180, 540]) {
-  for (const z of [-540, 0, 540]) {
-    addCrosswalk(x, z, 'horizontal', x === -180 && z === 0 ? 36 : 25);
-  }
+// 중심부 순환로 3개 + 6개 방사형 대로 + 항만 연결 해상교량
+addRingRoad(0, 0, 220, 30, 'OLD TOWN RING');
+addRingRoad(0, 0, 455, 26, 'MIDTOWN LOOP');
+addRingRoad(0, 0, 690, 34, 'COASTAL BELTWAY');
+addRoadSegment(-1010, 0, 565, 0, 38, { name: 'GRAND PROMENADE', divided: true });
+for (const angle of [Math.PI / 4, Math.PI / 2, 3 * Math.PI / 4, 5 * Math.PI / 4, 3 * Math.PI / 2, 7 * Math.PI / 4]) {
+  const r1 = 205, r2 = 690;
+  addRoadSegment(Math.cos(angle) * r1, Math.sin(angle) * r1, Math.cos(angle) * r2, Math.sin(angle) * r2, 24, { name: 'RADIAL AVENUE' });
 }
+// 구릉지의 휘어진 생활도로와 작은 회전교차로
+addRingRoad(-520, -440, 92, 15, 'NORTH HILL ROUNDABOUT');
+addRingRoad(-520, 435, 102, 15, 'SOUTH HILL ROUNDABOUT');
+addRoadSegment(-780, -690, -635, -570, 18, { name: 'NORTH HILL ROAD' });
+addRoadSegment(-635, -570, -520, -440, 18, { name: 'NORTH HILL ROAD' });
+addRoadSegment(-790, 690, -640, 555, 18, { name: 'SOUTH HILL ROAD' });
+addRoadSegment(-640, 555, -520, 435, 18, { name: 'SOUTH HILL ROAD' });
+// 바다 위 항만 원인도로. 육지와 부두를 직접 연결합니다.
+addRoadSegment(540, 0, 1018, 92, 32, { name: 'HARBOR CAUSEWAY', bridge: true, divided: true, sidewalk: false });
+addRoadSegment(760, 38, 1018, 82, 18, { name: 'PORT ACCESS NORTH', bridge: true, sidewalk: false });
+addRoadSegment(835, 232, 1018, 197, 18, { name: 'PORT ACCESS SOUTH', bridge: false, sidewalk: false });
+addRoadSegment(884, 42, 1020, 67, 16, { name: 'DOCK STREET', sidewalk: false });
+addRoadSegment(900, 130, 1024, 150, 16, { name: 'WAREHOUSE STREET', sidewalk: false });
+addRoadSegment(880, 225, 1015, 205, 16, { name: 'QUAYSIDE ROAD', sidewalk: false });
 
-function makePark(cx, cz, w, d, label = 'PARK', options = {}) {
-  const base = new THREE.Mesh(new THREE.BoxGeometry(w, 0.24, d), grassMat);
-  base.position.set(cx, -4.82, cz);
-  base.receiveShadow = true;
-  parkGroup.add(base);
-  // 십자 보행로와 작은 광장
-  const pathA = new THREE.Mesh(new THREE.BoxGeometry(Math.max(3, w - 10), 0.045, 3.2), plazaMat);
-  pathA.position.set(cx, -4.675, cz);
-  parkGroup.add(pathA);
-  const pathB = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.045, Math.max(3, d - 10)), plazaMat);
-  pathB.position.set(cx, -4.67, cz);
-  parkGroup.add(pathB);
-  if (options.plaza) {
-    const plaza = new THREE.Mesh(new THREE.CylinderGeometry(15, 15, 0.12, 32), plazaMat);
-    plaza.rotation.x = -Math.PI / 2;
-    plaza.position.set(cx, -4.65, cz);
-    parkGroup.add(plaza);
-  }
-  const count = Math.max(10, Math.floor((w * d) / 1500));
-  for (let i = 0; i < count; i++) {
+// 랜드의 공원·광장과 나무
+function makePark(cx, cz, w, d, label = 'PARK') {
+  const grass = new THREE.Mesh(new THREE.BoxGeometry(w, 0.24, d), grassMat);
+  grass.position.set(cx, -4.83, cz);
+  grass.receiveShadow = true;
+  parkGroup.add(grass);
+  const pathX = new THREE.Mesh(new THREE.BoxGeometry(w - 12, 0.045, 3.0), plazaMat);
+  pathX.position.set(cx, -4.675, cz);
+  parkGroup.add(pathX);
+  const pathZ = new THREE.Mesh(new THREE.BoxGeometry(3.0, 0.045, d - 12), plazaMat);
+  pathZ.position.set(cx, -4.67, cz);
+  parkGroup.add(pathZ);
+  for (let i = 0; i < Math.max(10, Math.floor(w * d / 1500)); i++) {
     const a = i * 2.39996;
-    const r = Math.sqrt((i + 0.5) / count);
-    const tx = cx + Math.cos(a) * r * (w * 0.42);
-    const tz = cz + Math.sin(a) * r * (d * 0.40);
-    if (Math.abs(tx - cx) < 5 || Math.abs(tz - cz) < 5) continue;
-    createTree(tx, tz, 0.75 + cityRnd(i + Math.round(cx), 31) * 0.45);
+    const r = Math.sqrt((i + 0.5) / Math.max(10, Math.floor(w * d / 1500)));
+    const tx = cx + Math.cos(a) * r * w * 0.42;
+    const tz = cz + Math.sin(a) * r * d * 0.40;
+    if (Math.abs(tx - cx) < 6 || Math.abs(tz - cz) < 6) continue;
+    createTree(tx, tz, 0.8 + cityRnd(i + Math.floor(cx), 31) * 0.36);
   }
   cityLandmarks.push({ type: 'park', x: cx, z: cz, w, d, label });
 }
 
-makePark(-450, 270, 115, 105, 'WEST GARDENS');
-makePark(-270, -270, 125, 115, 'CENTRAL PARK');
-makePark(270, 450, 135, 105, 'EAST COMMON');
-makePark(920, 235, 72, 132, 'RIVERSIDE PROMENADE', { plaza: true });
+function createTree(x, z, scale = 1) {
+  const group = new THREE.Group();
+  const trunk = new THREE.Mesh(treeTrunkGeo, treeTrunkMat);
+  trunk.position.y = -5 + 1.9 * scale;
+  trunk.scale.setScalar(scale);
+  const canopy = new THREE.Mesh(treeCanopyGeo, treeCanopyMat);
+  canopy.position.y = -5 + 3.8 * scale;
+  canopy.scale.set(scale, 1.12 * scale, scale);
+  trunk.castShadow = canopy.castShadow = true;
+  group.add(trunk, canopy);
+  group.position.set(x, 0, z);
+  parkGroup.add(group);
+  addCityCollider({ x, y: -3.15, z }, { x: 0.75 * scale, y: 1.85 * scale, z: 0.75 * scale }, 0, 'park-tree');
+}
+
+makePark(-520, -440, 125, 108, 'NORTH HILL PARK');
+makePark(-520, 435, 145, 122, 'SOUTH HILL PARK');
+makePark(365, -355, 128, 112, 'MARINA GARDEN');
+makePark(335, 365, 145, 120, 'BAYFRONT PARK');
+
+// 항구의 불규칙한 해안 절벽·방파제
+const coastCliffMat = new THREE.MeshStandardMaterial({ color: 0x65695f, roughness: 0.98 });
+for (let i = 2; i < CITY_COASTLINE.length - 3; i++) {
+  const [x1, z1] = CITY_COASTLINE[i];
+  const [x2, z2] = CITY_COASTLINE[i + 1];
+  const length = Math.hypot(x2 - x1, z2 - z1);
+  if (length < 110 || i < 5) continue;
+  const cliff = new THREE.Mesh(new THREE.BoxGeometry(length, 5.5, 5), coastCliffMat);
+  cliff.position.set((x1 + x2) * 0.5, -2.35, (z1 + z2) * 0.5);
+  cliff.rotation.y = -Math.atan2(z2 - z1, x2 - x1);
+  cliff.castShadow = true;
+  landmarkGroup.add(cliff);
+}
 
 function insideParkRect(x, z, w = 0, d = 0, pad = 0) {
-  return cityLandmarks.some(l => l.type === 'park' &&
-    Math.abs(x - l.x) < l.w * 0.5 + w * 0.5 + pad &&
-    Math.abs(z - l.z) < l.d * 0.5 + d * 0.5 + pad);
-}
-
-const buildingPalette = [
-  0x53616b, 0x716b62, 0x465d63, 0x68625a, 0x3c505e,
-  0x666a69, 0x526255, 0x77736b, 0x45535b, 0x60545a, 0x798087, 0x5a6870
-];
-const roofMat = new THREE.MeshStandardMaterial({ color: 0x596168, roughness: 0.72, metalness: 0.24 });
-
-function createDistrictBuilding(x, z, w, d, h, idx, district) {
-  const color = buildingPalette[Math.floor(cityRnd(idx, 21) * buildingPalette.length)];
-  const floors = Math.max(4, Math.floor(h / 3.7));
-  const cols = Math.max(3, Math.floor(w / 5.5));
-  const mat = new THREE.MeshStandardMaterial({
-    map: getBuildingTexture(color, floors, cols),
-    roughness: district === 'downtown' ? 0.31 : 0.62,
-    metalness: district === 'downtown' ? 0.32 : 0.12
+  return cityLandmarks.some(l => {
+    if (l.type === 'park') return Math.abs(x - l.x) < l.w * 0.5 + w * 0.5 + pad && Math.abs(z - l.z) < l.d * 0.5 + d * 0.5 + pad;
+    if (l.type === 'no-build') return Math.abs(x - l.x) < l.w * 0.5 + w * 0.5 + pad && Math.abs(z - l.z) < l.d * 0.5 + d * 0.5 + pad;
+    return false;
   });
-  const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
-  mesh.position.set(x, -5 + h * 0.5, z);
-  mesh.castShadow = true;
-  mesh.receiveShadow = true;
-  buildingGroup.add(mesh);
-  cityBuildings.push({ x, z, w, d, h, district });
-
-  // 옥상 기계실·난간으로 단순 박스 반복 느낌을 줄입니다.
-  const roofW = Math.max(4, w * (0.2 + cityRnd(idx, 33) * 0.22));
-  const roofD = Math.max(4, d * (0.2 + cityRnd(idx, 34) * 0.22));
-  const roofH = Math.min(7, Math.max(2.2, h * 0.07));
-  const rooftop = new THREE.Mesh(new THREE.BoxGeometry(roofW, roofH, roofD), roofMat);
-  rooftop.position.set(x + (cityRnd(idx, 35) - 0.5) * w * 0.35, -5 + h + roofH * 0.5, z + (cityRnd(idx, 36) - 0.5) * d * 0.35);
-  rooftop.castShadow = true;
-  buildingGroup.add(rooftop);
-  if (district === 'industrial') {
-    const vent = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.2, 2.4, 8), roofMat);
-    vent.position.set(x - w * 0.22, -5 + h + 1.2, z + d * 0.22);
-    buildingGroup.add(vent);
-  }
 }
 
-// 블록은 도로 중심선 사이의 실제 대지 단위로 나누고, 각 필지를 약간씩 달리해 배치합니다.
+function distancePointToSegment(px, pz, x1, z1, x2, z2) {
+  const vx = x2 - x1, vz = z2 - z1, wx = px - x1, wz = pz - z1;
+  const vv = vx * vx + vz * vz || 1;
+  const t = Math.max(0, Math.min(1, (wx * vx + wz * vz) / vv));
+  return Math.hypot(px - (x1 + t * vx), pz - (z1 + t * vz));
+}
+function insideCityRoad(x, z, padding = 0) {
+  for (const road of cityRoads) {
+    if (road.type === 'segment' && distancePointToSegment(x, z, road.x1, road.z1, road.x2, road.z2) < road.width * 0.5 + padding) return true;
+    if (road.type === 'circle' && Math.abs(Math.hypot(x - road.x, z - road.z) - road.radius) < road.width * 0.5 + padding) return true;
+  }
+  return false;
+}
+
+const buildingPalette = [0x52616a, 0x6a655d, 0x41575b, 0x68615a, 0x425363, 0x70736d, 0x526253, 0x77736b, 0x45555b, 0x66575a, 0x657078, 0x59656d];
 function districtForBlock(x, z) {
-  if (x > 600) return 'waterfront';
-  if (x < -540 && z > 180) return 'industrial';
-  if (x < -540 && z < -180) return 'suburban';
-  if (x > 180 && z > 180) return 'residential';
-  if (x > 180 && z < -180) return 'residential';
-  if (Math.abs(x + 90) < 290 && Math.abs(z) < 280) return 'downtown';
+  const r = Math.hypot(x, z);
+  if (r < 275) return 'downtown';
+  if (x > 560 && z > -230 && z < 340) return 'waterfront';
+  if (x < -300 && z < -230) return 'industrial';
+  if (r > 535 && x < 100) return 'suburban';
+  if (z > 120 && x < 250) return 'residential';
   return 'mixed';
 }
 
-let blockIndex = 0;
-for (let ix = 0; ix < streetX.length - 1; ix++) {
-  for (let iz = 0; iz < streetZ.length - 1; iz++) {
-    const x1 = streetX[ix], x2 = streetX[ix + 1];
-    const z1 = streetZ[iz], z2 = streetZ[iz + 1];
-    const cx = (x1 + x2) * 0.5, cz = (z1 + z2) * 0.5;
-    const spanX = x2 - x1, spanZ = z2 - z1;
-    const district = districtForBlock(cx, cz);
-    cityBlocks.push({ x: cx, z: cz, w: spanX, d: spanZ, district });
+function createDistrictBuilding(x, z, w, d, h, idx, district, rotation = 0) {
+  const color = buildingPalette[Math.floor(cityRnd(idx, 21) * buildingPalette.length)];
+  const item = { x, z, w, d, h, district, rotation, color };
+  cityBuildings.push(item);
+  const body = new CANNON.Body({ mass: 0, type: CANNON.Body.STATIC, material: groundMaterial });
+  body.addShape(new CANNON.Box(new CANNON.Vec3(Math.max(2, w * 0.49), Math.max(2, h * 0.5), Math.max(2, d * 0.49))));
+  body.position.set(x, -5 + h * 0.5, z);
+  body.quaternion.setFromEuler(0, rotation, 0);
+  body.collisionFilterGroup = 2;
+  body.collisionFilterMask = 1;
+  body.userData = { kind: 'building', district, index: cityBuildings.length - 1 };
+  world.addBody(body);
+  cityStaticBodies.push(body);
+}
 
-    // 도심의 상징광장과 타워 부지는 건물 대신 열린 공간으로 남깁니다.
-    const civicPlazaBlock = Math.abs(cx - 90) < 1 && Math.abs(cz + 90) < 1;
-    const towerPlazaBlock = Math.abs(cx + 90) < 1 && Math.abs(cz - 90) < 1;
-    if (civicPlazaBlock || towerPlazaBlock) { blockIndex++; continue; }
-    if (district === 'waterfront' && cityRnd(blockIndex, 41) < 0.36) { blockIndex++; continue; }
-
-    const widthAtX = (x) => x === 0 || x === -360 ? 30 : (x % 360 === 0 ? 20 : 15);
-    const widthAtZ = (z) => z === 0 ? 36 : (Math.abs(z) === 540 ? 25 : 15);
-    const insetLeft = widthAtX(x1) * 0.5 + 8;
-    const insetRight = widthAtX(x2) * 0.5 + 8;
-    const insetTop = widthAtZ(z1) * 0.5 + 8;
-    const insetBottom = widthAtZ(z2) * 0.5 + 8;
-    const freeW = spanX - insetLeft - insetRight;
-    const freeD = spanZ - insetTop - insetBottom;
-    if (freeW < 52 || freeD < 52) { blockIndex++; continue; }
-    const rows = 2, cols = 2;
-    const lotW = freeW / cols, lotD = freeD / rows;
-    for (let row = 0; row < rows; row++) {
-      for (let col = 0; col < cols; col++) {
-        const seed = 10000 + blockIndex * 13 + row * 3 + col;
-        const px = x1 + insetLeft + lotW * (col + 0.5) + (cityRnd(seed, 1) - 0.5) * 8;
-        const pz = z1 + insetTop + lotD * (row + 0.5) + (cityRnd(seed, 2) - 0.5) * 8;
-        const w = lotW * (0.64 + cityRnd(seed, 3) * 0.25);
-        const d = lotD * (0.62 + cityRnd(seed, 4) * 0.27);
-        if (insideParkRect(px, pz, w, d, 3)) continue;
-        const heightRoll = cityRnd(seed, 5);
-        let h;
-        if (district === 'downtown') h = 44 + heightRoll * 104;
-        else if (district === 'industrial') h = 14 + heightRoll * 18;
-        else if (district === 'waterfront') h = 20 + heightRoll * 44;
-        else if (district === 'suburban') h = 16 + heightRoll * 20;
-        else if (district === 'residential') h = 22 + heightRoll * 35;
-        else h = 24 + heightRoll * 48;
-        // 도심으로 갈수록 밀도를 높이고, 변두리에는 작은 필지·낮은 건물을 둡니다.
-        if (district === 'downtown' && cityRnd(seed, 6) > 0.58) h += 28;
-        createDistrictBuilding(px, pz, w, d, h, seed, district);
-      }
-    }
-    blockIndex++;
+function buildingFootprintsOverlap(a, b, clearance = 2) {
+  const axes = [];
+  for (const item of [a, b]) {
+    const c = Math.cos(item.rotation || 0), s = Math.sin(item.rotation || 0);
+    axes.push([c, -s], [s, c]);
   }
+  const dx = b.x - a.x, dz = b.z - a.z;
+  for (const [ax, az] of axes) {
+    const ra = Math.abs(ax * Math.cos(a.rotation || 0) - az * Math.sin(a.rotation || 0)) * a.w * 0.5 +
+      Math.abs(ax * Math.sin(a.rotation || 0) + az * Math.cos(a.rotation || 0)) * a.d * 0.5;
+    const rb = Math.abs(ax * Math.cos(b.rotation || 0) - az * Math.sin(b.rotation || 0)) * b.w * 0.5 +
+      Math.abs(ax * Math.sin(b.rotation || 0) + az * Math.cos(b.rotation || 0)) * b.d * 0.5;
+    if (Math.abs(dx * ax + dz * az) >= ra + rb + clearance) return false;
+  }
+  return true;
 }
 
-// 동쪽 둔치의 호텔·레저 건물은 교량과 강변도로를 따라 배치합니다.
-for (const [i, z] of [-625, -405, -82, 420, 625].entries()) {
-  createDistrictBuilding(918 + (i % 2) * 8, z, 34 + (i % 3) * 5, 38 + (i % 2) * 9, 30 + (i % 3) * 12, 18000 + i, 'waterfront');
+const towerData = { x: -118, z: -112, w: 42, d: 42 };
+cityLandmarks.push({ type: 'no-build', ...towerData });
+cityLandmarks.push({ type: 'no-build', x: 0, z: -108, w: 150, d: 135 });
+
+// 도심을 육각형 필지로 엇갈리게 채웁니다. 도로·해안·공원 겹침은 생성 단계에서 제외.
+let lotIndex = 0;
+const LOT_STEP_X = 58, LOT_STEP_Z = 60;
+for (let row = 0, z = -810; z <= 780; row++, z += LOT_STEP_Z) {
+    const rowOffset = (row % 2) * LOT_STEP_X * 0.5;
+  for (let col = 0, x = -930 + rowOffset; x <= 760; col++, x += LOT_STEP_X) {
+    const seed = 30000 + row * 701 + col * 37;
+    const px = x + (cityRnd(seed, 1) - 0.5) * 5;
+    const pz = z + (cityRnd(seed, 2) - 0.5) * 5;
+    const radius = Math.hypot(px, pz);
+    if (radius > 735 || !pointInCityLand(px, pz)) continue;
+    const district = districtForBlock(px, pz);
+    const w = (district === 'downtown' ? 34 : 27) + cityRnd(seed, 3) * 16;
+    const d = (district === 'downtown' ? 33 : 28) + cityRnd(seed, 4) * 14;
+    if (!pointInCityLand(px - w * 0.55, pz - d * 0.55) || !pointInCityLand(px + w * 0.55, pz + d * 0.55) ||
+        !pointInCityLand(px - w * 0.55, pz + d * 0.55) || !pointInCityLand(px + w * 0.55, pz - d * 0.55)) continue;
+    if (insideCityRoad(px, pz, Math.hypot(w, d) * 0.42 + 4) || insideParkRect(px, pz, w, d, 5)) continue;
+    if (px > 835 && pz > 15 && pz < 255) continue;
+    const heightRoll = cityRnd(seed, 5);
+    const h = district === 'downtown' ? 58 + heightRoll * 132 :
+      district === 'industrial' ? 18 + heightRoll * 24 :
+      district === 'suburban' ? 15 + heightRoll * 25 :
+      district === 'waterfront' ? 24 + heightRoll * 52 :
+      district === 'residential' ? 22 + heightRoll * 38 : 30 + heightRoll * 61;
+    const angle = Math.atan2(pz, px);
+    const rotation = Math.round(angle / (Math.PI / 4)) * (Math.PI / 4) + (cityRnd(seed, 6) - 0.5) * 0.08;
+    const candidate = { x: px, z: pz, w, d, rotation };
+    if (cityBuildings.some(existing => buildingFootprintsOverlap(candidate, existing, 2))) continue;
+    createDistrictBuilding(px, pz, w, d, h, seed, district, rotation);
+    cityBlocks.push({ x: px, z: pz, w: LOT_STEP_X, d: LOT_STEP_Z, district });
+    lotIndex++;
+    if (lotIndex >= 360) break;
+  }
+  if (lotIndex >= 360) break;
 }
 
-// 시청광장: 차 없는 열린 중심 공간과 얕은 수경 시설
-const civicPlaza = new THREE.Mesh(new THREE.BoxGeometry(120, 0.22, 120), plazaMat);
-civicPlaza.position.set(90, -4.83, -90);
-civicPlaza.receiveShadow = true;
-parkGroup.add(civicPlaza);
-const fountain = new THREE.Mesh(new THREE.CylinderGeometry(12, 12, 0.42, 32), waterMat);
-fountain.position.set(90, -4.62, -90);
-parkGroup.add(fountain);
-for (let i = 0; i < 8; i++) {
-  const lamp = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.18, 5.4, 8), railMat);
-  const a = i * Math.PI / 4;
-  lamp.position.set(90 + Math.cos(a) * 47, -2.25, -90 + Math.sin(a) * 47);
-  landmarkGroup.add(lamp);
-}
-
-// 도심 타워와 수변 문화시설
-const towerPlaza = new THREE.Mesh(new THREE.BoxGeometry(105, 0.18, 105), plazaMat);
-towerPlaza.position.set(-90, -4.87, 90);
-towerPlaza.receiveShadow = true;
-parkGroup.add(towerPlaza);
-const towerMat = new THREE.MeshStandardMaterial({ color: 0x6f818e, roughness: 0.22, metalness: 0.68 });
-const tower = new THREE.Mesh(new THREE.BoxGeometry(34, 240, 34), towerMat);
-tower.position.set(-90, 115, 90);
+// 상징물은 데이터·미니맵·물리에서 하나의 위치를 공유합니다.
+cityLandmarks.push({ type: 'landmark', x: towerData.x, z: towerData.z, label: 'TIDELINE TOWER' });
+const towerMat = new THREE.MeshStandardMaterial({ color: 0x586b77, roughness: 0.24, metalness: 0.62 });
+const tower = new THREE.Mesh(new THREE.BoxGeometry(towerData.w, 224, towerData.d), towerMat);
+tower.position.set(towerData.x, 107, towerData.z);
 tower.castShadow = true;
 landmarkGroup.add(tower);
-for (let y = 12; y < 232; y += 24) {
-  const strip = new THREE.Mesh(new THREE.BoxGeometry(36, 0.65, 36), new THREE.MeshStandardMaterial({ color: 0xa9d8e7, emissive: 0x254a5b, emissiveIntensity: 0.45 }));
-  strip.position.set(-90, y, 90);
-  landmarkGroup.add(strip);
+addCityCollider({ x: towerData.x, y: 107, z: towerData.z }, { x: towerData.w * 0.5, y: 112, z: towerData.d * 0.5 }, 0, 'landmark-tower');
+for (let y = 4; y < 215; y += 22) {
+  const band = new THREE.Mesh(new THREE.BoxGeometry(44, 0.55, 44), new THREE.MeshStandardMaterial({ color: 0x8cc6d2, emissive: 0x1a3943, emissiveIntensity: 0.45 }));
+  band.position.set(towerData.x, y, towerData.z);
+  landmarkGroup.add(band);
 }
-cityLandmarks.push({ type: 'landmark', x: -90, z: 90, label: 'METRO TOWER' });
 
-const wheel = new THREE.Mesh(new THREE.TorusGeometry(32, 1.8, 10, 64), railMat);
+// Civic square is outside the boulevard carriageway, with a low-profile fountain.
+const civicPlaza = new THREE.Mesh(new THREE.CylinderGeometry(62, 62, 0.18, 48), grassMat);
+civicPlaza.rotation.x = -Math.PI / 2;
+civicPlaza.position.set(0, -4.82, -108);
+parkGroup.add(civicPlaza);
+const civicPath = new THREE.Mesh(new THREE.RingGeometry(27, 29, 40), plazaMat);
+civicPath.rotation.x = -Math.PI / 2;
+civicPath.position.set(0, -4.69, -108);
+parkGroup.add(civicPath);
+const fountain = new THREE.Mesh(new THREE.CylinderGeometry(16, 16, 0.45, 32), new THREE.MeshStandardMaterial({ color: 0x35768a, roughness: 0.2, metalness: 0.1 }));
+fountain.position.set(0, -4.58, -108);
+parkGroup.add(fountain);
+cityLandmarks.push({ type: 'landmark', x: 0, z: -108, label: 'CIVIC PLAZA' });
+
+// Harbor container yard, a lighthouse and a small wheel on the peninsula.
+const containerMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.8, metalness: 0.12 });
+for (let row = 0; row < 3; row++) {
+  for (let col = 0; col < 4; col++) {
+    const x = 914 + col * 27;
+    const z = 112 + row * 28;
+    const w = 21 + cityRnd(row * 17 + col, 91) * 5;
+    const d = 17;
+    const h = 8 + cityRnd(row * 23 + col, 92) * 4;
+    const color = [0x8d5544, 0x586d7d, 0x72745e, 0x9a7146][(row * 4 + col) % 4];
+    cityPortContainers.push({ x, z, w, d, h, color });
+    cityBuildings.push({ x, z, w, d, h, district: 'industrial', rotation: 0, color });
+    addCityCollider({ x, y: -5 + h * 0.5, z }, { x: w * 0.5, y: h * 0.5, z: d * 0.5 }, 0, 'shipping-container');
+  }
+}
+const containerGeo = new THREE.BoxGeometry(1, 1, 1);
+const containerBatch = new THREE.InstancedMesh(containerGeo, containerMat, cityPortContainers.length);
+const containerNode = new THREE.Object3D();
+for (let i = 0; i < cityPortContainers.length; i++) {
+  const c = cityPortContainers[i];
+  containerNode.position.set(c.x, -5 + c.h * 0.5, c.z);
+  containerNode.scale.set(c.w, c.h, c.d);
+  containerNode.updateMatrix();
+  containerBatch.setMatrixAt(i, containerNode.matrix);
+  containerBatch.setColorAt(i, new THREE.Color(c.color));
+}
+containerBatch.castShadow = false;
+containerBatch.receiveShadow = true;
+buildingGroup.add(containerBatch);
+
+const lighthouseMat = new THREE.MeshStandardMaterial({ color: 0xe9e0cb, roughness: 0.78 });
+const lighthouse = new THREE.Mesh(new THREE.CylinderGeometry(5, 9, 48, 12), lighthouseMat);
+lighthouse.position.set(976, 19, 245);
+lighthouse.castShadow = true;
+landmarkGroup.add(lighthouse);
+const lightCap = new THREE.Mesh(new THREE.CylinderGeometry(7, 7, 5, 12), new THREE.MeshStandardMaterial({ color: 0xc87047, roughness: 0.7 }));
+lightCap.position.set(976, 45, 245);
+landmarkGroup.add(lightCap);
+addCityCollider({ x: 976, y: 19, z: 245 }, { x: 8, y: 24, z: 8 }, 0, 'lighthouse');
+cityLandmarks.push({ type: 'landmark', x: 976, z: 245, label: 'HARBOR LIGHT' });
+
+const wheel = new THREE.Mesh(new THREE.TorusGeometry(28, 1.55, 8, 48), railMat);
 wheel.rotation.y = Math.PI / 2;
-wheel.position.set(900, 28, -255);
+wheel.position.set(430, 27, 360);
 landmarkGroup.add(wheel);
-for (let i = 0; i < 12; i++) {
-  const a = i * Math.PI / 6;
-  const spoke = new THREE.Mesh(new THREE.BoxGeometry(62, 0.75, 0.75), railMat);
-  spoke.position.set(900, 28 + Math.sin(a) * 32, -255 + Math.cos(a) * 32);
+for (let i = 0; i < 10; i++) {
+  const a = i * Math.PI / 5;
+  const spoke = new THREE.Mesh(new THREE.BoxGeometry(54, 0.6, 0.6), railMat);
+  spoke.position.set(430, 27 + Math.sin(a) * 28, 360 + Math.cos(a) * 28);
   spoke.rotation.y = Math.PI / 2;
   spoke.rotation.z = -a;
   landmarkGroup.add(spoke);
 }
-cityLandmarks.push({ type: 'landmark', x: 900, z: -255, label: 'RIVER WHEEL' });
-cityLandmarks.push({ type: 'landmark', x: 90, z: -90, label: 'CIVIC PLAZA' });
+cityLandmarks.push({ type: 'landmark', x: 430, z: 360, label: 'BAY WHEEL' });
 
-function addTrafficLight(x, z, rotateY = 0) {
-  const poleMat = new THREE.MeshStandardMaterial({ color: 0x303840, metalness: 0.55, roughness: 0.55 });
-  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.12, 5.5, 8), poleMat);
-  pole.position.set(x, -2.2, z);
-  pole.rotation.y = rotateY;
+// Building and rooftop meshes are grouped into a few instanced batches rather than
+// hundreds of individual draw calls; the collision boxes remain one body per building.
+function buildCityInstances() {
+  const facade = getBuildingTexture(0x52616a, 24, 8);
+  facade.wrapS = facade.wrapT = THREE.RepeatWrapping;
+  const districts = ['downtown', 'mixed', 'residential', 'suburban', 'industrial', 'waterfront'];
+  const boxGeo = new THREE.BoxGeometry(1, 1, 1);
+  const node = new THREE.Object3D();
+  const districtTint = {
+    downtown: 0x9ba9ad, mixed: 0x8d9a9e, residential: 0x8c9b89,
+    suburban: 0x81927f, industrial: 0xa08a70, waterfront: 0x8da6ae
+  };
+  for (const district of districts) {
+    const list = cityBuildings.filter(b => b.district === district && !cityPortContainers.some(c => c.x === b.x && c.z === b.z));
+    if (!list.length) continue;
+    const mat = new THREE.MeshStandardMaterial({ map: facade, color: 0xffffff, roughness: district === 'downtown' ? 0.35 : 0.72, metalness: district === 'downtown' ? 0.22 : 0.08 });
+    const batch = new THREE.InstancedMesh(boxGeo, mat, list.length);
+    const roofs = new THREE.InstancedMesh(boxGeo, roofMat, list.length);
+    for (let i = 0; i < list.length; i++) {
+      const b = list[i];
+      node.position.set(b.x, -5 + b.h * 0.5, b.z);
+      node.rotation.set(0, b.rotation || 0, 0);
+      node.scale.set(b.w, b.h, b.d);
+      node.updateMatrix();
+      batch.setMatrixAt(i, node.matrix);
+      batch.setColorAt(i, new THREE.Color(b.color || districtTint[district]));
+
+      const rw = Math.max(4, b.w * (0.22 + cityRnd(i, 65) * 0.18));
+      const rd = Math.max(4, b.d * (0.22 + cityRnd(i, 66) * 0.18));
+      const rh = Math.min(6, Math.max(2, b.h * 0.055));
+      node.position.set(b.x + (cityRnd(i, 67) - 0.5) * b.w * 0.24, -5 + b.h + rh * 0.5, b.z + (cityRnd(i, 68) - 0.5) * b.d * 0.24);
+      node.rotation.set(0, b.rotation || 0, 0);
+      node.scale.set(rw, rh, rd);
+      node.updateMatrix();
+      roofs.setMatrixAt(i, node.matrix);
+    }
+    batch.instanceMatrix.needsUpdate = true;
+    batch.castShadow = true;
+    batch.receiveShadow = true;
+    roofs.instanceMatrix.needsUpdate = true;
+    roofs.castShadow = false;
+    buildingGroup.add(batch, roofs);
+  }
+}
+
+function addTrafficLight(x, z, rotation = 0) {
+  const poleMat = new THREE.MeshStandardMaterial({ color: 0x30383b, metalness: 0.48, roughness: 0.62 });
+  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.12, 5.3, 7), poleMat);
+  pole.position.set(x, -2.3, z);
+  pole.rotation.y = rotation;
   landmarkGroup.add(pole);
-  const arm = new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.09, 0.09), poleMat);
-  arm.position.set(x + Math.cos(rotateY), -0.1, z + Math.sin(rotateY));
-  landmarkGroup.add(arm);
-  const housing = new THREE.Mesh(new THREE.BoxGeometry(0.35, 1, 0.25), new THREE.MeshStandardMaterial({ color: 0x14171a, roughness: 0.6 }));
-  housing.position.set(arm.position.x + Math.cos(rotateY) * 0.75, 0, arm.position.z + Math.sin(rotateY) * 0.75);
-  landmarkGroup.add(housing);
+  const signal = new THREE.Mesh(new THREE.BoxGeometry(0.42, 1.15, 0.32), new THREE.MeshStandardMaterial({ color: 0x252a2b, roughness: 0.72 }));
+  signal.position.set(x + Math.cos(rotation) * 0.8, -0.15, z + Math.sin(rotation) * 0.8);
+  landmarkGroup.add(signal);
+  addCityCollider({ x, y: -2.3, z }, { x: 0.18, y: 2.65, z: 0.18 }, 0, 'traffic-signal');
 }
-for (const [x, z] of [[-540, 0], [-180, 0], [180, 0], [540, 0], [0, -540], [0, 540], [-540, -540], [540, 540]]) {
-  addTrafficLight(x + 10, z + 10, Math.PI / 2);
-}
+addTrafficLight(-42, 23, Math.PI / 2);
+addTrafficLight(42, -23, -Math.PI / 2);
+addTrafficLight(455, 8, Math.PI / 2);
 
-// ─── 가로등 (기존 HUD/소품 코드와의 호환성을 유지) ───────────────
+buildRoadMarkings();
+buildCityInstances();
 
 function createStreetLight(x, z) {
   const poleMat = new THREE.MeshStandardMaterial({ color: 0x4a4a4a, metalness: 0.8, roughness: 0.3 });
@@ -3385,17 +3524,12 @@ let playerId = null;
   }
 
   function miniMapPoint(x, z) {
-    return {
-      x: ((x / MINI_WORLD_SIZE) + 0.5) * MINI_SIZE,
-      y: ((z / MINI_WORLD_SIZE) + 0.5) * MINI_SIZE
-    };
+    const scale = MINI_SIZE / MINI_WORLD_SIZE;
+    return { x: (x + MINI_WORLD_SIZE * 0.5) * scale, y: (z + MINI_WORLD_SIZE * 0.5) * scale };
   }
 
   function clampMiniPoint(point) {
-    return {
-      x: Math.max(5, Math.min(MINI_SIZE - 5, point.x)),
-      y: Math.max(5, Math.min(MINI_SIZE - 5, point.y))
-    };
+    return { x: Math.max(5, Math.min(MINI_SIZE - 5, point.x)), y: Math.max(5, Math.min(MINI_SIZE - 5, point.y)) };
   }
 
   function drawMiniCar(x, z, heading, fill, radius, outline = null) {
@@ -3403,21 +3537,22 @@ let playerId = null;
     const r = radius;
     minimapCtx.save();
     minimapCtx.translate(p.x, p.y);
-    // 게임 차량의 전방은 +Z, 미니맵의 +Z는 아래쪽이므로 heading을 반전합니다.
+    // 실제 차량 모델의 코·헤드라이트는 -Z를 향합니다. 지도에서는 -Z가 위쪽이므로
+    // 삼각형의 끝을 위로 두고 쿼터니언 yaw와 같은 부호로 회전해야 전진 방향과 일치합니다.
     minimapCtx.rotate(-heading);
     minimapCtx.beginPath();
-    minimapCtx.moveTo(0, r * 1.55);
-    minimapCtx.lineTo(-r * 0.72, -r * 0.82);
-    minimapCtx.lineTo(0, -r * 0.52);
-    minimapCtx.lineTo(r * 0.72, -r * 0.82);
+    minimapCtx.moveTo(0, -r * 1.55);
+    minimapCtx.lineTo(r * 0.72, r * 0.82);
+    minimapCtx.lineTo(0, r * 0.52);
+    minimapCtx.lineTo(-r * 0.72, r * 0.82);
     minimapCtx.closePath();
     minimapCtx.fillStyle = fill;
     minimapCtx.shadowColor = fill;
-    minimapCtx.shadowBlur = r * 1.7;
+    minimapCtx.shadowBlur = r * 1.5;
     minimapCtx.fill();
     if (outline) {
       minimapCtx.shadowBlur = 0;
-      minimapCtx.lineWidth = 2.1;
+      minimapCtx.lineWidth = 2;
       minimapCtx.strokeStyle = outline;
       minimapCtx.stroke();
     }
@@ -3434,51 +3569,41 @@ let playerId = null;
   function renderMinimap() {
     const ctx = minimapCtx;
     ctx.clearRect(0, 0, MINI_SIZE, MINI_SIZE);
-    ctx.fillStyle = '#12191c';
+    ctx.fillStyle = '#102a39';
     ctx.fillRect(0, 0, MINI_SIZE, MINI_SIZE);
 
-    // 수변, 공원과 건물은 도시 생성 데이터에서 가져오므로 실제 월드와 항상 같은 배치입니다.
-    const riverA = miniMapPoint(RIVER.x - RIVER.width * 0.5, CITY_BOUNDS.minZ - 40);
-    const riverB = miniMapPoint(RIVER.x + RIVER.width * 0.5, CITY_BOUNDS.maxZ + 40);
-    ctx.fillStyle = '#174b62';
-    ctx.fillRect(riverA.x, riverA.y, riverB.x - riverA.x, riverB.y - riverA.y);
-    ctx.fillStyle = 'rgba(133,205,218,0.18)';
-    ctx.fillRect(riverA.x + 2, riverA.y, 1.5, riverB.y - riverA.y);
-    ctx.fillRect(riverB.x - 2, riverA.y, 1.5, riverB.y - riverA.y);
+    // 지형도는 3D 지형과 공유하는 해안 다각형에서 직접 그립니다.
+    ctx.beginPath();
+    CITY_COASTLINE.forEach(([x, z], i) => {
+      const p = miniMapPoint(x, z);
+      if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
+    });
+    ctx.closePath();
+    ctx.fillStyle = '#34413a';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(180,202,184,0.62)';
+    ctx.lineWidth = 1.4;
+    ctx.stroke();
 
+    // 공원 녹지
     for (const landmark of cityLandmarks) {
       if (landmark.type !== 'park') continue;
       const a = miniMapPoint(landmark.x - landmark.w * 0.5, landmark.z - landmark.d * 0.5);
       const b = miniMapPoint(landmark.x + landmark.w * 0.5, landmark.z + landmark.d * 0.5);
-      ctx.fillStyle = '#24543a';
+      ctx.fillStyle = '#286043';
       ctx.fillRect(a.x, a.y, b.x - a.x, b.y - a.y);
-      ctx.strokeStyle = 'rgba(125,218,157,0.45)';
+      ctx.strokeStyle = 'rgba(147,220,162,0.4)';
       ctx.lineWidth = 1;
       ctx.strokeRect(a.x, a.y, b.x - a.x, b.y - a.y);
     }
 
-    const districtColors = {
-      downtown: 'rgba(184,199,205,0.54)',
-      industrial: 'rgba(180,143,103,0.55)',
-      waterfront: 'rgba(124,176,188,0.56)',
-      suburban: 'rgba(143,164,140,0.48)',
-      residential: 'rgba(158,177,164,0.50)',
-      mixed: 'rgba(166,171,168,0.50)'
-    };
-    for (const building of cityBuildings) {
-      const a = miniMapPoint(building.x - building.w * 0.5, building.z - building.d * 0.5);
-      const b = miniMapPoint(building.x + building.w * 0.5, building.z + building.d * 0.5);
-      ctx.fillStyle = districtColors[building.district] || districtColors.mixed;
-      ctx.fillRect(a.x, a.y, Math.max(1, b.x - a.x), Math.max(1, b.y - a.y));
-    }
-
-    // 도로 메타데이터를 Three.js와 캔버스가 공동 사용합니다.
+    // 도시 도로망(원형 도로·사선 대로·항만 교량)
     for (const road of cityRoads) {
       ctx.save();
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
-      ctx.strokeStyle = road.bridge ? '#aeb8ba' : (road.width >= 30 ? '#626b70' : '#414b50');
-      ctx.lineWidth = Math.max(1.7, road.width / MINI_WORLD_SIZE * MINI_SIZE);
+      ctx.strokeStyle = road.bridge ? '#b3c4c5' : (road.width >= 30 ? '#788286' : '#4c5858');
+      ctx.lineWidth = Math.max(1.4, road.width / MINI_WORLD_SIZE * MINI_SIZE);
       ctx.beginPath();
       if (road.type === 'segment') {
         const a = miniMapPoint(road.x1, road.z1);
@@ -3491,52 +3616,70 @@ let playerId = null;
       }
       ctx.stroke();
       if (road.divided && road.type === 'segment') {
-        ctx.strokeStyle = 'rgba(243,205,91,0.88)';
-        ctx.lineWidth = 1;
+        const a = miniMapPoint(road.x1, road.z1), b = miniMapPoint(road.x2, road.z2);
         ctx.setLineDash([4, 4]);
-        ctx.stroke();
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = 'rgba(247,216,115,0.94)';
+        ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
       }
       ctx.restore();
     }
 
+    const districtColors = {
+      downtown: 'rgba(188,205,210,0.76)', mixed: 'rgba(164,179,179,0.72)',
+      residential: 'rgba(174,192,169,0.73)', suburban: 'rgba(141,170,143,0.74)',
+      industrial: 'rgba(191,150,111,0.76)', waterfront: 'rgba(143,183,194,0.76)'
+    };
+    // 회전된 건물 footprint도 3D 배치와 같은 각도로 표시합니다.
+    const mapScale = MINI_SIZE / MINI_WORLD_SIZE;
+    for (const building of cityBuildings) {
+      const p = miniMapPoint(building.x, building.z);
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(-(building.rotation || 0));
+      ctx.fillStyle = districtColors[building.district] || districtColors.mixed;
+      ctx.fillRect(-building.w * mapScale * 0.5, -building.d * mapScale * 0.5, building.w * mapScale, building.d * mapScale);
+      ctx.restore();
+    }
+
+    // 랜드마크
     for (const landmark of cityLandmarks) {
       if (landmark.type !== 'landmark') continue;
       const p = clampMiniPoint(miniMapPoint(landmark.x, landmark.z));
-      ctx.fillStyle = landmark.label === 'METRO TOWER' ? '#f2d27b' : '#e9f3f1';
-      ctx.strokeStyle = 'rgba(12,20,24,0.85)';
+      const isTower = landmark.label === 'TIDELINE TOWER';
+      ctx.fillStyle = isTower ? '#ffd77b' : '#f0f3df';
+      ctx.strokeStyle = 'rgba(12,20,24,0.9)';
       ctx.lineWidth = 1.5;
       ctx.beginPath();
-      ctx.arc(p.x, p.y, landmark.label === 'CIVIC PLAZA' ? 4 : 3, 0, Math.PI * 2);
+      ctx.arc(p.x, p.y, isTower ? 4.2 : 3, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
     }
 
-    // 보간 중인 원격 차량 위치를 사용해 서버 패킷 간에도 부드럽게 움직입니다.
+    // 원격 차량은 보간 중인 모델 transform, 로컬 차량은 화면의 실제 transform 사용
     for (const [id, pData] of Object.entries(remotePlayers)) {
       if (!pData || pData.loading) continue;
       const model = pData.model;
       const pos = model?.position || pData.targetPosition;
       const quat = model?.quaternion || pData.targetQuaternion;
       if (!pos || !quat) continue;
-      drawMiniCar(pos.x, pos.z, getYRotation(quat), hashPlayerColor(id), 5.8, 'rgba(255,255,255,0.84)');
+      drawMiniCar(pos.x, pos.z, getYRotation(quat), hashPlayerColor(id), 5.8, 'rgba(255,255,255,0.86)');
     }
-
-    // 로컬 차량은 화면에 표시되는 보간 좌표와 같은 좌표를 사용합니다.
     if (carModel) {
       drawMiniCar(carModel.position.x, carModel.position.z, getYRotation(carModel.quaternion), '#60a5fa', 7.5, '#ffffff');
     } else if (chassisBody) {
       drawMiniCar(chassisBody.position.x, chassisBody.position.z, getBodyYRotation(chassisBody), '#60a5fa', 7.5, '#ffffff');
     }
 
-    ctx.strokeStyle = 'rgba(255,255,255,0.22)';
-    ctx.lineWidth = 2;
+    ctx.fillStyle = 'rgba(246,250,241,0.9)';
+    ctx.font = '700 11px JetBrains Mono, monospace';
+    ctx.fillText('N', MINI_SIZE - 17, 17);
+    ctx.fillStyle = 'rgba(255,255,255,0.66)';
+    ctx.font = '600 8px JetBrains Mono, monospace';
+    ctx.fillText(`${Object.keys(remotePlayers).length + (carModel ? 1 : 0)} CARS`, 9, MINI_SIZE - 10);
+    ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+    ctx.lineWidth = 1.5;
     ctx.strokeRect(1, 1, MINI_SIZE - 2, MINI_SIZE - 2);
-    ctx.fillStyle = 'rgba(255,255,255,0.82)';
-    ctx.font = '700 12px JetBrains Mono, monospace';
-    ctx.fillText('N', MINI_SIZE - 18, 18);
-    ctx.fillStyle = 'rgba(255,255,255,0.56)';
-    ctx.font = '600 9px JetBrains Mono, monospace';
-    ctx.fillText(`${Object.keys(remotePlayers).length + (carModel ? 1 : 0)} PLAYERS`, 12, MINI_SIZE - 12);
   }
 
   function requestMinimapRender() {
@@ -3801,12 +3944,15 @@ setInterval(() => {
       // 최대 deltaTime 제한 (탭 이동 시 멈춤 방지)
       deltaTime = Math.min(deltaTime, 0.1);
 
-      accumulator += deltaTime;
-
-      while (accumulator >= fixedTimeStep) {
+      const maxPhysicsStepsPerFrame = 3;
+      // 프레임 드롭 뒤 누적된 물리를 무제한 따라잡느라 추가 렉이 생기는 현상(spiral of death)을 막습니다.
+      accumulator = Math.min(accumulator + deltaTime, fixedTimeStep * maxPhysicsStepsPerFrame);
+      let physicsSteps = 0;
+      while (accumulator >= fixedTimeStep && physicsSteps < maxPhysicsStepsPerFrame) {
         updateVehicleControls(fixedTimeStep);
         world.step(fixedTimeStep);
         accumulator -= fixedTimeStep;
+        physicsSteps++;
       }
 
       // 물리 업데이트 후 보간을 위해 남은 시간 비율 계산
@@ -4456,7 +4602,7 @@ if (cameraMode === 'third') {
       isPreviewActive = false;
       // 게임 화면으로 돌아갈 때 맵용 배경, 안개, 조명 복원
       scene.background = new THREE.Color(0x87ceeb);
-      scene.fog = new THREE.Fog(0x87ceeb, 160, 600);
+      scene.fog = new THREE.Fog(0x87ceeb, 220, 1050);
       showroomExhibition.visible = false;
       sun.intensity = 1.4;
       ambientLight.intensity = 0.6;
