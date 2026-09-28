@@ -1577,6 +1577,39 @@ for (const z of [0, -410, 390]) {
 }
 
 // 공원 / 광장
+// 나무 생성: 공원과 거리 소품에서 공통으로 사용
+function createTree(x, z, scale = 1) {
+  const group = new THREE.Group();
+  group.position.set(x, -5, z);
+  group.scale.setScalar(scale);
+
+  const trunkMat = new THREE.MeshStandardMaterial({ color: 0x5c3310, roughness: 0.9 });
+  const trunk = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.18, 0.28, 3.2, 7),
+    trunkMat
+  );
+  trunk.position.y = 1.6;
+  trunk.castShadow = true;
+  trunk.receiveShadow = true;
+  group.add(trunk);
+
+  const greens = [0x1a6b1a, 0x247a24, 0x2e9030];
+  for (let i = 0; i < 3; i++) {
+    const r = 2.2 - i * 0.4;
+    const cone = new THREE.Mesh(
+      new THREE.ConeGeometry(r, 1.8, 8),
+      new THREE.MeshStandardMaterial({ color: greens[i], roughness: 0.85 })
+    );
+    cone.position.y = 3.0 + i * 1.35;
+    cone.castShadow = true;
+    cone.receiveShadow = true;
+    group.add(cone);
+  }
+
+  parkGroup.add(group);
+  return group;
+}
+
 function makePark(cx, cz, w, d, label = 'PARK') {
   const grass = new THREE.Mesh(new THREE.BoxGeometry(w, 0.22, d), grassMat);
   grass.position.set(cx, -4.80, cz);
