@@ -4,7 +4,7 @@
   <link rel="icon" href="data:,">
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>TIDELINE — Harbor City Driving</title>
+  <title>multi driving</title>
           <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@500;700&display=swap');
     
@@ -715,68 +715,32 @@
     }
 
 
+    /* 주행 HUD는 게임 시작 후에만 표시 */
+    body:not(.playing) #hudContainer,
+    body:not(.playing) #controlsLeft,
+    body:not(.playing) #driveControls,
+    body:not(.playing) #gearControls,
+    body:not(.playing) #btnToggleCam,
+    body:not(.playing) #timerDisplay {
+      display: none;
+    }
 
-    /* ===== CITY MINIMAP ===== */
-    #minimapWrap {
+    #minimap {
       position: fixed;
-      top: 25px;
-      left: 25px;
-      width: 218px;
-      height: 218px;
-      padding: 7px;
-      box-sizing: border-box;
-      background: rgba(6, 10, 16, 0.78);
-      backdrop-filter: blur(10px);
-      border: 1px solid rgba(255,255,255,0.14);
-      border-radius: 14px;
-      z-index: 160;
-      box-shadow: 0 14px 35px rgba(0,0,0,0.35);
+      top: 24px;
+      left: 24px;
+      width: 176px;
+      height: 176px;
+      border-radius: 50%;
+      border: 2px solid rgba(255, 255, 255, 0.25);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+      z-index: 100;
+      display: none;
       pointer-events: none;
     }
-    #minimapCanvas {
-      display: block;
-      width: 100%;
-      height: 100%;
-      border-radius: 9px;
+    @media (max-height: 500px) {
+      #minimap { width: 120px; height: 120px; top: 12px; left: 12px; }
     }
-    #minimapHeader {
-      position: absolute;
-      left: 13px;
-      top: 10px;
-      color: rgba(255,255,255,0.72);
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 9px;
-      font-weight: 700;
-      letter-spacing: 0.12em;
-      text-shadow: 0 2px 8px rgba(0,0,0,0.65);
-    }
-    #minimapLegend {
-      position: absolute;
-      left: 13px;
-      bottom: 10px;
-      display: flex;
-      gap: 8px;
-      color: rgba(255,255,255,0.65);
-      font-family: 'Inter', sans-serif;
-      font-size: 8px;
-      font-weight: 700;
-      text-shadow: 0 2px 8px rgba(0,0,0,0.65);
-    }
-    .miniLegendDot {
-      display: inline-block;
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      vertical-align: 0;
-      margin-right: 3px;
-      box-shadow: 0 0 6px currentColor;
-    }
-    @media (max-width: 760px) {
-      #minimapWrap { width: 176px; height: 176px; top: 12px; left: 12px; }
-      #minimapHeader { left: 11px; top: 9px; }
-      #minimapLegend { left: 11px; bottom: 8px; gap: 6px; }
-    }
-
   </style>
   
    <script src="/socket.io/socket.io.js"></script>
@@ -788,10 +752,7 @@
 {
   "imports": {
     "three": "https://unpkg.com/three@0.152.2/build/three.module.js",
-    "three/examples/jsm/loaders/FontLoader.js": "https://unpkg.com/three@0.152.2/examples/jsm/loaders/FontLoader.js",
-    "three/examples/jsm/geometries/TextGeometry.js": "https://unpkg.com/three@0.152.2/examples/jsm/geometries/TextGeometry.js",
-    "three/examples/jsm/geometries/RoundedBoxGeometry.js": "https://unpkg.com/three@0.152.2/examples/jsm/geometries/RoundedBoxGeometry.js",
-    "three/examples/jsm/loaders/GLTFLoader.js": "https://unpkg.com/three@0.152.2/examples/jsm/loaders/GLTFLoader.js",
+    "three/addons/": "https://unpkg.com/three@0.152.2/examples/jsm/",
     "cannon-es": "https://cdn.jsdelivr.net/npm/cannon-es@0.20.0/dist/cannon-es.js"
   }
 }
@@ -875,18 +836,9 @@
     <button id="liveStartButton" type="button">START DRIVE</button>
   </div>
 
+  <canvas id="minimap" aria-label="미니맵"></canvas>
   <div id="rotateWarning">가로 모드로 전환해주세요</div>
   <div id="timerDisplay">TIME: 0.00s</div>
-
-  <div id="minimapWrap" aria-label="CITY MINIMAP">
-    <canvas id="minimapCanvas" width="420" height="420"></canvas>
-    <div id="minimapHeader">CITY MAP · LIVE</div>
-    <div id="minimapLegend">
-      <span><span class="miniLegendDot" style="color:#60a5fa;background:#60a5fa"></span>YOU</span>
-      <span><span class="miniLegendDot" style="color:#ff5b5b;background:#ff5b5b"></span>PLAYERS</span>
-    </div>
-  </div>
-
   <div id="hudContainer">
     <div id="hud">0 KM/H</div>
     <div id="gearDisplay">P</div>
@@ -919,16 +871,16 @@
  <div id="adminPanel">
     <h3>차량 물리 설정 (Admin)</h3>
     <div class="admin-row">
-      <label>엔진 힘: <span id="valEngine">6000</span></label>
-      <input type="range" id="inputEngine" min="1000" max="20000" step="500" value="6000">
+      <label>엔진 힘: <span id="valEngine">3200</span></label>
+      <input type="range" id="inputEngine" min="1000" max="12000" step="100" value="3200">
     </div>
     <div class="admin-row">
-      <label>브레이크 힘: <span id="valBrake">400</span></label>
-      <input type="range" id="inputBrake" min="50" max="2000" step="50" value="400">
+      <label>브레이크 힘: <span id="valBrake">95</span></label>
+      <input type="range" id="inputBrake" min="10" max="300" step="5" value="95">
     </div>
     <div class="admin-row">
-      <label>최대 조향각: <span id="valSteer">11.25</span>°</label>
-      <input type="range" id="inputSteer" min="5" max="45" step="1" value="11.25">
+      <label>최대 조향각: <span id="valSteer">32</span>°</label>
+      <input type="range" id="inputSteer" min="5" max="45" step="1" value="32">
     </div>
     <div class="admin-row">
       <label>서스펜션 강도: <span id="valSusp">80</span></label>
@@ -939,8 +891,8 @@
       <input type="range" id="inputFriction" min="0.5" max="15" step="0.5" value="5.5">
     </div>
     <div class="admin-row">
-      <label>질량 (kg): <span id="valMass">1200</span></label>
-      <input type="range" id="inputMass" min="500" max="3000" step="100" value="1200">
+      <label>질량 (kg): <span id="valMass">1500</span></label>
+      <input type="range" id="inputMass" min="500" max="3000" step="100" value="1500">
     </div>
     <div class="admin-row">
   <label>공기 저항: <span id="valDrag">0.003</span></label>
@@ -951,38 +903,56 @@
   </div>
     
 <script type="module">
-// SYNTAX-CLEAN-V2
 import * as THREE from 'three';
-import { FontLoader } from 'https://cdn.jsdelivr.net/npm/three@0.152.2/examples/jsm/loaders/FontLoader.js';
-import { TextGeometry } from 'https://cdn.jsdelivr.net/npm/three@0.152.2/examples/jsm/geometries/TextGeometry.js';
-import { RoundedBoxGeometry } from 'https://cdn.jsdelivr.net/npm/three@0.152.2/examples/jsm/geometries/RoundedBoxGeometry.js';
-import { GLTFLoader } from 'https://unpkg.com/three@0.152.2/examples/jsm/loaders/GLTFLoader.js';
-import { DRACOLoader } from 'https://unpkg.com/three@0.152.2/examples/jsm/loaders/DRACOLoader.js';
-import * as CANNON from 'https://cdn.jsdelivr.net/npm/cannon-es@0.20.0/dist/cannon-es.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+import * as CANNON from 'cannon-es';
+import { createCity, GROUND_Y } from './js/city.js';
+import { createSky } from './js/sky.js';
+import { createTraffic } from './js/traffic.js';
 
 const dracoLoader = new DRACOLoader();
 dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
 
 const gltfLoader = new GLTFLoader();
 gltfLoader.setDRACOLoader(dracoLoader);
-  
-    
 
-    const socket = io('https://multi-driving.onrender.com'); // 배포 주소
+// GLB는 URL당 한 번만 다운로드·파싱하고, 사용할 때마다 씬 그래프를 복제한다.
+// (쇼룸 미리보기 → 게임 시작 → 다른 플레이어 차량 생성 시 24MB 모델을 반복 로드하던 문제 해결)
+const gltfCache = new Map();
+function loadModel(url, onLoad, _onProgress, onError) {
+  let promise = gltfCache.get(url);
+  if (!promise) {
+    promise = gltfLoader.loadAsync(url);
+    gltfCache.set(url, promise);
+    promise.catch(() => gltfCache.delete(url));
+  }
+  promise.then((gltf) => {
+    try {
+      onLoad({ ...gltf, scene: gltf.scene.clone(true) });
+    } catch (err) {
+      console.error('모델 후처리 실패:', url, err);
+      onError?.(err);
+    }
+  }, (err) => onError?.(err));
+}
 
-
-let font;
-const fontLoader = new FontLoader();
+// 서버와 같은 origin에서 서비스되므로 기본 연결을 사용한다.
+// 다른 서버에 붙어야 할 때만 window.MULTI_DRIVING_SERVER에 주소를 지정한다.
+const socket = io(window.MULTI_DRIVING_SERVER || undefined);
 
 // 보간된 차량 위치 및 회전 변수 (카메라 업데이트용)
 let interpolatedCarPosition = new THREE.Vector3();
 let interpolatedCarQuaternion = new THREE.Quaternion();
-const camDistance = 15;
+const camDistance = 9;
 let camAzimuth = Math.PI;       // 좌우 회전 (0~2PI)
 let camElevation = Math.PI / 6; // 위아래 회전 (0~PI)
-fontLoader.load('https://cdn.jsdelivr.net/npm/three@0.152.2/examples/fonts/helvetiker_regular.typeface.json', loadedFont => {
-  font = loadedFont;
-});
+
+// 키보드 입력이 닉네임 입력창 등에서 발생한 경우 게임 조작으로 처리하지 않는다.
+const isTypingTarget = (e) => {
+  const t = e.target;
+  return t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable);
+};
 
     // 가로모드 체크
     const rotateWarning = document.getElementById('rotateWarning');
@@ -997,15 +967,15 @@ fontLoader.load('https://cdn.jsdelivr.net/npm/three@0.152.2/examples/fonts/helve
     const scene = new THREE.Scene();
 scene.background = new THREE.Color(0xa0a0a0);
 
-const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1800);
+const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.3, 4200);
 camera.position.set(0, 300, 500);
 
-const renderer = new THREE.WebGLRenderer({ antialias: true });
-//그림자
-  renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap; // 부드러운 그림자 설정
-//렌더
-renderer.setPixelRatio(1);
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.0;
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
     // 자유 카메라 각도 변수 (구면좌표)
@@ -1059,11 +1029,29 @@ renderer.domElement.addEventListener('touchcancel', onPointerUp);
     });
 document.getElementById('btnReset').addEventListener('click', resetCar);
 window.addEventListener('keydown', e => {
+  if (isTypingTarget(e)) return;
   if (e.key?.toLowerCase() === 'r') resetCar();
 });
 
+function respawnCar() {
+  // 다른 플레이어와 가장 멀리 떨어진 스폰 슬롯을 고른다
+  const others = Object.values(otherPlayers).filter((p) => p.model).map((p) => p.model.position);
+  let best = city.spawnPoints[(Math.random() * city.spawnPoints.length) | 0], bestD = -1;
+  if (others.length) {
+    for (const sp of city.spawnPoints) {
+      const d = Math.min(...others.map((o) => Math.hypot(o.x - sp.x, o.z - sp.z)));
+      if (d > bestD) { bestD = d; best = sp; }
+    }
+  }
+  city.spawn = best;
+  hudLastPos = null;
+  chassisBody.position.set(best.x, -3, best.z);
+  chassisBody.quaternion.set(0, 0, 0, 1);
+  chassisBody.velocity.set(0, 0, 0);
+  chassisBody.angularVelocity.set(0, 0, 0);
+}
+
 function resetCar() {
-  if (!chassisBody) return;
   // 위치는 그대로, 높이 약간 위로
   const pos = chassisBody.position;
   chassisBody.position.set(pos.x, pos.y + 1.5, pos.z);
@@ -1088,10 +1076,6 @@ function getYRotation(q) {
 const world = new CANNON.World({
   gravity: new CANNON.Vec3(0, -9.82, 0),
 });
-// 도시 정적 콜라이더가 많아도 매 프레임 전수검사하지 않도록 축 정렬 공간분할을 사용합니다.
-world.broadphase = new CANNON.SAPBroadphase(world);
-world.broadphase.axisIndex = 0;
-world.allowSleep = true;
 
 // 마찰 재질 설정
 const groundMaterial = new CANNON.Material("groundMaterial");
@@ -1105,25 +1089,34 @@ const contactMaterial = new CANNON.ContactMaterial(groundMaterial, wheelMaterial
 });
 world.addContactMaterial(contactMaterial);
 
-// ─── 안개 ────────────────────────────────────
-scene.fog = new THREE.Fog(0x87ceeb, 220, 1050);
-scene.background = new THREE.Color(0x87ceeb);
+// 넓은 정적 도시에서 쌍 검사 비용을 줄이기 위해 SAP 브로드페이즈 사용
+world.broadphase = new CANNON.SAPBroadphase(world);
+
+// ─── 하늘 · 환경맵 · 안개 ─────────────────────────────────────
+const sky = createSky(scene, renderer);
+const GAME_FOG = new THREE.Fog(sky.fogColor, 220, 2000);
+scene.fog = GAME_FOG;
+scene.background = sky.fogColor.clone();
 
 // ─── 조명 ─────────────────────────────────────────────────
-const sun = new THREE.DirectionalLight(0xfff5e0, 1.4);
-// --- 그림자 설정 추가 ---
+// 태양은 매 프레임 차량을 따라다니며, 차량 주변만 고해상도 그림자를 만든다.
+const SUN_INTENSITY = 2.3, AMBIENT_INTENSITY = 0.18, HEMI_INTENSITY = 0.75;
+const sun = new THREE.DirectionalLight(0xfff1dc, SUN_INTENSITY);
 sun.castShadow = true;
-//빛
-sun.position.set(200, 400, 100);
-sun.shadow.mapSize.width = 618;
-sun.shadow.mapSize.height = 616;
-sun.shadow.camera.left = -320;
-sun.shadow.camera.right = 260;
-sun.shadow.camera.top = 260;
-sun.shadow.camera.bottom = -360;
+sun.position.copy(sky.sunDir).multiplyScalar(400);
+sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.camera.left = -110;
+sun.shadow.camera.right = 110;
+sun.shadow.camera.top = 110;
+sun.shadow.camera.bottom = -110;
+sun.shadow.camera.near = 10;
+sun.shadow.camera.far = 1200;
+sun.shadow.bias = -0.0004;
+sun.shadow.normalBias = 0.05;
 scene.add(sun);
-const ambientLight = new THREE.AmbientLight(0x88aacc, 0.6);
-const hemisphereLight = new THREE.HemisphereLight(0x87ceeb, 0x4a7a3a, 0.5);
+scene.add(sun.target);
+const ambientLight = new THREE.AmbientLight(0x88aacc, AMBIENT_INTENSITY);
+const hemisphereLight = new THREE.HemisphereLight(0xcfe0f0, 0x8a8272, HEMI_INTENSITY);
 // 쇼룸 전용 포인트 조명. 게임 중에는 강도를 0으로 유지합니다.
 const showroomKeyLight = new THREE.PointLight(0xffe6b8, 0, 100, 2);
 const showroomFillLight = new THREE.PointLight(0x9fc8ff, 0, 100, 2);
@@ -1133,8 +1126,6 @@ scene.add(hemisphereLight);
 scene.add(showroomKeyLight);
 scene.add(showroomFillLight);
 scene.add(showroomRimLight);
-
-renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.25));
 
 // ─── 쇼룸 전시장 세트 ───────────────────────────────────────
 // 실제 게임 맵과 분리된 좌표에 바닥, 단상, 벽, 라이트 스트립을 구성합니다.
@@ -1325,717 +1316,61 @@ function createShowroomExhibition() {
 
 const showroomExhibition = createShowroomExhibition();
 
-// ─── 캔버스 텍스처 생성 함수 ───────────────────────────────
-function makeAsphaltTexture() {
-  const c = document.createElement('canvas');
-  c.width = c.height = 256;
-  const ctx = c.getContext('2d');
-  ctx.fillStyle = '#111111';
-  ctx.fillRect(0, 0, 256, 256);
-  for (let i = 0; i < 4000; i++) {
-  const v = 12 + Math.random() * 10 | 0;
-    ctx.fillStyle = `rgb(${v},${v},${v})`;
-    ctx.fillRect(Math.random() * 256, Math.random() * 256, 1 + Math.random() * 2, 1);
-  }
-  const t = new THREE.CanvasTexture(c);
-  t.wrapS = t.wrapT = THREE.RepeatWrapping;
-  t.repeat.set(60, 60);
-  return t;
-}
-
-function makeSidewalkTexture() {
-  const c = document.createElement('canvas');
-  c.width = c.height = 128;
-  const ctx = c.getContext('2d');
-  ctx.fillStyle = '#888888';
-  ctx.fillRect(0, 0, 128, 128);
-  ctx.strokeStyle = '#707070';
-  ctx.lineWidth = 1.5;
-  for (let i = 0; i <= 128; i += 16) {
-    ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, 128); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(128, i); ctx.stroke();
-  }
-  const t = new THREE.CanvasTexture(c);
-  t.wrapS = t.wrapT = THREE.RepeatWrapping;
-  t.repeat.set(5, 5);
-  return t;
-}
-
-const buildingTextureCache = new Map();
-function getBuildingTexture(hexColor, floors = 10, cols = 5) {
-  const key = `${hexColor}|${floors}|${cols}`;
-  if (buildingTextureCache.has(key)) return buildingTextureCache.get(key);
-  const texture = makeBuildingTexture(hexColor, floors, cols);
-  buildingTextureCache.set(key, texture);
-  return texture;
-}
-
-function makeBuildingTexture(hexColor, floors = 10, cols = 5) {
-  const w = 256, h = 512;
-  const c = document.createElement('canvas');
-  c.width = w; c.height = h;
-  const ctx = c.getContext('2d');
-  const r = (hexColor >> 16) & 0xff;
-  const g = (hexColor >> 8) & 0xff;
-  const b = hexColor & 0xff;
-  ctx.fillStyle = `rgb(${r},${g},${b})`;
-  ctx.fillRect(0, 0, w, h);
-  const fh = h / floors, cw = w / cols;
-  for (let f = 0; f < floors; f++) {
-    for (let col = 0; col < cols; col++) {
-      const lit = Math.random() > 0.72;
-      ctx.fillStyle = lit ? 'rgba(255,215,150,0.78)' : 'rgba(18,34,48,0.94)';
-      ctx.fillRect(col * cw + cw * 0.12, f * fh + fh * 0.12, cw * 0.76, fh * 0.58);
-      // 창문 테두리
-      ctx.strokeStyle = 'rgba(0,0,0,0.2)';
-      ctx.lineWidth = 0.5;
-      ctx.strokeRect(col * cw + cw * 0.12, f * fh + fh * 0.12, cw * 0.76, fh * 0.58);
-    }
-  }
-  return new THREE.CanvasTexture(c);
-}
-
-const asphaltTex = makeAsphaltTexture();
-const sidewalkTex = makeSidewalkTexture();
-
 // ─── 물리 바닥 ─────────────────────────────────────────────
 const floorBody = new CANNON.Body({
   mass: 0,
   shape: new CANNON.Box(new CANNON.Vec3(10000, 5, 10000)),
-  position: new CANNON.Vec3(0, -10, 0),
+  position: new CANNON.Vec3(0, GROUND_Y - 5, 0),
 });
 floorBody.material = groundMaterial;
 world.addBody(floorBody);
 
-// ─── 시각 바닥 (아스팔트) ──────────────────────────────────
-const floorMesh = new THREE.Mesh(
-  new THREE.PlaneGeometry(10000, 10000),
-  new THREE.MeshStandardMaterial({ map: asphaltTex, roughness: 0.95 })
-);
-floorMesh.rotation.x = -Math.PI / 2;
-floorMesh.position.y = -5;
-floorMesh.receiveShadow = true;
-scene.add(floorMesh);
+// ─── 도시 (public/js/city.js) ──────────────────────────────
+const city = createCity({ scene, world, renderer, groundMaterial });
 
-// ─── TIDELINE : 해안 항구와 방사형 구도심으로 다시 만든 새 맵 ───────
-// 이전 사각 격자는 제거했습니다. 도심 순환도로, 방사형 대로, 절벽 해안과 항만
-// 반도를 중심으로 지형·도로·건물·미니맵·물리 충돌이 같은 좌표 데이터를 공유합니다.
-const CITY_BOUNDS = { minX: -1080, maxX: 1040, minZ: -900, maxZ: 860 };
-const CITY_MAP_EXTENT = 2300;
-const CITY_HALF_EXTENT = 950;
-const BLOCK_SIZE = 96;
-const ROAD_WIDTH = 22;
-const GRID_COUNT = 0;
-const CITY_CENTER = { x: 0, z: 0 };
-const CITY_COASTLINE = [
-  [-1080, -900], [240, -900], [470, -790], [400, -635], [585, -490],
-  [465, -345], [640, -190], [570, -76], [715, 0], [1018, 44],
-  [1035, 185], [920, 294], [695, 310], [600, 445], [420, 690],
-  [180, 860], [-1080, 860]
-];
-
-const roadGroup = new THREE.Group();
-const buildingGroup = new THREE.Group();
-const parkGroup = new THREE.Group();
-const landmarkGroup = new THREE.Group();
-scene.add(roadGroup, buildingGroup, parkGroup, landmarkGroup);
-const cityBlocks = [];
-const cityRoads = [];
-const cityLandmarks = [];
-const cityBuildings = [];
-const cityStaticBodies = [];
-const cityRoadMarks = [];
-const cityPortContainers = [];
-
-const roadSurfaceMat = new THREE.MeshStandardMaterial({ color: 0x252a2f, roughness: 0.95, metalness: 0.02 });
-const roadEdgeMat = new THREE.MeshStandardMaterial({ color: 0xc0c5c6, roughness: 0.82 });
-const sidewalkMat = new THREE.MeshStandardMaterial({ color: 0x777f7f, roughness: 0.94 });
-const curbMat = new THREE.MeshStandardMaterial({ color: 0xb4b7b3, roughness: 0.88 });
-const grassMat = new THREE.MeshStandardMaterial({ color: 0x344e3d, roughness: 0.98 });
-const cityGroundMat = new THREE.MeshStandardMaterial({ color: 0x35413d, roughness: 1 });
-const seaMat = new THREE.MeshStandardMaterial({ color: 0x17485d, roughness: 0.26, metalness: 0.08 });
-const bridgeMat = new THREE.MeshStandardMaterial({ color: 0x454e52, roughness: 0.82, metalness: 0.16 });
-const railMat = new THREE.MeshStandardMaterial({ color: 0xa6adae, roughness: 0.62, metalness: 0.42 });
-const medianMat = new THREE.MeshStandardMaterial({ color: 0x3f5b43, roughness: 0.96 });
-const plazaMat = new THREE.MeshStandardMaterial({ color: 0x948f82, roughness: 0.94 });
-const treeTrunkMat = new THREE.MeshStandardMaterial({ color: 0x594534, roughness: 0.98 });
-const treeCanopyMat = new THREE.MeshStandardMaterial({ color: 0x3a6848, roughness: 0.96 });
-const treeTrunkGeo = new THREE.CylinderGeometry(0.28, 0.42, 3.8, 6);
-const treeCanopyGeo = new THREE.IcosahedronGeometry(2.45, 1);
-const roofMat = new THREE.MeshStandardMaterial({ color: 0x566166, roughness: 0.78, metalness: 0.16 });
-const rng = () => Math.random();
-
-function seeded(value) {
-  const x = Math.sin(value * 12.9898 + 78.233) * 43758.5453;
-  return x - Math.floor(x);
-}
-function cityRnd(i, salt = 0) { return seeded(i * 17.173 + salt * 31.77); }
-
-function pointInCityLand(x, z) {
-  let inside = false;
-  for (let i = 0, j = CITY_COASTLINE.length - 1; i < CITY_COASTLINE.length; j = i++) {
-    const [xi, zi] = CITY_COASTLINE[i];
-    const [xj, zj] = CITY_COASTLINE[j];
-    const intersects = ((zi > z) !== (zj > z)) && (x < (xj - xi) * (z - zi) / ((zj - zi) || 1e-9) + xi);
-    if (intersects) inside = !inside;
-  }
-  return inside;
-}
-
-function makePolygonMesh(points, material, y) {
-  const shape = new THREE.Shape();
-  points.forEach(([x, z], i) => {
-    if (i === 0) shape.moveTo(x, -z);
-    else shape.lineTo(x, -z);
-  });
-  shape.closePath();
-  const mesh = new THREE.Mesh(new THREE.ShapeGeometry(shape), material);
-  mesh.rotation.x = -Math.PI / 2;
-  mesh.position.y = y;
-  mesh.receiveShadow = true;
-  return mesh;
-}
-
-// 배경 바다 + 실제 불규칙한 해안선 형태의 도시 지형
-const seaMesh = new THREE.Mesh(new THREE.PlaneGeometry(2400, 2050), seaMat);
-seaMesh.rotation.x = -Math.PI / 2;
-seaMesh.position.set(0, -4.985, 0);
-seaMesh.receiveShadow = true;
-roadGroup.add(seaMesh);
-roadGroup.add(makePolygonMesh(CITY_COASTLINE, cityGroundMat, -4.955));
-
-function addCityCollider(position, halfExtents, rotationY = 0, kind = 'city-solid') {
-  const body = new CANNON.Body({ mass: 0, type: CANNON.Body.STATIC, material: groundMaterial });
-  body.addShape(new CANNON.Box(new CANNON.Vec3(halfExtents.x, halfExtents.y, halfExtents.z)));
-  body.position.set(position.x, position.y, position.z);
-  body.quaternion.setFromEuler(0, rotationY, 0);
-  body.collisionFilterGroup = 2;
-  body.collisionFilterMask = 1;
-  body.userData = { kind };
-  world.addBody(body);
-  cityStaticBodies.push(body);
-  return body;
-}
-
-function addRoadSegment(x1, z1, x2, z2, width, options = {}) {
-  const dx = x2 - x1, dz = z2 - z1;
-  const length = Math.hypot(dx, dz);
-  if (length < 1) return;
-  const angle = Math.atan2(dz, dx);
-  const midX = (x1 + x2) * 0.5, midZ = (z1 + z2) * 0.5;
-  const isBridge = Boolean(options.bridge);
-  const road = new THREE.Mesh(new THREE.BoxGeometry(length, 0.12, width), isBridge ? bridgeMat : roadSurfaceMat);
-  road.position.set(midX, -4.91, midZ);
-  road.rotation.y = -angle;
-  road.receiveShadow = true;
-  roadGroup.add(road);
-
-  const at = (along, side) => ({
-    x: midX + Math.cos(angle) * along - Math.sin(angle) * side,
-    z: midZ + Math.sin(angle) * along + Math.cos(angle) * side
-  });
-  for (const side of [-1, 1]) {
-    const curbPoint = at(0, side * (width * 0.5 - 0.42));
-    const edge = new THREE.Mesh(new THREE.BoxGeometry(length, 0.035, 0.13), roadEdgeMat);
-    edge.position.set(curbPoint.x, -4.835, curbPoint.z);
-    edge.rotation.y = -angle;
-    roadGroup.add(edge);
-  }
-
-  if (options.divided) {
-    for (const side of [-1, 1]) {
-      const p = at(0, side * 0.42);
-      const line = new THREE.Mesh(new THREE.BoxGeometry(length, 0.028, 0.13), roadEdgeMat);
-      line.position.set(p.x, -4.83, p.z);
-      line.rotation.y = -angle;
-      roadGroup.add(line);
-    }
-    const median = new THREE.Mesh(new THREE.BoxGeometry(length, 0.16, Math.min(2.4, width * 0.075)), medianMat);
-    median.position.set(midX, -4.82, midZ);
-    median.rotation.y = -angle;
-    roadGroup.add(median);
-  } else if (width >= 20) {
-    for (let along = -length * 0.5 + 12; along < length * 0.5 - 6; along += 22) {
-      const p = at(along, 0);
-      cityRoadMarks.push({ x: p.x, z: p.z, y: -4.82, angle, length: 5, width: 0.16, color: 0xe8cf7b });
-    }
-  }
-
-  if (options.sidewalk !== false && width >= 20 && !isBridge) {
-    for (const side of [-1, 1]) {
-      const offset = width * 0.5 + 2.0;
-      const p = at(0, side * offset);
-      const sidewalk = new THREE.Mesh(new THREE.BoxGeometry(length, 0.16, 3.6), sidewalkMat);
-      sidewalk.position.set(p.x, -4.82, p.z);
-      sidewalk.rotation.y = -angle;
-      sidewalk.receiveShadow = true;
-      roadGroup.add(sidewalk);
-      const cp = at(0, side * (width * 0.5 + 0.18));
-      const curb = new THREE.Mesh(new THREE.BoxGeometry(length, 0.16, 0.28), curbMat);
-      curb.position.set(cp.x, -4.80, cp.z);
-      curb.rotation.y = -angle;
-      roadGroup.add(curb);
-    }
-  }
-
-  if (isBridge) {
-    const railOffset = width * 0.5 + 0.55;
-    for (const side of [-1, 1]) {
-      const p = at(0, side * railOffset);
-      const rail = new THREE.Mesh(new THREE.BoxGeometry(length, 1.15, 0.16), railMat);
-      rail.position.set(p.x, -4.0, p.z);
-      rail.rotation.y = -angle;
-      rail.castShadow = true;
-      landmarkGroup.add(rail);
-      for (let u = -length * 0.5 + 10; u < length * 0.5; u += 24) {
-        const postPoint = at(u, side * railOffset);
-        const post = new THREE.Mesh(new THREE.BoxGeometry(0.16, 1.35, 0.18), railMat);
-        post.position.set(postPoint.x, -4.12, postPoint.z);
-        post.rotation.y = -angle;
-        landmarkGroup.add(post);
-      }
-    }
-  }
-  cityRoads.push({ type: 'segment', x1, z1, x2, z2, width, name: options.name || '', bridge: isBridge, divided: Boolean(options.divided) });
-}
-
-function addRingRoad(cx, cz, radius, width, name) {
-  const inner = radius - width * 0.5, outer = radius + width * 0.5;
-  const ring = new THREE.Mesh(new THREE.RingGeometry(inner, outer, 144), roadSurfaceMat);
-  ring.rotation.x = -Math.PI / 2;
-  ring.position.set(cx, -4.91, cz);
-  ring.receiveShadow = true;
-  roadGroup.add(ring);
-  for (const r of [inner + 0.24, outer - 0.24]) {
-    const line = new THREE.Mesh(new THREE.RingGeometry(r - 0.09, r + 0.09, 144), roadEdgeMat);
-    line.rotation.x = -Math.PI / 2;
-    line.position.set(cx, -4.835, cz);
-    roadGroup.add(line);
-  }
-  cityRoads.push({ type: 'circle', x: cx, z: cz, radius, width, name, divided: false, bridge: false });
-}
-
-// 도로 차선 점선은 한 번에 인스턴싱하여 수백 개의 개별 드로콜을 없앱니다.
-function buildRoadMarkings() {
-  if (!cityRoadMarks.length) return;
-  const geometry = new THREE.BoxGeometry(1, 1, 1);
-  const material = new THREE.MeshBasicMaterial({ color: 0xffffff });
-  const batch = new THREE.InstancedMesh(geometry, material, cityRoadMarks.length);
-  const node = new THREE.Object3D();
-  for (let i = 0; i < cityRoadMarks.length; i++) {
-    const mark = cityRoadMarks[i];
-    node.position.set(mark.x, mark.y, mark.z);
-    node.rotation.set(0, -mark.angle, 0);
-    node.scale.set(mark.length, 0.035, mark.width);
-    node.updateMatrix();
-    batch.setMatrixAt(i, node.matrix);
-    batch.setColorAt(i, new THREE.Color(mark.color));
-  }
-  batch.instanceMatrix.needsUpdate = true;
-  if (batch.instanceColor) batch.instanceColor.needsUpdate = true;
-  roadGroup.add(batch);
-}
-
-// 중심부 순환로 3개 + 6개 방사형 대로 + 항만 연결 해상교량
-addRingRoad(0, 0, 220, 30, 'OLD TOWN RING');
-addRingRoad(0, 0, 455, 26, 'MIDTOWN LOOP');
-addRingRoad(0, 0, 690, 34, 'COASTAL BELTWAY');
-addRoadSegment(-1010, 0, 565, 0, 38, { name: 'GRAND PROMENADE', divided: true });
-for (const angle of [Math.PI / 4, Math.PI / 2, 3 * Math.PI / 4, 5 * Math.PI / 4, 3 * Math.PI / 2, 7 * Math.PI / 4]) {
-  const r1 = 205, r2 = 690;
-  addRoadSegment(Math.cos(angle) * r1, Math.sin(angle) * r1, Math.cos(angle) * r2, Math.sin(angle) * r2, 24, { name: 'RADIAL AVENUE' });
-}
-// 구릉지의 휘어진 생활도로와 작은 회전교차로
-addRingRoad(-520, -440, 92, 15, 'NORTH HILL ROUNDABOUT');
-addRingRoad(-520, 435, 102, 15, 'SOUTH HILL ROUNDABOUT');
-addRoadSegment(-780, -690, -635, -570, 18, { name: 'NORTH HILL ROAD' });
-addRoadSegment(-635, -570, -520, -440, 18, { name: 'NORTH HILL ROAD' });
-addRoadSegment(-790, 690, -640, 555, 18, { name: 'SOUTH HILL ROAD' });
-addRoadSegment(-640, 555, -520, 435, 18, { name: 'SOUTH HILL ROAD' });
-// 바다 위 항만 원인도로. 육지와 부두를 직접 연결합니다.
-addRoadSegment(540, 0, 1018, 92, 32, { name: 'HARBOR CAUSEWAY', bridge: true, divided: true, sidewalk: false });
-addRoadSegment(760, 38, 1018, 82, 18, { name: 'PORT ACCESS NORTH', bridge: true, sidewalk: false });
-addRoadSegment(835, 232, 1018, 197, 18, { name: 'PORT ACCESS SOUTH', bridge: false, sidewalk: false });
-addRoadSegment(884, 42, 1020, 67, 16, { name: 'DOCK STREET', sidewalk: false });
-addRoadSegment(900, 130, 1024, 150, 16, { name: 'WAREHOUSE STREET', sidewalk: false });
-addRoadSegment(880, 225, 1015, 205, 16, { name: 'QUAYSIDE ROAD', sidewalk: false });
-
-// 랜드의 공원·광장과 나무
-function makePark(cx, cz, w, d, label = 'PARK') {
-  const grass = new THREE.Mesh(new THREE.BoxGeometry(w, 0.24, d), grassMat);
-  grass.position.set(cx, -4.83, cz);
-  grass.receiveShadow = true;
-  parkGroup.add(grass);
-  const pathX = new THREE.Mesh(new THREE.BoxGeometry(w - 12, 0.045, 3.0), plazaMat);
-  pathX.position.set(cx, -4.675, cz);
-  parkGroup.add(pathX);
-  const pathZ = new THREE.Mesh(new THREE.BoxGeometry(3.0, 0.045, d - 12), plazaMat);
-  pathZ.position.set(cx, -4.67, cz);
-  parkGroup.add(pathZ);
-  for (let i = 0; i < Math.max(10, Math.floor(w * d / 1500)); i++) {
-    const a = i * 2.39996;
-    const r = Math.sqrt((i + 0.5) / Math.max(10, Math.floor(w * d / 1500)));
-    const tx = cx + Math.cos(a) * r * w * 0.42;
-    const tz = cz + Math.sin(a) * r * d * 0.40;
-    if (Math.abs(tx - cx) < 6 || Math.abs(tz - cz) < 6) continue;
-    createTree(tx, tz, 0.8 + cityRnd(i + Math.floor(cx), 31) * 0.36);
-  }
-  cityLandmarks.push({ type: 'park', x: cx, z: cz, w, d, label });
-}
-
-function createTree(x, z, scale = 1) {
-  const group = new THREE.Group();
-  const trunk = new THREE.Mesh(treeTrunkGeo, treeTrunkMat);
-  trunk.position.y = -5 + 1.9 * scale;
-  trunk.scale.setScalar(scale);
-  const canopy = new THREE.Mesh(treeCanopyGeo, treeCanopyMat);
-  canopy.position.y = -5 + 3.8 * scale;
-  canopy.scale.set(scale, 1.12 * scale, scale);
-  trunk.castShadow = canopy.castShadow = true;
-  group.add(trunk, canopy);
-  group.position.set(x, 0, z);
-  parkGroup.add(group);
-  addCityCollider({ x, y: -3.15, z }, { x: 0.75 * scale, y: 1.85 * scale, z: 0.75 * scale }, 0, 'park-tree');
-}
-
-makePark(-520, -440, 125, 108, 'NORTH HILL PARK');
-makePark(-520, 435, 145, 122, 'SOUTH HILL PARK');
-makePark(365, -355, 128, 112, 'MARINA GARDEN');
-makePark(335, 365, 145, 120, 'BAYFRONT PARK');
-
-// 항구의 불규칙한 해안 절벽·방파제
-const coastCliffMat = new THREE.MeshStandardMaterial({ color: 0x65695f, roughness: 0.98 });
-for (let i = 2; i < CITY_COASTLINE.length - 3; i++) {
-  const [x1, z1] = CITY_COASTLINE[i];
-  const [x2, z2] = CITY_COASTLINE[i + 1];
-  const length = Math.hypot(x2 - x1, z2 - z1);
-  if (length < 110 || i < 5) continue;
-  const cliff = new THREE.Mesh(new THREE.BoxGeometry(length, 5.5, 5), coastCliffMat);
-  cliff.position.set((x1 + x2) * 0.5, -2.35, (z1 + z2) * 0.5);
-  cliff.rotation.y = -Math.atan2(z2 - z1, x2 - x1);
-  cliff.castShadow = true;
-  landmarkGroup.add(cliff);
-}
-
-function insideParkRect(x, z, w = 0, d = 0, pad = 0) {
-  return cityLandmarks.some(l => {
-    if (l.type === 'park') return Math.abs(x - l.x) < l.w * 0.5 + w * 0.5 + pad && Math.abs(z - l.z) < l.d * 0.5 + d * 0.5 + pad;
-    if (l.type === 'no-build') return Math.abs(x - l.x) < l.w * 0.5 + w * 0.5 + pad && Math.abs(z - l.z) < l.d * 0.5 + d * 0.5 + pad;
-    return false;
-  });
-}
-
-function distancePointToSegment(px, pz, x1, z1, x2, z2) {
-  const vx = x2 - x1, vz = z2 - z1, wx = px - x1, wz = pz - z1;
-  const vv = vx * vx + vz * vz || 1;
-  const t = Math.max(0, Math.min(1, (wx * vx + wz * vz) / vv));
-  return Math.hypot(px - (x1 + t * vx), pz - (z1 + t * vz));
-}
-function insideCityRoad(x, z, padding = 0) {
-  for (const road of cityRoads) {
-    if (road.type === 'segment' && distancePointToSegment(x, z, road.x1, road.z1, road.x2, road.z2) < road.width * 0.5 + padding) return true;
-    if (road.type === 'circle' && Math.abs(Math.hypot(x - road.x, z - road.z) - road.radius) < road.width * 0.5 + padding) return true;
-  }
-  return false;
-}
-
-const buildingPalette = [0x52616a, 0x6a655d, 0x41575b, 0x68615a, 0x425363, 0x70736d, 0x526253, 0x77736b, 0x45555b, 0x66575a, 0x657078, 0x59656d];
-function districtForBlock(x, z) {
-  const r = Math.hypot(x, z);
-  if (r < 275) return 'downtown';
-  if (x > 560 && z > -230 && z < 340) return 'waterfront';
-  if (x < -300 && z < -230) return 'industrial';
-  if (r > 535 && x < 100) return 'suburban';
-  if (z > 120 && x < 250) return 'residential';
-  return 'mixed';
-}
-
-function createDistrictBuilding(x, z, w, d, h, idx, district, rotation = 0) {
-  const color = buildingPalette[Math.floor(cityRnd(idx, 21) * buildingPalette.length)];
-  const item = { x, z, w, d, h, district, rotation, color };
-  cityBuildings.push(item);
-  const body = new CANNON.Body({ mass: 0, type: CANNON.Body.STATIC, material: groundMaterial });
-  body.addShape(new CANNON.Box(new CANNON.Vec3(Math.max(2, w * 0.49), Math.max(2, h * 0.5), Math.max(2, d * 0.49))));
-  body.position.set(x, -5 + h * 0.5, z);
-  body.quaternion.setFromEuler(0, rotation, 0);
-  body.collisionFilterGroup = 2;
-  body.collisionFilterMask = 1;
-  body.userData = { kind: 'building', district, index: cityBuildings.length - 1 };
-  world.addBody(body);
-  cityStaticBodies.push(body);
-}
-
-function buildingFootprintsOverlap(a, b, clearance = 2) {
-  const axes = [];
-  for (const item of [a, b]) {
-    const c = Math.cos(item.rotation || 0), s = Math.sin(item.rotation || 0);
-    axes.push([c, -s], [s, c]);
-  }
-  const dx = b.x - a.x, dz = b.z - a.z;
-  for (const [ax, az] of axes) {
-    const ra = Math.abs(ax * Math.cos(a.rotation || 0) - az * Math.sin(a.rotation || 0)) * a.w * 0.5 +
-      Math.abs(ax * Math.sin(a.rotation || 0) + az * Math.cos(a.rotation || 0)) * a.d * 0.5;
-    const rb = Math.abs(ax * Math.cos(b.rotation || 0) - az * Math.sin(b.rotation || 0)) * b.w * 0.5 +
-      Math.abs(ax * Math.sin(b.rotation || 0) + az * Math.cos(b.rotation || 0)) * b.d * 0.5;
-    if (Math.abs(dx * ax + dz * az) >= ra + rb + clearance) return false;
-  }
-  return true;
-}
-
-const towerData = { x: -118, z: -112, w: 42, d: 42 };
-cityLandmarks.push({ type: 'no-build', ...towerData });
-cityLandmarks.push({ type: 'no-build', x: 0, z: -108, w: 150, d: 135 });
-
-// 도심을 육각형 필지로 엇갈리게 채웁니다. 도로·해안·공원 겹침은 생성 단계에서 제외.
-let lotIndex = 0;
-const LOT_STEP_X = 58, LOT_STEP_Z = 60;
-for (let row = 0, z = -810; z <= 780; row++, z += LOT_STEP_Z) {
-    const rowOffset = (row % 2) * LOT_STEP_X * 0.5;
-  for (let col = 0, x = -930 + rowOffset; x <= 760; col++, x += LOT_STEP_X) {
-    const seed = 30000 + row * 701 + col * 37;
-    const px = x + (cityRnd(seed, 1) - 0.5) * 5;
-    const pz = z + (cityRnd(seed, 2) - 0.5) * 5;
-    const radius = Math.hypot(px, pz);
-    if (radius > 735 || !pointInCityLand(px, pz)) continue;
-    const district = districtForBlock(px, pz);
-    const w = (district === 'downtown' ? 34 : 27) + cityRnd(seed, 3) * 16;
-    const d = (district === 'downtown' ? 33 : 28) + cityRnd(seed, 4) * 14;
-    if (!pointInCityLand(px - w * 0.55, pz - d * 0.55) || !pointInCityLand(px + w * 0.55, pz + d * 0.55) ||
-        !pointInCityLand(px - w * 0.55, pz + d * 0.55) || !pointInCityLand(px + w * 0.55, pz - d * 0.55)) continue;
-    if (insideCityRoad(px, pz, Math.hypot(w, d) * 0.42 + 4) || insideParkRect(px, pz, w, d, 5)) continue;
-    if (px > 835 && pz > 15 && pz < 255) continue;
-    const heightRoll = cityRnd(seed, 5);
-    const h = district === 'downtown' ? 58 + heightRoll * 132 :
-      district === 'industrial' ? 18 + heightRoll * 24 :
-      district === 'suburban' ? 15 + heightRoll * 25 :
-      district === 'waterfront' ? 24 + heightRoll * 52 :
-      district === 'residential' ? 22 + heightRoll * 38 : 30 + heightRoll * 61;
-    const angle = Math.atan2(pz, px);
-    const rotation = Math.round(angle / (Math.PI / 4)) * (Math.PI / 4) + (cityRnd(seed, 6) - 0.5) * 0.08;
-    const candidate = { x: px, z: pz, w, d, rotation };
-    if (cityBuildings.some(existing => buildingFootprintsOverlap(candidate, existing, 2))) continue;
-    createDistrictBuilding(px, pz, w, d, h, seed, district, rotation);
-    cityBlocks.push({ x: px, z: pz, w: LOT_STEP_X, d: LOT_STEP_Z, district });
-    lotIndex++;
-    if (lotIndex >= 360) break;
-  }
-  if (lotIndex >= 360) break;
-}
-
-// 상징물은 데이터·미니맵·물리에서 하나의 위치를 공유합니다.
-cityLandmarks.push({ type: 'landmark', x: towerData.x, z: towerData.z, label: 'TIDELINE TOWER' });
-const towerMat = new THREE.MeshStandardMaterial({ color: 0x586b77, roughness: 0.24, metalness: 0.62 });
-const tower = new THREE.Mesh(new THREE.BoxGeometry(towerData.w, 224, towerData.d), towerMat);
-tower.position.set(towerData.x, 107, towerData.z);
-tower.castShadow = true;
-landmarkGroup.add(tower);
-addCityCollider({ x: towerData.x, y: 107, z: towerData.z }, { x: towerData.w * 0.5, y: 112, z: towerData.d * 0.5 }, 0, 'landmark-tower');
-for (let y = 4; y < 215; y += 22) {
-  const band = new THREE.Mesh(new THREE.BoxGeometry(44, 0.55, 44), new THREE.MeshStandardMaterial({ color: 0x8cc6d2, emissive: 0x1a3943, emissiveIntensity: 0.45 }));
-  band.position.set(towerData.x, y, towerData.z);
-  landmarkGroup.add(band);
-}
-
-// Civic square is outside the boulevard carriageway, with a low-profile fountain.
-const civicPlaza = new THREE.Mesh(new THREE.CylinderGeometry(62, 62, 0.18, 48), grassMat);
-civicPlaza.rotation.x = -Math.PI / 2;
-civicPlaza.position.set(0, -4.82, -108);
-parkGroup.add(civicPlaza);
-const civicPath = new THREE.Mesh(new THREE.RingGeometry(27, 29, 40), plazaMat);
-civicPath.rotation.x = -Math.PI / 2;
-civicPath.position.set(0, -4.69, -108);
-parkGroup.add(civicPath);
-const fountain = new THREE.Mesh(new THREE.CylinderGeometry(16, 16, 0.45, 32), new THREE.MeshStandardMaterial({ color: 0x35768a, roughness: 0.2, metalness: 0.1 }));
-fountain.position.set(0, -4.58, -108);
-parkGroup.add(fountain);
-cityLandmarks.push({ type: 'landmark', x: 0, z: -108, label: 'CIVIC PLAZA' });
-
-// Harbor container yard, a lighthouse and a small wheel on the peninsula.
-const containerMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.8, metalness: 0.12 });
-for (let row = 0; row < 3; row++) {
-  for (let col = 0; col < 4; col++) {
-    const x = 914 + col * 27;
-    const z = 112 + row * 28;
-    const w = 21 + cityRnd(row * 17 + col, 91) * 5;
-    const d = 17;
-    const h = 8 + cityRnd(row * 23 + col, 92) * 4;
-    const color = [0x8d5544, 0x586d7d, 0x72745e, 0x9a7146][(row * 4 + col) % 4];
-    cityPortContainers.push({ x, z, w, d, h, color });
-    cityBuildings.push({ x, z, w, d, h, district: 'industrial', rotation: 0, color });
-    addCityCollider({ x, y: -5 + h * 0.5, z }, { x: w * 0.5, y: h * 0.5, z: d * 0.5 }, 0, 'shipping-container');
-  }
-}
-const containerGeo = new THREE.BoxGeometry(1, 1, 1);
-const containerBatch = new THREE.InstancedMesh(containerGeo, containerMat, cityPortContainers.length);
-const containerNode = new THREE.Object3D();
-for (let i = 0; i < cityPortContainers.length; i++) {
-  const c = cityPortContainers[i];
-  containerNode.position.set(c.x, -5 + c.h * 0.5, c.z);
-  containerNode.scale.set(c.w, c.h, c.d);
-  containerNode.updateMatrix();
-  containerBatch.setMatrixAt(i, containerNode.matrix);
-  containerBatch.setColorAt(i, new THREE.Color(c.color));
-}
-containerBatch.castShadow = false;
-containerBatch.receiveShadow = true;
-buildingGroup.add(containerBatch);
-
-const lighthouseMat = new THREE.MeshStandardMaterial({ color: 0xe9e0cb, roughness: 0.78 });
-const lighthouse = new THREE.Mesh(new THREE.CylinderGeometry(5, 9, 48, 12), lighthouseMat);
-lighthouse.position.set(976, 19, 245);
-lighthouse.castShadow = true;
-landmarkGroup.add(lighthouse);
-const lightCap = new THREE.Mesh(new THREE.CylinderGeometry(7, 7, 5, 12), new THREE.MeshStandardMaterial({ color: 0xc87047, roughness: 0.7 }));
-lightCap.position.set(976, 45, 245);
-landmarkGroup.add(lightCap);
-addCityCollider({ x: 976, y: 19, z: 245 }, { x: 8, y: 24, z: 8 }, 0, 'lighthouse');
-cityLandmarks.push({ type: 'landmark', x: 976, z: 245, label: 'HARBOR LIGHT' });
-
-const wheel = new THREE.Mesh(new THREE.TorusGeometry(28, 1.55, 8, 48), railMat);
-wheel.rotation.y = Math.PI / 2;
-wheel.position.set(430, 27, 360);
-landmarkGroup.add(wheel);
-for (let i = 0; i < 10; i++) {
-  const a = i * Math.PI / 5;
-  const spoke = new THREE.Mesh(new THREE.BoxGeometry(54, 0.6, 0.6), railMat);
-  spoke.position.set(430, 27 + Math.sin(a) * 28, 360 + Math.cos(a) * 28);
-  spoke.rotation.y = Math.PI / 2;
-  spoke.rotation.z = -a;
-  landmarkGroup.add(spoke);
-}
-cityLandmarks.push({ type: 'landmark', x: 430, z: 360, label: 'BAY WHEEL' });
-
-// Building and rooftop meshes are grouped into a few instanced batches rather than
-// hundreds of individual draw calls; the collision boxes remain one body per building.
-function buildCityInstances() {
-  const facade = getBuildingTexture(0x52616a, 24, 8);
-  facade.wrapS = facade.wrapT = THREE.RepeatWrapping;
-  const districts = ['downtown', 'mixed', 'residential', 'suburban', 'industrial', 'waterfront'];
-  const boxGeo = new THREE.BoxGeometry(1, 1, 1);
-  const node = new THREE.Object3D();
-  const districtTint = {
-    downtown: 0x9ba9ad, mixed: 0x8d9a9e, residential: 0x8c9b89,
-    suburban: 0x81927f, industrial: 0xa08a70, waterfront: 0x8da6ae
-  };
-  for (const district of districts) {
-    const list = cityBuildings.filter(b => b.district === district && !cityPortContainers.some(c => c.x === b.x && c.z === b.z));
-    if (!list.length) continue;
-    const mat = new THREE.MeshStandardMaterial({ map: facade, color: 0xffffff, roughness: district === 'downtown' ? 0.35 : 0.72, metalness: district === 'downtown' ? 0.22 : 0.08 });
-    const batch = new THREE.InstancedMesh(boxGeo, mat, list.length);
-    const roofs = new THREE.InstancedMesh(boxGeo, roofMat, list.length);
-    for (let i = 0; i < list.length; i++) {
-      const b = list[i];
-      node.position.set(b.x, -5 + b.h * 0.5, b.z);
-      node.rotation.set(0, b.rotation || 0, 0);
-      node.scale.set(b.w, b.h, b.d);
-      node.updateMatrix();
-      batch.setMatrixAt(i, node.matrix);
-      batch.setColorAt(i, new THREE.Color(b.color || districtTint[district]));
-
-      const rw = Math.max(4, b.w * (0.22 + cityRnd(i, 65) * 0.18));
-      const rd = Math.max(4, b.d * (0.22 + cityRnd(i, 66) * 0.18));
-      const rh = Math.min(6, Math.max(2, b.h * 0.055));
-      node.position.set(b.x + (cityRnd(i, 67) - 0.5) * b.w * 0.24, -5 + b.h + rh * 0.5, b.z + (cityRnd(i, 68) - 0.5) * b.d * 0.24);
-      node.rotation.set(0, b.rotation || 0, 0);
-      node.scale.set(rw, rh, rd);
-      node.updateMatrix();
-      roofs.setMatrixAt(i, node.matrix);
-    }
-    batch.instanceMatrix.needsUpdate = true;
-    batch.castShadow = true;
-    batch.receiveShadow = true;
-    roofs.instanceMatrix.needsUpdate = true;
-    roofs.castShadow = false;
-    buildingGroup.add(batch, roofs);
-  }
-}
-
-function addTrafficLight(x, z, rotation = 0) {
-  const poleMat = new THREE.MeshStandardMaterial({ color: 0x30383b, metalness: 0.48, roughness: 0.62 });
-  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.12, 5.3, 7), poleMat);
-  pole.position.set(x, -2.3, z);
-  pole.rotation.y = rotation;
-  landmarkGroup.add(pole);
-  const signal = new THREE.Mesh(new THREE.BoxGeometry(0.42, 1.15, 0.32), new THREE.MeshStandardMaterial({ color: 0x252a2b, roughness: 0.72 }));
-  signal.position.set(x + Math.cos(rotation) * 0.8, -0.15, z + Math.sin(rotation) * 0.8);
-  landmarkGroup.add(signal);
-  addCityCollider({ x, y: -2.3, z }, { x: 0.18, y: 2.65, z: 0.18 }, 0, 'traffic-signal');
-}
-addTrafficLight(-42, 23, Math.PI / 2);
-addTrafficLight(42, -23, -Math.PI / 2);
-addTrafficLight(455, 8, Math.PI / 2);
-
-buildRoadMarkings();
-buildCityInstances();
-
-function createStreetLight(x, z) {
-  const poleMat = new THREE.MeshStandardMaterial({ color: 0x4a4a4a, metalness: 0.8, roughness: 0.3 });
-  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.14, 7.5, 8), poleMat);
-  pole.position.set(x, -1.25, z);
-  pole.castShadow = true;
-  scene.add(pole);
-
-  const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 2.5, 6), poleMat);
-  arm.rotation.z = Math.PI / 2;
-  arm.position.set(x + 1.2, 2.5, z);
-  scene.add(arm);
-
-  // 등갓
-  const headMat = new THREE.MeshStandardMaterial({ color: 0x333333, metalness: 0.6 });
-  const head = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.45, 0.4, 8), headMat);
-  head.position.set(x + 2.2, 2.5, z);
-  scene.add(head);
-
-  // 발광 구체
-  const bulbMat = new THREE.MeshStandardMaterial({
-  color: 0xfff5cc,
-  emissive: 0xfff5cc,
-  emissiveIntensity: 3.0, // 더 밝게
-  roughness: 0.2
-});
-  
-  const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.2, 8, 8), bulbMat);
-  bulb.position.set(x + 2.2, 2.35, z);
-  scene.add(bulb);
-
-
-}
-
-// ─── 건물 주변 소품 ────────────────────────────────────────
-function addStreetProps(x, z, w, d) {
-  const half = (BLOCK_SIZE - ROAD_WIDTH) / 2 - 2;
-  const spots = [
-    [x + half - 2, z + half - 2],
-    [x - half + 2, z + half - 2],
-    [x + half - 2, z - half + 2],
-    [x - half + 2, z - half + 2],
-  ];
-
-  for (const [px, pz] of spots) {
-    const r = rng();
-    if (r < 0.35) {
-      createStreetLight(px, pz);
-    } else if (r < 0.65) {
-      createTree(px, pz);
-    } else {
-      // 쓰레기통
-      const binMat = new THREE.MeshStandardMaterial({ color: 0x336633, roughness: 0.8 });
-      const bin = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.2, 0.8, 8), binMat);
-      bin.position.set(px, -4.6, pz);
-      scene.add(bin);
-    }
-  }
-}  
     // 자동차 차체 물리 (박스)
-    const chassisShape = new CANNON.Box(new CANNON.Vec3(1.5, 0.33, 3));
-    const chassisBody = new CANNON.Body({ mass: 1200 });
-    chassisBody.addShape(chassisShape, new CANNON.Vec3(0, 0.25, -0.3));
-    chassisBody.position.set(-50, -3.0, 0);
+    // 실제 승용차 크기 기준 물리 치수 (기존 3m × 6m 박스는 차선 폭 4m에 비해 너무 컸다)
+    const CAR_PHYS = { halfW: 0.92, halfH: 0.28, halfL: 2.25, bodyY: 0.2, wheelR: 0.36, wheelY: 0.1, rest: 0.2, halfTrack: 0.8, halfBase: 1.4 };
+    // 정지 상태에서 차체 원점 기준 지면 높이 (서스펜션 정적 압축 약 3cm 포함)
+    const CAR_GROUND_REL = CAR_PHYS.wheelY - CAR_PHYS.rest - CAR_PHYS.wheelR + 0.03;
+    const chassisShape = new CANNON.Box(new CANNON.Vec3(CAR_PHYS.halfW, CAR_PHYS.halfH, CAR_PHYS.halfL));
+    const chassisBody = new CANNON.Body({ mass: 1500 }); // 중형 스포츠카 공차중량 수준
+    chassisBody.addShape(chassisShape, new CANNON.Vec3(0, CAR_PHYS.bodyY, 0));
+    chassisBody.position.set(city.spawn.x, -3.0, city.spawn.z);
     chassisBody.angularDamping = 0.32;
-    chassisBody.linearDamping = 0.06;
+    chassisBody.linearDamping = 0.01; // 공기저항은 updateVehicleControls의 airDrag로 따로 계산한다
     chassisBody.collisionFilterGroup = 1;
     chassisBody.collisionFilterMask = 1 | 2;
     world.addBody(chassisBody);
+
+  // 차종별 실제 전장(m). 모델마다 원본 단위가 달라 기존에는 페라리가 11m로 보이는 등
+  // 크기가 제각각이었다. 게임 내 차량은 모두 이 길이로 맞춘다.
+  const CAR_LENGTHS = { SportsCar: 4.53, DodgeDemon: 5.03, SUV: 4.88, McLarenP1: 4.59, PontiacPhoenix: 4.86, GrandeurIG: 4.93 };
+
+  /**
+   * 차량 모델을 실제 크기로 축소하고, 물리 차체 중심에 맞춰 수평 정렬한 뒤
+   * 바닥면이 지면에 닿도록 높이를 맞춘다. 원본 모델은 holder 안에 넣어 물리 회전은
+   * holder가 받고, 모델 고유의 크기/위치 보정은 유지된다.
+   */
+  function fitCarModel(model, modelName) {
+    const ud = model.userData;
+    model.position.set(0, 0, 0);
+    model.quaternion.identity(); // 기존에도 매 프레임 물리 회전으로 덮어써져 원본 회전은 쓰이지 않았다
+    model.updateMatrixWorld(true);
+    let box = new THREE.Box3().setFromObject(model);
+    const len = box.max.z - box.min.z;
+    const k = len > 0.01 ? (CAR_LENGTHS[modelName] || 4.7) / len : 1;
+    model.scale.multiplyScalar(k);
+    model.updateMatrixWorld(true);
+    box = new THREE.Box3().setFromObject(model);
+    const c = box.getCenter(new THREE.Vector3());
+    model.position.set(-c.x, CAR_GROUND_REL - box.min.y, -c.z);
+    const holder = new THREE.Group();
+    holder.name = `${modelName}Holder`;
+    holder.add(model);
+    holder.userData = { ...ud, modelName, visualOffsetY: 0, fit: { k, offset: model.position.clone() } };
+    return holder;
+  }
   
   let carModel; // 선언만
   let carVisualOffsetY = 0;
@@ -2187,7 +1522,7 @@ group.add(tailBar);
 
 function createSportsCar(color = '#ffffff') {
   return new Promise((resolve) => {
-    gltfLoader.load(
+    loadModel(
       'https://threejs.org/examples/models/gltf/ferrari.glb',
       (gltf) => {
         const car = gltf.scene;
@@ -2268,8 +1603,8 @@ function createSportsCar(color = '#ffffff') {
 
 function createSUVCar(color = '#ffffff') {
   return new Promise((resolve) => {
-    gltfLoader.load(
-      'https://raw.githubusercontent.com/austin-mino/multi-driving/main/Range%20Rover%20Sports%202018%20(.GLB).glb',
+    loadModel(
+      '/models/range_rover/range_rover_sport_2018.glb',
       (gltf) => {
         const innerCar = gltf.scene;
         
@@ -2332,7 +1667,7 @@ function createSUVCar(color = '#ffffff') {
         wrapper.userData.wheelNodes = carWheelNodes;
         wrapper.userData.modelName = 'SUV';
         wrapper.userData.visualOffsetY = -0.8;
-        wrapper.userData.steeringNode = steeringWheelNode;
+        wrapper.userData.steeringNode = null; // 레인지로버 모델에는 핸들 피벗이 없다
                           
         resolve(wrapper);
       },
@@ -2348,10 +1683,8 @@ function createSUVCar(color = '#ffffff') {
 async function createMcLarenP1(color = '#ffffff') {
     return new Promise((resolve) => {
 
-        const loader = new GLTFLoader();
-
-        loader.load(
-            'https://raw.githubusercontent.com/austin-mino/multi-driving/refs/heads/main/models/mclaren/scene.gltf',
+        loadModel(
+            '/models/mclaren/scene.gltf',
 
             (gltf) => {
                 const car = gltf.scene;
@@ -2509,8 +1842,8 @@ for (let i = 0; i < 4; i++) {
                 carGroup.userData.wheelNodes = carWheelNodes;
                 carGroup.userData.modelName = 'McLarenP1'; 
                 carGroup.userData.visualOffsetY = 0.76;
-                carGroup.userData.steeringNode = steeringWheelNode;
-              
+                carGroup.userData.steeringNode = null; // 맥라렌 모델에는 핸들 피벗이 없다
+
                 resolve(carGroup); // carGroup 반환
             },
 
@@ -2528,10 +1861,8 @@ for (let i = 0; i < 4; i++) {
 /* 폰티악(Pontiac Phoenix) 생성 함수 */
 async function createPontiacPhoenix(color = '#ffffff') {
   return new Promise((resolve) => {
-    const loader = new GLTFLoader();
-    
-    loader.load(
-      'https://raw.githubusercontent.com/austin-mino/multi-driving/main/models/Pontiac%20Firebird/uploads_files_6012214_American+Muscle.glb', 
+    loadModel(
+      '/models/Pontiac%20Firebird/uploads_files_6012214_American+Muscle.glb', 
       (gltf) => {
         const car = gltf.scene;
          steeringWheelNode = null; // 헨들 조정 초기화
@@ -2630,7 +1961,7 @@ node.quaternion.multiply(rotation90);
   // 분리해야 한다. Z축으로 나누면 바퀴의 상·하단이 갈라져 독립 회전할 수 없다.
   const DODGE_WHEEL_NAMES = ['Wheel_FL', 'Wheel_FR', 'Wheel_RL', 'Wheel_RR'];
   // 이 HTML과 같은 경로에 전달된 수정 GLB를 둔다.
-  const DODGE_GLB_URL = './models/dodge_demon/dodge_challenger_srt_demon_split_wheels.glb.glb';
+  const DODGE_GLB_URL = '/models/dodge_demon/dodge_challenger_srt_demon_split_wheels.glb.glb';
 
   // Dodge 전용 표시 보정값. 전장은 기존 8.0에서 약 31% 키워 다른 차량과의
   // 현재 GLB는 차량이 이미 Y축을 위쪽으로 사용하므로 X축 보정은 적용하지 않는다.
@@ -2714,9 +2045,7 @@ node.quaternion.multiply(rotation90);
   }
 async function createDodgeDemon(color = '#ffffff') {
     return new Promise((resolve) => {
-      const loader = new GLTFLoader();
-
-      loader.load(
+      loadModel(
         DODGE_GLB_URL,
         (gltf) => {
           const car = gltf.scene;
@@ -2985,25 +2314,31 @@ async function createDodgeDemon(color = '#ffffff') {
 
     // 휠 옵션 - 디자인 및 물리 조정
     const wheelOptions = {
-      radius: 0.65,
+      radius: CAR_PHYS.wheelR,
       collisionFilterGroup: 1,
       collisionFilterMask: -1,
       directionLocal: new CANNON.Vec3(0, -1, 0),
       suspensionStiffness: 80,
-      suspensionRestLength: 0.2,
+      suspensionRestLength: CAR_PHYS.rest,
       frictionSlip: 5.5,
       dampingRelaxation: 3.5,
       dampingCompression: 5.5,
       maxSuspensionForce: 1e4,
       rollInfluence: 0.15,
       axleLocal: new CANNON.Vec3(1, 0, 0),
-      maxSuspensionTravel: 0.45,
+      maxSuspensionTravel: 0.3,
       useCustomSlidingRotationalSpeed: true,
       customSlidingRotationalSpeed: -30,
     };
 
     // 휠 위치 및 앞바퀴 여부 설정
-    [[-1.2, 0.2, 2.4, true], [1.2, 0.2, 2.4, true], [-1.2, 0.2, -2.4, false], [1.2, 0.2, -2.4, false]].forEach(
+    // 차량은 -z 방향으로 전진한다. 기존에는 +z(뒤쪽) 바퀴가 조향되는 후륜조향 구조여서
+    // 고속에서 차가 쉽게 돌아버렸다. 조향 바퀴(0,1)를 앞쪽(-z)으로, 구동·사이드브레이크
+    // 바퀴(2,3)를 뒤쪽으로 옮겨 일반적인 FR(앞 조향 + 후륜 구동) 차량으로 만든다.
+    // 인덱스 순서 [FL, FR, RL, RR]는 그대로라 모델별 바퀴 노드 매핑은 바뀌지 않는다.
+    {
+      const { halfTrack: t, halfBase: b, wheelY: y } = CAR_PHYS;
+      [[-t, y, -b, true], [t, y, -b, true], [-t, y, b, false], [t, y, b, false]].forEach(
       ([x, y, z, isFront]) => {
         vehicle.addWheel({
           ...wheelOptions,
@@ -3012,6 +2347,7 @@ async function createDodgeDemon(color = '#ffffff') {
         });
       }
     );
+    }
 
     vehicle.addToWorld(world);
 
@@ -3078,6 +2414,7 @@ btnToggleCam.addEventListener('click', () => {
 
     // 키보드 입력 처리
     window.addEventListener('keydown', e => {
+      if (isTypingTarget(e)) return;
       const key = (e.key ||'').toLowerCase();
       switch(key) {
         case ' ':
@@ -3098,6 +2435,7 @@ btnToggleCam.addEventListener('click', () => {
     });
 
     window.addEventListener('keyup', e => {
+      if (isTypingTarget(e)) return;
       const key = (e.key||'').toLowerCase();
       switch(key) {
         case ' ':
@@ -3119,6 +2457,7 @@ btnToggleCam.addEventListener('click', () => {
     let lastKeyPressed = '';
 
     window.addEventListener('keydown', (e) => {
+      if (isTypingTarget(e)) return;
       const key = e.key;
       if (lastKeyPressed === '1' && key === '6') {
         adminPanel.style.display = adminPanel.style.display === 'block' ? 'none' : 'block';
@@ -3145,11 +2484,13 @@ btnToggleCam.addEventListener('click', () => {
     updateAdminSetting('inputSusp', 'valSusp', (v) => {
       if (typeof vehicle !== 'undefined') vehicle.wheelInfos.forEach(w => w.suspensionStiffness = v);
     });
-    updateAdminSetting('inputFriction', 'valFriction', (v) => {
-      if (typeof vehicle !== 'undefined') vehicle.wheelInfos.forEach(w => w.frictionSlip = v);
-    });
+    let adminGrip = null; // 관리자 패널에서 지정하면 차종별 grip 대신 사용
+    updateAdminSetting('inputFriction', 'valFriction', (v) => { adminGrip = v; });
     updateAdminSetting('inputMass', 'valMass', (v) => {
-      if (typeof chassisBody !== 'undefined') chassisBody.mass = v;
+      if (typeof chassisBody !== 'undefined') {
+        chassisBody.mass = v;
+        chassisBody.updateMassProperties();
+      }
     });
   
 let airDrag = 0.003; // 공기 저항 변수 선언
@@ -3161,12 +2502,12 @@ const btnResetAdmin = document.getElementById('btnResetAdmin');
 btnResetAdmin.addEventListener('click', () => {
   // 1. 기본값 정의
   const defaults = {
-    inputEngine: 6000,
-    inputBrake: 400,
-    inputSteer: 11.25, // (45도 기준 11.25도)
+    inputEngine: 3200,
+    inputBrake: 95,
+    inputSteer: 32,
     inputSusp: 80,
     inputFriction: 5.5,
-    inputMass: 1200,
+    inputMass: 1500,
     inputDrag: 0.003
   };
 
@@ -3176,9 +2517,7 @@ btnResetAdmin.addEventListener('click', () => {
     input.value = value;
     input.dispatchEvent(new Event('input')); // input 이벤트를 강제로 발생시켜 물리 변수도 업데이트
   }
-  
-  alert('모든 설정이 초기화되었습니다.');
-});
+  });
 
     // 모바일 버튼 바인딩 함수
     function bindButton(button, prop) {
@@ -3202,12 +2541,15 @@ btnResetAdmin.addEventListener('click', () => {
     }
 
     // 기어 상태와 UI 업데이트 함수
-    let maxEngineForce = 6000;
-    let maxBrakeForce = 400;
-    let maxSteerVal = Math.PI / 16;
+    let maxEngineForce = 3200; // 1500kg 기준 페라리 0→100km/h 약 8초
+    let maxBrakeForce = 95; // 스텝당 최대 제동 충격량 (100→0km/h 약 24m)
+    let maxSteerVal = (35 * Math.PI) / 180; // 저속 최대 조향각. 고속에서는 자동으로 줄어든다.
     let engineForce = 0;
     let steeringValue = 0;
     let visualSteeringLag = 0; // 핸들 시각 전용
+    const STEERING_WHEEL_RATIO = 5; // 바퀴 조향각 대비 핸들 회전 배율
+    let steerGripAccel = 32; // 조향 한계를 정하는 목표 횡가속도(m/s²)
+    let rearGripBias = 1.5;  // 뒷바퀴 접지력 배율 (고속 안정성)
 
     function updateGearDisplay() {
       gearDisplay.textContent = `${gearState}`;
@@ -3240,7 +2582,7 @@ btnResetAdmin.addEventListener('click', () => {
     // 핸드브레이크 중이면 조향 억제 없음
     const steerFactor = input.handbrake
       ? 1.0
-      : Math.max(0.4, 1.0 - Math.abs(steeringValue) * 4.0);
+      : Math.max(0.4, 1.0 - Math.abs(steeringValue) * 1.5);
 
     // 저단(1.8)일수록 RPM 빠르게, 고단(1.0)일수록 느리게
 // 변경 - 4500 이하는 빠르게, 4500 이상은 천천히
@@ -3255,7 +2597,7 @@ rpm += rpmRiseSpeed * delta * steerFactor * gearRatios[currentGear] * rpmFactor;
   // 속도 기반 RPM 아주 약하게 혼합
   // 커브 시 속도 떨어지면 RPM도 살짝 내려옴
   // 고단에서 RPM 끌어올리는 부작용 최소화 (0.02)
-  const wheelRadius = 0.65;
+  const wheelRadius = CAR_PHYS.wheelR;
   const wheelCircumference = 2 * Math.PI * wheelRadius;
   const wheelRPM = (speed / 3.6) / wheelCircumference * 60;
   const speedBasedRPM = wheelRPM * gearRatios[currentGear] * finalDrive;
@@ -3290,16 +2632,25 @@ function updateGearAuto(delta) {
     shiftTimer = shiftDelay * 0.5;
   }
 }
+    // 사이드브레이크를 당긴 순간을 감지하기 위한 상태 (프레임 간 유지되어야 함)
+    let handbrakeActive = false;
+
     // 차량 조향, 가속, 브레이크 처리
 function updateVehicleControls(delta) {
 
  const speed = getSpeedKmH();
  const performance = getVehiclePerformance();
 
-  // 조향: 차량별 반응 속도와 최대 조향각 적용
-  const steerSpeed = 0.004 * performance.steeringResponse;
-  const returnSpeed = 0.016 * performance.steeringResponse;
-  const vehicleMaxSteerVal = maxSteerVal * performance.maxSteering;
+  // 조향: 차량별 반응 속도와 최대 조향각 적용.
+  // 실제 차처럼 속도가 오를수록 최대 조향각을 줄인다. 선회 반경 R = L / tan(δ)에서
+  // 횡가속도 v²/R 이 약 1.1g를 넘지 않도록 δ ≤ atan(a·L / v²)로 제한해
+  // 저속(교차로)에서는 크게, 고속에서는 안정적으로 꺾인다.
+  const steerSpeed = 0.018 * performance.steeringResponse;
+  const returnSpeed = 0.03 * performance.steeringResponse;
+  const v = speed / 3.6;
+  // 횡가속 한계를 약 2.2g로 두어 고속에서도 충분히 선회되게 한다(아케이드 감각).
+  const gripSteerLimit = Math.atan((steerGripAccel * CAR_PHYS.halfBase * 2) / Math.max(v * v, 1));
+  const vehicleMaxSteerVal = Math.min(maxSteerVal, gripSteerLimit) * performance.maxSteering;
 
   if (input.left) {
     steeringValue = Math.max(steeringValue - steerSpeed, -vehicleMaxSteerVal);
@@ -3312,9 +2663,12 @@ function updateVehicleControls(delta) {
   else if (steeringValue < 0)
     steeringValue = Math.min(steeringValue + returnSpeed, 0);
 }
+  steeringValue = Math.max(-vehicleMaxSteerVal, Math.min(vehicleMaxSteerVal, steeringValue));
 
-  vehicle.setSteeringValue(steeringValue, 0);
-  vehicle.setSteeringValue(steeringValue, 1);
+  // 앞바퀴 조향: 전륜 조향은 같은 선회 방향을 위해 후륜 조향과 부호가 반대다.
+  // steeringValue(음수 = 좌회전)의 의미는 그대로 유지한다.
+  vehicle.setSteeringValue(-steeringValue, 0);
+  vehicle.setSteeringValue(-steeringValue, 1);
   vehicle.setSteeringValue(0, 2);
   vehicle.setSteeringValue(0, 3);
 
@@ -3338,9 +2692,10 @@ engineForce = 0;
       torqueCurve = 1.0 - (rpmFactor - 0.75) * 1.2;
     }
 
-const gearRatio = gearRatios[currentGear] * finalDrive;
-const torque = maxEngineForce * performance.engineForce * torqueCurve / gearRatios[currentGear];
-engineForce = Math.min(torque, maxEngineForce * performance.engineForce * 0.9);
+// 바퀴 구동력 = 엔진 토크 × 기어비. 저단일수록 힘이 세고 고단으로 갈수록 약해진다.
+// (기존 코드는 기어비로 나눠서 1단이 가장 약하고 6단이 가장 강한 역전 구조였다)
+const gearMultiplier = gearRatios[currentGear] / gearRatios[1];
+engineForce = maxEngineForce * performance.engineForce * torqueCurve * gearMultiplier;
 
 const drag = airDrag * performance.drag * speed * speed;
 
@@ -3366,20 +2721,22 @@ else if (gearState === 'R') {
 }
 
 
+// 트랙션 컨트롤: 구동 바퀴(뒤)가 미끄러지면 구동력을 줄여, 액셀을 밟은 채 꺾을 때
+// 뒤가 돌아 스핀하는 것을 막는다. 사이드브레이크 드리프트 중에는 끈다.
+if (!input.handbrake && (vehicle.wheelInfos[2].sliding || vehicle.wheelInfos[3].sliding)) engineForce *= 0.25;
+
 // 마지막 (이건 항상 맨 끝)
 vehicle.applyEngineForce(engineForce, 2);
 vehicle.applyEngineForce(engineForce, 3);
     
   
    // 사이드 브레이크 드리프트
-let handbrakeActive = false;
-
 if (input.handbrake) {
   const speed = chassisBody.velocity.length();
 
-  // 방향 + 초기 킥
+  // 방향 + 초기 킥 (당긴 순간 한 번만)
   if (!handbrakeActive) {
-    chassisBody.angularVelocity.y -= steeringValue * speed * 0.11;
+    chassisBody.angularVelocity.y -= steeringValue * speed * 0.05;
     handbrakeActive = true;
   }
 
@@ -3391,19 +2748,27 @@ if (input.handbrake) {
   vehicle.wheelInfos[3].frictionSlip = 0.25;
 
   // 회전 유지 (약하게)
-  chassisBody.angularVelocity.y -= steeringValue * speed * 0.008;
+  chassisBody.angularVelocity.y -= steeringValue * speed * 0.004;
 
   // 회전 제한
   chassisBody.angularVelocity.y *= 0.88;
 
 } else {
   handbrakeActive = false;
+  // 뒷바퀴 브레이크는 위의 applyBrake()가 이미 설정했다. 여기서 0으로 덮어쓰면
+  // 브레이크 페달과 P 기어가 앞바퀴에만 걸리게 된다.
+  const grip = adminGrip ?? performance.grip;
+  // 뒷바퀴 접지력을 조금 높여 고속 선회 중 뒤가 먼저 미끄러져 스핀하는 것을 막는다.
+  for (let i = 0; i < 4; i++) vehicle.wheelInfos[i].frictionSlip = i < 2 ? grip : grip * rearGripBias;
 
-  vehicle.setBrake(0, 2);
-  vehicle.setBrake(0, 3);
-
-  vehicle.wheelInfos[2].frictionSlip = performance.grip;
-  vehicle.wheelInfos[3].frictionSlip = performance.grip;
+  // 차체 자세 제어(ESC): 현재 속도에서 허용 횡가속도로 낼 수 있는 회전 속도(ω = a / v)보다
+  // 빠르게 돌면 요 회전을 잘라 스핀을 막는다. 사이드브레이크 드리프트 중에는 동작하지 않는다.
+  const vNow = chassisBody.velocity.length();
+  if (vNow > 8) {
+    const yawMax = (steerGripAccel * 1.1) / vNow;
+    const w = chassisBody.angularVelocity.y;
+    if (Math.abs(w) > yawMax) chassisBody.angularVelocity.y = Math.sign(w) * (yawMax + (Math.abs(w) - yawMax) * 0.5);
+  }
 }
  }
  
@@ -3413,18 +2778,18 @@ if (input.handbrake) {
   const carPos = interpolatedCarPosition.clone();
   
   // 1. 기본 오프셋 설정 (차량 뒤쪽 위)
-  const offset = new THREE.Vector3(0, 6, 14);
+  const offset = new THREE.Vector3(0, 2.9, 7.4);
   
   // 2. 조향에 따른 카메라 쏠림 효과 (원심력 표현)
   // steeringValue가 왼쪽(-)이면 카메라는 오른쪽(+)으로 살짝 이동
-  const steeringLean = -steeringValue * 5; 
+  const steeringLean = -steeringValue * 1.2;  
   offset.x += steeringLean;
   
   // 3. 속도에 따른 거리 조절 (속도가 빠르면 카메라가 더 멀어짐)
   const speed = getSpeedKmH();
   const speedFactor = Math.min(speed / 200, 1);
-  offset.z += speedFactor * 4;
-  offset.y += speedFactor * 1.5;
+  offset.z += speedFactor * 2.5;
+  offset.y += speedFactor * 0.8;
 
   offset.applyQuaternion(interpolatedCarQuaternion);
   const targetPos = carPos.clone().add(offset);
@@ -3433,7 +2798,7 @@ if (input.handbrake) {
   camera.position.lerp(targetPos, 0.15);
   
   // 5. 시선 보간 (차량의 약간 앞쪽을 바라보게 하여 더 역동적으로)
-  const lookAtOffset = new THREE.Vector3(0, 1, -5);
+  const lookAtOffset = new THREE.Vector3(0, 0.6, -4);
   lookAtOffset.applyQuaternion(interpolatedCarQuaternion);
   const lookAtTarget = carPos.clone().add(lookAtOffset);
   
@@ -3461,6 +2826,11 @@ if (input.handbrake) {
   } else {
     offset = new THREE.Vector3(-0.85, 2.5, -0.4); // 그랜저 기본
   }
+  // 위 값은 원래(확대된) 모델 기준으로 맞춘 좌석 위치다. fitCarModel()이 적용한
+  // 축소 비율과 위치 보정을 똑같이 적용해 실제 크기 차량의 좌석으로 옮긴다.
+  const fit = carModel.userData.fit;
+  if (fit) offset.multiplyScalar(fit.k).add(fit.offset);
+
 
 
   // 1인칭 흔들림 효과 (G-Force 표현)
@@ -3468,7 +2838,7 @@ if (input.handbrake) {
   const speedFactor = speed / 100;
   const shake = Math.sin(Date.now() * 0.01) * 0.0021618 * speedFactor;
   offset.y += shake;
-  offset.x += -steeringValue * 0.5; // 조향 시 몸이 쏠리는 효과
+  offset.x += -steeringValue * 0.12; // 조향 시 몸이 쏠리는 효과
 
   offset.applyQuaternion(interpolatedCarQuaternion);
   camera.position.copy(interpolatedCarPosition).add(offset);
@@ -3476,7 +2846,7 @@ if (input.handbrake) {
   const forward = new THREE.Vector3(0, 0, -1);
   // 시선도 조향 방향으로 살짝 미리 보게 함
   const lookRotation = interpolatedCarQuaternion.clone();
-  const steeringQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), -steeringValue * 0.3);
+  const steeringQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), -steeringValue * 0.08);
   lookRotation.multiply(steeringQuat);
   
   forward.applyQuaternion(lookRotation);
@@ -3504,277 +2874,164 @@ if (input.handbrake) {
 const fixedTimeStep = 1 / 60; // 60fps
 let lastCallTime = performance.now();
 let accumulator = 0;
+let frameDelta = 1 / 60;
+let hudSpeed = 0, hudLastPos = null; // HUD 표시용 속도 (실제 이동 거리 기반)   // 이번 프레임의 실제 경과 시간(초)
+let simTime = 0;           // 신호 주기·교통용 게임 시간
+let traffic = null;        // AI 교통 (게임 시작 시 생성)
+const trafficObstacles = []; // AI가 피해야 할 플레이어 차량 위치
+const SHOWROOM_BG = new THREE.Color(0x1d2736);
+
+// ─── 미니맵 ───────────────────────────────────────────────────
+// 도시 전체를 1px = 1m 오프스크린 캔버스에 한 번 그려 두고, 매 프레임 진행 방향이 위로
+// 오도록 회전시켜 원형으로 잘라 그린다.
+const minimapEl = document.getElementById('minimap');
+const minimapCtx = minimapEl.getContext('2d');
+const MINIMAP_RANGE = 170; // 미니맵 반경(m)
+const minimapStatic = (() => {
+  const E = city.bounds;
+  const c = document.createElement('canvas');
+  c.width = c.height = Math.ceil(E * 2);
+  const g = c.getContext('2d');
+  g.fillStyle = '#3f5a36'; g.fillRect(0, 0, c.width, c.height);
+  g.fillStyle = '#2b3036'; g.fillRect(0, 0, E * 2, E * 2);
+  const kindColor = { downtown: '#6b7483', midtown: '#7d7a76', residential: '#8a8f7a', park: '#4f8a3c', pocketpark: '#5a9446', plaza: '#b3aa98', parking: '#555a61' };
+  for (const b of city.blocks) {
+    g.fillStyle = kindColor[b.kind] || '#777';
+    g.fillRect(b.x0 + E, b.z0 + E, b.x1 - b.x0, b.z1 - b.z0);
+  }
+  g.fillStyle = 'rgba(255,255,255,0.25)';
+  for (const s of city.segments) {
+    const w = s.def.median > 1 ? 1.5 : 0.8;
+    if (s.axis === 'z') g.fillRect(s.p - w / 2 + E, s.s0 + E, w, s.len);
+    else g.fillRect(s.s0 + E, s.p - w / 2 + E, s.len, w);
+  }
+  return c;
+})();
+const minimapFwd = new THREE.Vector3();
+function updateMinimap() {
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const size = minimapEl.clientWidth;
+  if (minimapEl.width !== size * dpr) { minimapEl.width = minimapEl.height = size * dpr; }
+  const g = minimapCtx, S = minimapEl.width, k = (S / 2) / MINIMAP_RANGE, E = city.bounds;
+  const px = interpolatedCarPosition.x, pz = interpolatedCarPosition.z;
+  minimapFwd.set(0, 0, -1).applyQuaternion(interpolatedCarQuaternion);
+  const theta = -Math.atan2(minimapFwd.x, -minimapFwd.z);
+  g.save();
+  g.clearRect(0, 0, S, S);
+  g.beginPath(); g.arc(S / 2, S / 2, S / 2, 0, Math.PI * 2); g.clip();
+  g.fillStyle = '#3f5a36'; g.fillRect(0, 0, S, S);
+  g.translate(S / 2, S / 2);
+  g.rotate(theta);
+  g.scale(k, k);
+  g.drawImage(minimapStatic, -(px + E), -(pz + E));
+  // AI 차량
+  if (traffic) {
+    g.fillStyle = 'rgba(255,255,255,0.75)';
+    for (const c of traffic.cars) {
+      const dx = c.pos.x - px, dz = c.pos.z - pz;
+      if (Math.abs(dx) < MINIMAP_RANGE * 1.5 && Math.abs(dz) < MINIMAP_RANGE * 1.5) g.fillRect(dx - 1.6, dz - 1.6, 3.2, 3.2);
+    }
+  }
+  // 다른 플레이어
+  g.fillStyle = '#f59f00';
+  for (const p of Object.values(otherPlayers)) {
+    if (!p.model) continue;
+    g.beginPath(); g.arc(p.model.position.x - px, p.model.position.z - pz, 5, 0, Math.PI * 2); g.fill();
+  }
+  g.restore();
+  // 내 차량 (항상 중앙, 위쪽을 향함)
+  g.fillStyle = '#3b82f6'; g.strokeStyle = '#fff'; g.lineWidth = 2 * dpr;
+  g.beginPath();
+  g.moveTo(S / 2, S / 2 - 9 * dpr); g.lineTo(S / 2 + 6 * dpr, S / 2 + 7 * dpr); g.lineTo(S / 2, S / 2 + 3 * dpr); g.lineTo(S / 2 - 6 * dpr, S / 2 + 7 * dpr);
+  g.closePath(); g.fill(); g.stroke();
+}
 
 // ----------------- 멀티플레이 관련 추가 코드 -----------------
 
 let playerId = null; 
-  let remotePlayers = {};  
-
-  // ================= LIVE CITY MAP =================
-  // 도시 렌더링과 동일한 world 좌표를 사용하고, 게임 프레임과 함께 움직입니다.
-  const minimapCanvas = document.getElementById('minimapCanvas');
-  const minimapCtx = minimapCanvas.getContext('2d');
-  const MINI_SIZE = minimapCanvas.width;
-  const MINI_WORLD_SIZE = CITY_MAP_EXTENT;
-  let lastMinimapRender = 0;
-  let latestPlayersSnapshot = {};
-
-  function getBodyYRotation(body) {
-    return body?.quaternion ? getYRotation(body.quaternion) : 0;
-  }
-
-  function miniMapPoint(x, z) {
-    const scale = MINI_SIZE / MINI_WORLD_SIZE;
-    return { x: (x + MINI_WORLD_SIZE * 0.5) * scale, y: (z + MINI_WORLD_SIZE * 0.5) * scale };
-  }
-
-  function clampMiniPoint(point) {
-    return { x: Math.max(5, Math.min(MINI_SIZE - 5, point.x)), y: Math.max(5, Math.min(MINI_SIZE - 5, point.y)) };
-  }
-
-  function drawMiniCar(x, z, heading, fill, radius, outline = null) {
-    const p = clampMiniPoint(miniMapPoint(x, z));
-    const r = radius;
-    minimapCtx.save();
-    minimapCtx.translate(p.x, p.y);
-    // 실제 차량 모델의 코·헤드라이트는 -Z를 향합니다. 지도에서는 -Z가 위쪽이므로
-    // 삼각형의 끝을 위로 두고 쿼터니언 yaw와 같은 부호로 회전해야 전진 방향과 일치합니다.
-    minimapCtx.rotate(-heading);
-    minimapCtx.beginPath();
-    minimapCtx.moveTo(0, -r * 1.55);
-    minimapCtx.lineTo(r * 0.72, r * 0.82);
-    minimapCtx.lineTo(0, r * 0.52);
-    minimapCtx.lineTo(-r * 0.72, r * 0.82);
-    minimapCtx.closePath();
-    minimapCtx.fillStyle = fill;
-    minimapCtx.shadowColor = fill;
-    minimapCtx.shadowBlur = r * 1.5;
-    minimapCtx.fill();
-    if (outline) {
-      minimapCtx.shadowBlur = 0;
-      minimapCtx.lineWidth = 2;
-      minimapCtx.strokeStyle = outline;
-      minimapCtx.stroke();
-    }
-    minimapCtx.restore();
-  }
-
-  function hashPlayerColor(id) {
-    let h = 0;
-    const str = String(id);
-    for (let i = 0; i < str.length; i++) h = ((h << 5) - h + str.charCodeAt(i)) | 0;
-    return `hsl(${Math.abs(h) % 360} 82% 62%)`;
-  }
-
-  function renderMinimap() {
-    const ctx = minimapCtx;
-    ctx.clearRect(0, 0, MINI_SIZE, MINI_SIZE);
-    ctx.fillStyle = '#102a39';
-    ctx.fillRect(0, 0, MINI_SIZE, MINI_SIZE);
-
-    // 지형도는 3D 지형과 공유하는 해안 다각형에서 직접 그립니다.
-    ctx.beginPath();
-    CITY_COASTLINE.forEach(([x, z], i) => {
-      const p = miniMapPoint(x, z);
-      if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
-    });
-    ctx.closePath();
-    ctx.fillStyle = '#34413a';
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(180,202,184,0.62)';
-    ctx.lineWidth = 1.4;
-    ctx.stroke();
-
-    // 공원 녹지
-    for (const landmark of cityLandmarks) {
-      if (landmark.type !== 'park') continue;
-      const a = miniMapPoint(landmark.x - landmark.w * 0.5, landmark.z - landmark.d * 0.5);
-      const b = miniMapPoint(landmark.x + landmark.w * 0.5, landmark.z + landmark.d * 0.5);
-      ctx.fillStyle = '#286043';
-      ctx.fillRect(a.x, a.y, b.x - a.x, b.y - a.y);
-      ctx.strokeStyle = 'rgba(147,220,162,0.4)';
-      ctx.lineWidth = 1;
-      ctx.strokeRect(a.x, a.y, b.x - a.x, b.y - a.y);
-    }
-
-    // 도시 도로망(원형 도로·사선 대로·항만 교량)
-    for (const road of cityRoads) {
-      ctx.save();
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
-      ctx.strokeStyle = road.bridge ? '#b3c4c5' : (road.width >= 30 ? '#788286' : '#4c5858');
-      ctx.lineWidth = Math.max(1.4, road.width / MINI_WORLD_SIZE * MINI_SIZE);
-      ctx.beginPath();
-      if (road.type === 'segment') {
-        const a = miniMapPoint(road.x1, road.z1);
-        const b = miniMapPoint(road.x2, road.z2);
-        ctx.moveTo(a.x, a.y);
-        ctx.lineTo(b.x, b.y);
-      } else if (road.type === 'circle') {
-        const c = miniMapPoint(road.x, road.z);
-        ctx.arc(c.x, c.y, road.radius / MINI_WORLD_SIZE * MINI_SIZE, 0, Math.PI * 2);
-      }
-      ctx.stroke();
-      if (road.divided && road.type === 'segment') {
-        const a = miniMapPoint(road.x1, road.z1), b = miniMapPoint(road.x2, road.z2);
-        ctx.setLineDash([4, 4]);
-        ctx.lineWidth = 1;
-        ctx.strokeStyle = 'rgba(247,216,115,0.94)';
-        ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
-      }
-      ctx.restore();
-    }
-
-    const districtColors = {
-      downtown: 'rgba(188,205,210,0.76)', mixed: 'rgba(164,179,179,0.72)',
-      residential: 'rgba(174,192,169,0.73)', suburban: 'rgba(141,170,143,0.74)',
-      industrial: 'rgba(191,150,111,0.76)', waterfront: 'rgba(143,183,194,0.76)'
-    };
-    // 회전된 건물 footprint도 3D 배치와 같은 각도로 표시합니다.
-    const mapScale = MINI_SIZE / MINI_WORLD_SIZE;
-    for (const building of cityBuildings) {
-      const p = miniMapPoint(building.x, building.z);
-      ctx.save();
-      ctx.translate(p.x, p.y);
-      ctx.rotate(-(building.rotation || 0));
-      ctx.fillStyle = districtColors[building.district] || districtColors.mixed;
-      ctx.fillRect(-building.w * mapScale * 0.5, -building.d * mapScale * 0.5, building.w * mapScale, building.d * mapScale);
-      ctx.restore();
-    }
-
-    // 랜드마크
-    for (const landmark of cityLandmarks) {
-      if (landmark.type !== 'landmark') continue;
-      const p = clampMiniPoint(miniMapPoint(landmark.x, landmark.z));
-      const isTower = landmark.label === 'TIDELINE TOWER';
-      ctx.fillStyle = isTower ? '#ffd77b' : '#f0f3df';
-      ctx.strokeStyle = 'rgba(12,20,24,0.9)';
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, isTower ? 4.2 : 3, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
-    }
-
-    // 원격 차량은 보간 중인 모델 transform, 로컬 차량은 화면의 실제 transform 사용
-    for (const [id, pData] of Object.entries(remotePlayers)) {
-      if (!pData || pData.loading) continue;
-      const model = pData.model;
-      const pos = model?.position || pData.targetPosition;
-      const quat = model?.quaternion || pData.targetQuaternion;
-      if (!pos || !quat) continue;
-      drawMiniCar(pos.x, pos.z, getYRotation(quat), hashPlayerColor(id), 5.8, 'rgba(255,255,255,0.86)');
-    }
-    if (carModel) {
-      drawMiniCar(carModel.position.x, carModel.position.z, getYRotation(carModel.quaternion), '#60a5fa', 7.5, '#ffffff');
-    } else if (chassisBody) {
-      drawMiniCar(chassisBody.position.x, chassisBody.position.z, getBodyYRotation(chassisBody), '#60a5fa', 7.5, '#ffffff');
-    }
-
-    ctx.fillStyle = 'rgba(246,250,241,0.9)';
-    ctx.font = '700 11px JetBrains Mono, monospace';
-    ctx.fillText('N', MINI_SIZE - 17, 17);
-    ctx.fillStyle = 'rgba(255,255,255,0.66)';
-    ctx.font = '600 8px JetBrains Mono, monospace';
-    ctx.fillText(`${Object.keys(remotePlayers).length + (carModel ? 1 : 0)} CARS`, 9, MINI_SIZE - 10);
-    ctx.strokeStyle = 'rgba(255,255,255,0.25)';
-    ctx.lineWidth = 1.5;
-    ctx.strokeRect(1, 1, MINI_SIZE - 2, MINI_SIZE - 2);
-  }
-
-  function requestMinimapRender() {
-    const now = performance.now();
-    if (now - lastMinimapRender < 30) return;
-    lastMinimapRender = now;
-    renderMinimap();
-  }
-
-  renderMinimap();
-
+  let otherPlayers = {};  
   socket.on('playerId', (id) => {
-    playerId = id;
-    console.log('내 ID:', id);
-    if (Object.keys(latestPlayersSnapshot).length > 0) {
-      syncRemotePlayers(latestPlayersSnapshot);
-    }
+  playerId = id; // 저장용
+  console.log('내 ID:', id); // 디버깅용
+});
+
+/**
+ * 닉네임 라벨. 기존 TextGeometry(헬베티카 폰트)는 한글 글리프가 없어 한글 닉네임이
+ * 보이지 않았다. 캔버스 스프라이트는 시스템 폰트를 쓰므로 모든 언어가 표시되고,
+ * 항상 카메라를 향한다.
+ */
+function createNameSprite(text) {
+  const c = document.createElement('canvas');
+  const g = c.getContext('2d');
+  const font = '700 44px Inter, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif';
+  g.font = font;
+  const w = Math.ceil(g.measureText(text).width) + 48;
+  c.width = w; c.height = 72;
+  g.font = font;
+  g.fillStyle = 'rgba(10,14,20,0.62)';
+  g.beginPath(); g.roundRect(0, 0, w, 72, 36); g.fill();
+  g.fillStyle = '#ffffff';
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.fillText(text, w / 2, 38);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, fog: false }));
+  sprite.scale.set(w / 72 * 0.9, 0.9, 1);
+  sprite.renderOrder = 10;
+  return sprite;
+}
+
+function disposeRemote(p) {
+  if (!p) return;
+  if (p.model) scene.remove(p.model);
+  if (p.label) { scene.remove(p.label); p.label.material.map.dispose(); p.label.material.dispose(); }
+  if (p.chassisBody) world.removeBody(p.chassisBody);
+}
+
+
+// 서버로 내 현재 위치, 회전, 입력, 기어 상태를 주기적으로 보내는 함수
+function sendPlayerState() {
+  if (!playerId) return;
+
+  socket.emit('updatePosition', {
+    position: { x: chassisBody.position.x, y: chassisBody.position.y, z: chassisBody.position.z },
+    rotation: { x: chassisBody.quaternion.x, y: chassisBody.quaternion.y, z: chassisBody.quaternion.z, w: chassisBody.quaternion.w },
+    gear: gearState,
+    steeringValue: steeringValue
   });
+}
+// 예시: 키 입력 처리 후
+  const targetQuaternion = new THREE.Quaternion(); // 회전 보간용
+socket.on('updatePlayers', async (players) => {
+  if (!playerId) return;
 
-  let loadedFont = null;
+  for (const [id, player] of Object.entries(players)) {
+    if (id === playerId) continue;
 
-  function loadFontAsync() {
-    return new Promise((resolve, reject) => {
-      if (loadedFont) {
-        resolve(loadedFont);
-        return;
-      }
-      fontLoader.load(
-        'https://threejs.org/examples/fonts/helvetiker_regular.typeface.json',
-        (loaded) => {
-          loadedFont = loaded;
-          resolve(loaded);
-        },
-        undefined,
-        (err) => reject(err)
-      );
-    });
-  }
+    // 잘못된 데이터 검증
+    if (!player?.position || typeof player.position.x !== 'number' ||
+        !player?.rotation || typeof player.rotation.w !== 'number') {
+      continue;
+    }
 
-  async function createTextMesh(text) {
-    const loaded = await loadFontAsync();
-    const geometry = new TextGeometry(text, {
-      font: loaded,
-      size: 0.6,
-      height: 0.1,
-      curveSegments: 12
-    });
-    const material = new THREE.MeshStandardMaterial({ color: 0xffffff });
-    return new THREE.Mesh(geometry, material);
-  }
+    // [중요] 이미 존재하는 플레이어 처리
+    if (otherPlayers[id]) {
+      const pData = otherPlayers[id];
+      
+      // 로딩 중이라면 데이터를 업데이트하지 않고 다음 플레이어로 넘어감 (중복 생성 차단)
+      if (pData.loading) continue;
 
-  function sendPlayerState() {
-    if (!playerId || !vehicle || !chassisBody) return;
-
-    const wheels = vehicle.wheelInfos.map((w, i) => {
-      vehicle.updateWheelTransform(i);
-      const t = vehicle.wheelInfos[i].worldTransform;
-      return {
-        position: { x: t.position.x, y: t.position.y, z: t.position.z },
-        quaternion: { x: t.quaternion.x, y: t.quaternion.y, z: t.quaternion.z, w: t.quaternion.w }
-      };
-    });
-
-    socket.emit('updatePosition', {
-      position: { x: chassisBody.position.x, y: chassisBody.position.y, z: chassisBody.position.z },
-      rotation: { x: chassisBody.quaternion.x, y: chassisBody.quaternion.y, z: chassisBody.quaternion.z, w: chassisBody.quaternion.w },
-      gear: gearState,
-      wheels: wheels,
-      steeringValue: steeringValue
-    });
-  }
-
-  async function syncRemotePlayers(players) {
-    if (!playerId) return;
-    const snapshot = players || {};
-
-    for (const [id, player] of Object.entries(snapshot)) {
-      if (id === playerId) continue;
-      if (!player || !player.position || !player.rotation) continue;
-      if (typeof player.position.x !== 'number' || typeof player.position.y !== 'number' || typeof player.position.z !== 'number') continue;
-      if (typeof player.rotation.x !== 'number' || typeof player.rotation.y !== 'number' || typeof player.rotation.z !== 'number' || typeof player.rotation.w !== 'number') continue;
-
-      if (remotePlayers[id]) {
-        const pData = remotePlayers[id];
-        if (pData.loading) continue;
-        if (pData.targetPosition && pData.targetQuaternion) {
-          pData.targetPosition.set(player.position.x, player.position.y, player.position.z);
-          pData.targetQuaternion.set(player.rotation.x, player.rotation.y, player.rotation.z, player.rotation.w);
-          pData.wheels = Array.isArray(player.wheels) ? player.wheels : [];
-          pData.steeringValue = Number(player.steeringValue) || 0;
-        }
-        if (pData.model && player.carColor) {
-          pData.model.traverse((child) => {
+      // 로딩이 완료된 경우에만 위치/회전 타겟 업데이트
+      if (pData.targetPosition && pData.targetQuaternion) {
+        pData.targetPosition.set(player.position.x, player.position.y, player.position.z);
+        pData.targetQuaternion.set(player.rotation.x, player.rotation.y, player.rotation.z, player.rotation.w);
+        pData.steeringValue = player.steeringValue || 0;
+        
+        // 차량 색상 실시간 업데이트 (필요시)
+        if (pData.model) {
+          pData.model.traverse(child => {
             if (child.isMesh && child.name === 'MainBody' && child.material && child.material.color) {
-              const newColor = new THREE.Color(player.carColor);
+              const newColor = new THREE.Color(player.carColor || '#888888');
               if (!child.material.color.equals(newColor)) {
                 child.material = child.material.clone();
                 child.material.color.copy(newColor);
@@ -3782,97 +3039,113 @@ let playerId = null;
             }
           });
         }
-        continue;
       }
-
-      remotePlayers[id] = { loading: true };
-      console.log('새 플레이어 접속:', player.nickname || id);
-
-      try {
-        let otherCar;
-        switch (player.carModel) {
-          case 'SportsCar': otherCar = await createSportsCar(player.carColor || '#aaaaaa'); break;
-          case 'SUV': otherCar = await createSUVCar(player.carColor || '#aaaaaa'); break;
-          case 'McLarenP1': otherCar = await createMcLarenP1(player.carColor || '#aaaaaa'); break;
-          case 'PontiacPhoenix': otherCar = await createPontiacPhoenix(player.carColor || '#aaaaaa'); break;
-          case 'DodgeDemon': otherCar = await createDodgeDemon(player.carColor || '#aaaaaa'); break;
-          default: otherCar = createGrandeurIGCarDetailed(player.carColor || '#aaaaaa'); break;
-        }
-
-        if (player.nickname) {
-          const nicknameText = await createTextMesh(player.nickname);
-          nicknameText.position.set(0, 2.5, 0);
-          otherCar.add(nicknameText);
-        }
-        otherCar.position.set(player.position.x, player.position.y, player.position.z);
-        otherCar.quaternion.set(player.rotation.x, player.rotation.y, player.rotation.z, player.rotation.w);
-        otherCar.userData.remotePlayerId = id;
-        scene.add(otherCar);
-
-        const otherWheelHolders = [];
-        const wheelPositions = [
-          [-1.2, 0.2, 2.4], [1.2, 0.2, 2.4],
-          [-1.2, 0.2, -2.4], [1.2, 0.2, -2.4]
-        ];
-        for (let i = 0; i < 4; i++) {
-          const holder = new THREE.Group();
-          holder.position.set(wheelPositions[i][0], wheelPositions[i][1], wheelPositions[i][2]);
-          otherCar.add(holder);
-          otherWheelHolders.push(holder);
-        }
-
-        const otherChassisShape = new CANNON.Box(new CANNON.Vec3(1.5, 0.5, 3));
-        const otherChassisBody = new CANNON.Body({ mass: 1200 });
-        otherChassisBody.type = CANNON.Body.KINEMATIC;
-        otherChassisBody.addShape(otherChassisShape);
-        otherChassisBody.position.set(player.position.x, player.position.y, player.position.z);
-        otherChassisBody.quaternion.set(player.rotation.x, player.rotation.y, player.rotation.z, player.rotation.w);
-        world.addBody(otherChassisBody);
-
-        remotePlayers[id] = {
-          loading: false,
-          model: otherCar,
-          chassisBody: otherChassisBody,
-          wheelHolders: otherWheelHolders,
-          targetPosition: new THREE.Vector3(player.position.x, player.position.y, player.position.z),
-          targetQuaternion: new THREE.Quaternion(player.rotation.x, player.rotation.y, player.rotation.z, player.rotation.w),
-          wheels: Array.isArray(player.wheels) ? player.wheels : [],
-          steeringValue: Number(player.steeringValue) || 0
-        };
-      } catch (err) {
-        console.error('플레이어 로딩 중 에러 발생:', id, err);
-        delete remotePlayers[id];
-      }
+      continue; // 이미 있는 플레이어는 여기서 끝내야 중복 생성이 안 됨
     }
 
-    for (const id of Object.keys(remotePlayers)) {
-      if (!snapshot[id]) {
-        const pData = remotePlayers[id];
-        if (pData.model) scene.remove(pData.model);
-        if (pData.chassisBody) world.removeBody(pData.chassisBody);
-        delete remotePlayers[id];
+    // --- 새로운 플레이어 생성 시작 ---
+    // 로딩 상태를 즉시 true로 설정하여 다음 패킷이 들어와도 중복 생성을 막음
+    const placeholder = { loading: true };
+    otherPlayers[id] = placeholder;
+    console.log("새 플레이어 접속:", player.nickname);
+
+    try {
+      let otherCar;
+      // 모델 생성
+      switch (player.carModel) {
+        case 'SportsCar':
+          otherCar = await createSportsCar(player.carColor || '#aaaaaa');
+          break;
+        case 'SUV':
+          otherCar = await createSUVCar(player.carColor || '#aaaaaa');
+          break;
+        case 'McLarenP1':
+          otherCar = await createMcLarenP1(player.carColor || '#aaaaaa');
+          break;
+        case 'PontiacPhoenix':
+          otherCar = await createPontiacPhoenix(player.carColor || '#aaaaaa');
+          break;
+        case 'DodgeDemon':
+          otherCar = await createDodgeDemon(player.carColor || '#aaaaaa');
+          break;
+        default:
+          otherCar = createGrandeurIGCarDetailed(player.carColor || '#aaaaaa');
       }
+
+      // 로딩 중에 나간 플레이어라면 유령 차량을 만들지 않는다.
+      if (otherPlayers[id] !== placeholder) continue;
+
+      const label = createNameSprite(player.nickname || 'Unknown');
+      scene.add(label);
+      otherCar = fitCarModel(otherCar, player.carModel);
+      scene.add(otherCar);
+
+      // 바퀴 메시 생성 (기본 휠)
+      const otherWheelHolders = [];
+      const wheelPositions = [
+        [-1.2, 0.2, 2.4], [1.2, 0.2, 2.4],
+        [-1.2, 0.2, -2.4], [1.2, 0.2, -2.4]
+      ];
+      for (let i = 0; i < 4; i++) {
+        const holder = new THREE.Group();
+        const tireGeo = new THREE.CylinderGeometry(0.65, 0.65, 0.4, 24);
+        
+        // 방법 1: 투명하게 만들기 (Material 속성 변경)
+        const tireMat = new THREE.MeshStandardMaterial({ 
+          color: 0x222222, metalness: 0.7, roughness: 0.4,
+          transparent: true,
+          opacity: 0 // 투명도 0으로 설정
+        });
+        const tireMesh = new THREE.Mesh(tireGeo, tireMat);
+        tireMesh.rotation.z = Math.PI / 2;
+        
+        // 방법 2: 렌더링에서 제외하기 (이 방법을 더 추천합니다)
+        tireMesh.visible = false; 
+
+        holder.add(tireMesh);
+        holder.position.set(...wheelPositions[i]);
+        otherCar.add(holder);
+        otherWheelHolders.push(holder);
+      }
+
+      // 충돌 물리 바디 생성 (킨메틱 타입으로 설정하여 부드럽게 동기화)
+      const otherChassisShape = new CANNON.Box(new CANNON.Vec3(CAR_PHYS.halfW, 0.5, CAR_PHYS.halfL));
+      const otherChassisBody = new CANNON.Body({ mass: 1200 });
+      otherChassisBody.type = CANNON.Body.KINEMATIC;
+      otherChassisBody.addShape(otherChassisShape);
+      otherChassisBody.position.set(player.position.x, player.position.y, player.position.z);
+      world.addBody(otherChassisBody);
+
+      // 데이터 최종 저장 (로딩 완료)
+      otherPlayers[id] = {
+        loading: false,
+        model: otherCar,
+        label,
+        chassisBody: otherChassisBody,
+        wheelHolders: otherWheelHolders,
+        targetPosition: new THREE.Vector3(player.position.x, player.position.y, player.position.z),
+        targetQuaternion: new THREE.Quaternion(player.rotation.x, player.rotation.y, player.rotation.z, player.rotation.w),
+        steeringValue: player.steeringValue || 0
+      };
+    } catch (err) {
+      console.error("플레이어 로딩 중 에러 발생:", err);
+      delete otherPlayers[id]; // 에러 시 다시 시도할 수 있도록 삭제
     }
   }
 
-  socket.on('updatePlayers', (players) => {
-    latestPlayersSnapshot = players || {};
-    syncRemotePlayers(latestPlayersSnapshot);
-  });
-
-
-// 매 프레임 또는 50ms 간격으로 내 위치/상태 서버 전송
- setInterval(() => {
-  if (playerId) {
-    socket.emit('updateInput', input);
+  // 제거된 플레이어 처리
+  for (const id of Object.keys(otherPlayers)) {
+    if (!players[id]) {
+      disposeRemote(otherPlayers[id]);
+      delete otherPlayers[id];
+    }
   }
-}, 50);
+});
 
+
+// 50ms 간격으로 내 위치/상태 서버 전송 (게임 시작 후에만)
 setInterval(() => {
-  // 속도 조건(velocity)을 지우고, 내 차(chassisBody)가 존재할 때 무조건 전송하도록 변경!
-  if (chassisBody) { 
-    sendPlayerState();
-  }
+  if (carModel) sendPlayerState();
 }, 50);
 //  // 위치 상태 전송
 //setInterval(() => {
@@ -3883,8 +3156,8 @@ setInterval(() => {
 
     
     function animate() {
-      requestAnimationFrame(animate);
 
+    
     // 쇼룸 모드일 때 미리보기 차량 360도 회전 및 조명 고정 (게임 맵과 완전히 격리된 좌표 X: 5000, Y: 1000, Z: 5000)
     if (isPreviewActive) {
       if (previewCarModel) previewCarModel.rotation.y += 0.008;
@@ -3895,7 +3168,9 @@ setInterval(() => {
         showroomExhibition.userData.particles.rotation.y += 0.0008;
       }
       // 시네마틱 하이테크 스튜디오 톤과 3점 조명
-      scene.background = new THREE.Color(0x1d2736);
+      scene.background = SHOWROOM_BG;
+      sky.mesh.visible = false;
+      city.root.visible = false;
       scene.fog = null;
       // 톤 매핑을 사용하지 않는 현재 게임 설정 기준으로 쇼룸 조도를 낮춥니다.
       sun.intensity = 0.20;
@@ -3914,16 +3189,17 @@ setInterval(() => {
       camera.position.set(showroomCenter.x, showroomCenter.y + 1, showroomCenter.z + 10);
       camera.lookAt(showroomCenter.x, showroomCenter.y - 1, showroomCenter.z);
       renderer.render(scene, camera);
-      requestMinimapRender();
+      requestAnimationFrame(animate);
       return;
     }
 
+
+       requestAnimationFrame(animate);
 
       // 게임 시작 직후 비동기 차량 생성이 끝나기 전에는 물리 객체가 없습니다.
       // 이 프레임을 건너뛰어 undefined.position 오류와 초기화 경합을 방지합니다.
       if (!world || !vehicle || !chassisBody || !carModel) {
         renderer.render(scene, camera);
-        requestMinimapRender();
         return;
       }
 
@@ -3944,19 +3220,17 @@ setInterval(() => {
       // 최대 deltaTime 제한 (탭 이동 시 멈춤 방지)
       deltaTime = Math.min(deltaTime, 0.1);
 
-      const maxPhysicsStepsPerFrame = 3;
-      // 프레임 드롭 뒤 누적된 물리를 무제한 따라잡느라 추가 렉이 생기는 현상(spiral of death)을 막습니다.
-      accumulator = Math.min(accumulator + deltaTime, fixedTimeStep * maxPhysicsStepsPerFrame);
-      let physicsSteps = 0;
-      while (accumulator >= fixedTimeStep && physicsSteps < maxPhysicsStepsPerFrame) {
+      accumulator += deltaTime;
+
+      while (accumulator >= fixedTimeStep) {
         updateVehicleControls(fixedTimeStep);
         world.step(fixedTimeStep);
         accumulator -= fixedTimeStep;
-        physicsSteps++;
       }
 
       // 물리 업데이트 후 보간을 위해 남은 시간 비율 계산
       const alpha = accumulator / fixedTimeStep;
+      frameDelta = deltaTime;
 
   // 자동차 모델 위치/회전을 물리 바디에 맞게 업데이트
   // 물리 바디의 위치를 Three.js Vector3로 변환
@@ -4000,7 +3274,7 @@ if (carModel && carModel.userData.steeringNode) {
 
       // Dodge 핸들은 로컬 Z축을 기준으로 회전
       const steeringAngle =
-        visualSteeringLag * 15.0;
+        visualSteeringLag * STEERING_WHEEL_RATIO;
 
       const steeringQuaternion =
         new THREE.Quaternion().setFromAxisAngle(
@@ -4016,11 +3290,11 @@ if (carModel && carModel.userData.steeringNode) {
       currentCarModel === 'PontiacPhoenix'
     ) {
       steeringNode.rotation.y =
-        -visualSteeringLag * 15.0;
+        -visualSteeringLag * STEERING_WHEEL_RATIO;
 
     } else {
       steeringNode.rotation.y =
-        visualSteeringLag * 15.0;
+        visualSteeringLag * STEERING_WHEEL_RATIO;
     }
 
   } else {
@@ -4071,27 +3345,29 @@ if (currentCarModel.includes('PontiacPhoenix')) {
       rollingQuat.invert(); 
   }
   // 4. 우리가 원하는 시각적 조향각 계산 (SUV 반전 및 앞바퀴 증폭)
-  let visualSteering = physicsSteering;
-  const exaggerationFactor = 2.6; //원하는 꺾임 배율
+  // 물리 앞바퀴는 -steeringValue로 조향되므로, 시각 계산에는 원래 의미의 조향값을 쓴다.
+  const logicalSteering = i < 2 ? -physicsSteering : 0;
+  let visualSteering = logicalSteering;
+  const exaggerationFactor = 1.0; // 바퀴 그래픽 각도 = 실제 물리 조향각
 
   if (currentCarModel.includes('SUV') || currentCarModel.includes('McLarenP1') || currentCarModel.includes('PontiacPhoenix')) {
     // 레인지로버(SUV)는 조향 축 방향이 반대이므로 마이너스(-) 처리
     if (i === 0 || i === 1) {
-      visualSteering = -physicsSteering * exaggerationFactor; 
+      visualSteering = -logicalSteering * exaggerationFactor; 
     } else {
-      visualSteering = -physicsSteering; 
+      visualSteering = -logicalSteering; 
     }
   } else {
     // 다른 일반 차량들 
     if (i === 0 || i === 1) {
-      visualSteering = physicsSteering * exaggerationFactor;  
+      visualSteering = logicalSteering * exaggerationFactor;  
     }
   }
 
   // Dodge GLB는 차량 축과 wheelRoot 축이 다르므로 별도 회전을 적용한다.
   if (currentCarModel.includes('DodgeDemon')) {
     const dodgeSteering = (i === 0 || i === 1)
-      ? physicsSteering * exaggerationFactor
+      ? logicalSteering * exaggerationFactor
       : 0;
     const dodgeSteeringQuat = new THREE.Quaternion().setFromAxisAngle(
       new THREE.Vector3(0, 0, 1),
@@ -4159,12 +3435,12 @@ correctionQuat.setFromEuler(new THREE.Euler(0, -Math.PI / 2, 0));
       }
 
        // 상대방 차량 위치 보간 처리
-
+      
   const now = performance.now();
 // 상대방 차량 위치 보간 처리
 // 상대방 차량 위치 보간 처리
-  for (const id in remotePlayers) {
-    const pData = remotePlayers[id];
+  for (const id in otherPlayers) {
+    const pData = otherPlayers[id];
     
     // 로딩 중이거나 모델이 아직 없는 경우 건너뜀
     if (pData.loading || !pData.model) continue;
@@ -4185,6 +3461,19 @@ correctionQuat.setFromEuler(new THREE.Euler(0, -Math.PI / 2, 0));
         pData.model.position.z
     );
     pData.chassisBody.quaternion.copy(pData.model.quaternion);
+    if (pData.lastBodyPos) {
+      const inv = 1 / Math.max(frameDelta, 1e-3);
+      pData.chassisBody.velocity.set(
+        (pData.chassisBody.position.x - pData.lastBodyPos.x) * inv,
+        (pData.chassisBody.position.y - pData.lastBodyPos.y) * inv,
+        (pData.chassisBody.position.z - pData.lastBodyPos.z) * inv
+      );
+    } else {
+      pData.lastBodyPos = new THREE.Vector3();
+    }
+    pData.lastBodyPos.copy(pData.chassisBody.position);
+    if (pData.label) pData.label.position.set(pData.model.position.x, pData.model.position.y + 2.2 - remoteOffset, pData.model.position.z);
+    trafficObstacles.push({ x: pData.model.position.x, z: pData.model.position.z });
 
     // 3. 상대방 바퀴 강제 굴림 및 조향 동기화 
     if (pData.model.userData.wheelNodes) {
@@ -4210,7 +3499,7 @@ correctionQuat.setFromEuler(new THREE.Euler(0, -Math.PI / 2, 0));
             if (remoteModelName.includes('SUV')) {
                 // ─── [1] SUV (레인지로버) 전용 바퀴 정렬 로직 ───
                 // 조향각 방향 반전 및 증폭 (내 차 SUV 로직과 동일하게)
-                const visualSteering = (i === 0 || i === 1) ? -steerAngle * 2.6 : -steerAngle;
+                const visualSteering = (i === 0 || i === 1) ? -steerAngle : 0;
                 
                 const steerQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), visualSteering);
                 const rollQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), pData.accumulatedRoll);
@@ -4231,7 +3520,7 @@ correctionQuat.setFromEuler(new THREE.Euler(0, -Math.PI / 2, 0));
 
             } else if (remoteModelName.includes('McLarenP1')) {
                 // ─── [2] 맥라렌 전용 바퀴 정렬 로직 ───
-                const visualSteering = (i === 0 || i === 1) ? -steerAngle * 2.6 : 0;
+                const visualSteering = (i === 0 || i === 1) ? -steerAngle : 0;
                 const steerQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), visualSteering);
                 const rollQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), pData.accumulatedRoll);
                 
@@ -4246,7 +3535,7 @@ correctionQuat.setFromEuler(new THREE.Euler(0, -Math.PI / 2, 0));
                 wheel.quaternion.copy(finalTransform);
 
                         } else if (remoteModelName.includes('DodgeDemon')) {
-                const visualSteering = (i === 0 || i === 1) ? steerAngle * 2.6 : 0;
+                const visualSteering = (i === 0 || i === 1) ? steerAngle : 0;
                 const steerQuat = new THREE.Quaternion().setFromAxisAngle(
                   new THREE.Vector3(0, 0, 1),
                   -visualSteering
@@ -4259,7 +3548,7 @@ correctionQuat.setFromEuler(new THREE.Euler(0, -Math.PI / 2, 0));
 
             } else if (remoteModelName.includes('PontiacPhoenix')) {
 
-              const visualSteering = (i === 0 || i === 1) ? -steerAngle * 2.6 : 0;
+              const visualSteering = (i === 0 || i === 1) ? -steerAngle : 0;
                 // ─── [3] 폰티악 전용 바퀴 정렬 로직 (조향 및 반전 수정) ───
                 // 싱글플레이와 동일하게 Y축 기준 조향
                 const steerQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), visualSteering);
@@ -4282,7 +3571,7 @@ correctionQuat.setFromEuler(new THREE.Euler(0, -Math.PI / 2, 0));
                 }
             } else {
                 // ─── [3] 일반 차량 로직 (그랜저, 스포츠카 등) ───
-                const finalSteer = (i === 0 || i === 1) ? steerAngle * 2.6 : 0;
+                const finalSteer = (i === 0 || i === 1) ? steerAngle : 0;
                 const steerQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), -finalSteer);
                 const rollQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), pData.accumulatedRoll);
 
@@ -4302,12 +3591,36 @@ correctionQuat.setFromEuler(new THREE.Euler(0, -Math.PI / 2, 0));
   } 
 
  // 조명 위치가 차량을 따라다니도록 업데이트 (그림자 품질 유지)
-    sun.position.set(interpolatedCarPosition.x + 200, interpolatedCarPosition.y + 400, interpolatedCarPosition.z + 100);
-    sun.target.position.copy(interpolatedCarPosition);
+    // 그림자 텍셀 단위로 스냅해 차가 움직일 때 그림자 경계가 떨리지 않게 한다.
+    const texel = (sun.shadow.camera.right - sun.shadow.camera.left) / sun.shadow.mapSize.x;
+    const snap = (v) => Math.round(v / texel) * texel;
+    const focus = new THREE.Vector3(snap(interpolatedCarPosition.x), GROUND_Y, snap(interpolatedCarPosition.z));
+    sun.position.copy(focus).addScaledVector(sky.sunDir, 500);
+    sun.target.position.copy(focus);
     sun.target.updateMatrixWorld();
-      
-  // 속도 + RPM + 기어 UI 표시
-  hud.textContent = `${Math.floor(getSpeedKmH())} KM/H`; gearDisplay.textContent = `${currentGear}`;
+
+  // 신호등 · AI 교통
+  simTime += frameDelta;
+  city.update(simTime);
+  if (traffic) {
+    trafficObstacles.push({ x: chassisBody.position.x, z: chassisBody.position.z });
+    traffic.update(frameDelta, simTime, trafficObstacles);
+  }
+  trafficObstacles.length = 0;
+
+  // 도시 밖으로 떨어졌으면 스폰 지점으로 복귀
+  if (chassisBody.position.y < GROUND_Y - 25) respawnCar();
+
+  // 속도 + 기어 UI 표시 (D 상태에서는 자동변속 단수까지)
+  // body.velocity에는 브레이크 구속 해소 과정의 잔여 속도가 남아 정차 중에도 1~7km/h로
+  // 표시됐다. 실제 이동 거리로 속도를 계산해 표시한다.
+  if (!hudLastPos) hudLastPos = interpolatedCarPosition.clone();
+  const measured = interpolatedCarPosition.distanceTo(hudLastPos) / Math.max(frameDelta, 1e-3) * 3.6;
+  hudLastPos.copy(interpolatedCarPosition);
+  hudSpeed += (Math.min(measured, 400) - hudSpeed) * 0.15;
+  hud.textContent = `${hudSpeed < 0.8 ? 0 : Math.round(hudSpeed)} KM/H`;
+  gearDisplay.textContent = gearState === 'D' ? `D${currentGear}` : gearState;
+  updateMinimap();
       // 카메라 따라가기
 const carPos = interpolatedCarPosition; // 보간된 차량 위치 사용
 
@@ -4328,8 +3641,10 @@ if (cameraMode === 'third') {
       // 타이머 업데이트
       updateTimer();
 
+      const ov = window.__game?.camOverride;
+      if (ov) { camera.position.set(...ov.pos); camera.lookAt(...ov.look); }
+      sky.follow(camera);
       renderer.render(scene, camera);
-      requestMinimapRender();
     }
       
   
@@ -4366,27 +3681,35 @@ if (cameraMode === 'third') {
       model.updateMatrixWorld(true);
     }
 
+    // 차량 버튼을 빠르게 연속 클릭하면 이전 요청이 늦게 끝나 여러 대가 겹쳐 보이던 문제를
+    // 요청 토큰으로 막는다. 가장 마지막 요청의 결과만 쇼룸에 올린다.
+    let previewRequest = 0;
     async function initPreviewCar(modelName, color) {
+      const request = ++previewRequest;
       if (previewCarModel) {
         scene.remove(previewCarModel);
         previewCarModel = null;
       }
-      
-      console.log("Loading preview for:", modelName, color);
-      
+
+      let model = null;
       if (modelName === 'GrandeurIG') {
-        previewCarModel = createGrandeurIGCarDetailed(color);
+        model = createGrandeurIGCarDetailed(color);
       } else if (modelName === 'SportsCar') {
-        previewCarModel = await createSportsCar(color);
+        model = await createSportsCar(color);
       } else if (modelName === 'SUV') {
-        previewCarModel = await createSUVCar(color);
+        model = await createSUVCar(color);
       } else if (modelName === 'McLarenP1') {
-        previewCarModel = await createMcLarenP1(color);
+        model = await createMcLarenP1(color);
       } else if (modelName === 'PontiacPhoenix') {
-        previewCarModel = await createPontiacPhoenix(color);
+        model = await createPontiacPhoenix(color);
       } else if (modelName === 'DodgeDemon') {
-        previewCarModel = await createDodgeDemon(color);
+        model = await createDodgeDemon(color);
       }
+      if (request !== previewRequest || !isPreviewActive) return; // 더 최신 요청이 있거나 이미 게임 시작
+      previewCarModel = model;
+      // 미리보기 로딩 중 바뀐 색상도 반영
+      if (color !== selectedCarColor) applyPreviewColor(selectedCarColor);
+      
       
       if (previewCarModel) {
         // 게임 맵과 완전히 격리된 별도의 쇼룸 좌표에 위치 설정
@@ -4414,7 +3737,7 @@ if (cameraMode === 'third') {
           modelName === 'SportsCar' ? 0.95 :
           1;
         normalizePreviewCarScale(previewCarModel, previewScaleMultiplier);
-        console.log("Preview model added to isolated showroom scene with normalized scale");
+        
       }
     }
 
@@ -4600,13 +3923,17 @@ if (cameraMode === 'third') {
       }
       
       isPreviewActive = false;
+      previewRequest++;
       // 게임 화면으로 돌아갈 때 맵용 배경, 안개, 조명 복원
-      scene.background = new THREE.Color(0x87ceeb);
-      scene.fog = new THREE.Fog(0x87ceeb, 220, 1050);
+      scene.background = sky.fogColor.clone();
+      scene.fog = GAME_FOG;
+      sky.mesh.visible = true;
+      city.root.visible = true;
+      document.body.classList.add('playing');
       showroomExhibition.visible = false;
-      sun.intensity = 1.4;
-      ambientLight.intensity = 0.6;
-      hemisphereLight.intensity = 0.5;
+      sun.intensity = SUN_INTENSITY;
+      ambientLight.intensity = AMBIENT_INTENSITY;
+      hemisphereLight.intensity = HEMI_INTENSITY;
       showroomKeyLight.intensity = 0;
       showroomFillLight.intensity = 0;
       showroomRimLight.intensity = 0;
@@ -4650,6 +3977,7 @@ if (cameraMode === 'third') {
       carModel = createGrandeurIGCarDetailed(color);
   }
 
+  carModel = fitCarModel(carModel, modelName);
   scene.add(carModel);
   // carModel.userData.wheelNodes가 이미 설정되어 있다면 전역 변수 carWheelNodes를 업데이트합니다.
   if (carModel.userData.wheelNodes) {
@@ -4659,15 +3987,37 @@ if (cameraMode === 'third') {
   }
   carModel.userData.modelName = currentCarModel;
   wheelHolders.forEach(h => scene.add(h));
-  carModel.userData.steeringNode = steeringWheelNode;
+  carModel.userData.steeringNode = carModel.userData.steeringNode || null;
+
 
   // 물리 바디 보간용 초기값 설정
   chassisBody.previousPosition = new THREE.Vector3(chassisBody.position.x, chassisBody.position.y, chassisBody.position.z);
   chassisBody.previousQuaternion = new THREE.Quaternion(chassisBody.quaternion.x, chassisBody.quaternion.y, chassisBody.quaternion.z, chassisBody.quaternion.w);
 
+  // 스폰 지점을 바라보는 위치로 카메라를 옮겨, 시작 직후 쇼룸에서 날아오는 연출을 없앤다.
+  respawnCar();
+  camera.position.set(city.spawn.x, GROUND_Y + 8, city.spawn.z + 18);
+  camera.lookAt(city.spawn.x, GROUND_Y, city.spawn.z - 10);
+  if (!traffic) traffic = createTraffic({ scene, world, city, count: 80, avoid: new THREE.Vector3(city.spawn.x, 0, city.spawn.z) });
+  minimapEl.style.display = 'block';
+
   startTimer();
   updateGearDisplay();
 }
+
+// 콘솔 디버깅용 핸들 (게임 로직에는 사용하지 않음)
+window.__game = {
+  scene, camera, renderer, world, city, chassisBody, input,
+  get traffic() { return traffic; },
+  setGear, respawnCar,
+  setSteerGrip(v) { steerGripAccel = v; },
+  setRearGrip(v) { rearGripBias = v; },
+  setCameraMode(m) { cameraMode = m; },
+  // 테스트용: 렌더 루프와 무관하게 물리를 n 스텝 진행
+  stepPhysics(n = 60) {
+    for (let i = 0; i < n; i++) { updateVehicleControls(fixedTimeStep); world.step(fixedTimeStep); }
+  },
+};
 
 // 쇼룸 미리보기를 위해 즉시 애니메이션 루프 시작
 animate();
