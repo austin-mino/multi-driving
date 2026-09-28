@@ -2774,86 +2774,95 @@ if (input.handbrake) {
  
 
     // 카메라 차량 뒤쪽 위치로 고정
-   function updateCamera() {
-  const carPos = interpolatedCarPosition.clone();
-  
-  // 1. 기본 오프셋 설정 (차량 뒤쪽 위)
-  const offset = new THREE.Vector3(0, 2.9, 7.4);
-  
-  // 2. 조향에 따른 카메라 쏠림 효과 (원심력 표현)
-  // steeringValue가 왼쪽(-)이면 카메라는 오른쪽(+)으로 살짝 이동
-  const steeringLean = -steeringValue * 1.2;  
-  offset.x += steeringLean;
-  
-  // 3. 속도에 따른 거리 조절 (속도가 빠르면 카메라가 더 멀어짐)
+ function updateCamera() {
+  const carPos = interpolatedCarPosition;
+  const carQuat = interpolatedCarQuaternion;
+
   const speed = getSpeedKmH();
   const speedFactor = Math.min(speed / 200, 1);
-  offset.z += speedFactor * 2.5;
-  offset.y += speedFactor * 0.8;
 
-  offset.applyQuaternion(interpolatedCarQuaternion);
-  const targetPos = carPos.clone().add(offset);
+  // 차량 로컬 좌표 기준
+  // +Z는 차량 뒤쪽, -Z는 차량 앞쪽
+  const localOffset = new THREE.Vector3(
+    -steeringValue * 0.8,       // 조향 시 좌우 이동
+    3.8 + speedFactor * 0.8,    // 높이
+    10.0 + speedFactor * 3.0    // 차량과의 거리
+  );
 
-  // 4. 부드러운 위치 보간 (너무 딱딱하지 않게)
-  camera.position.lerp(targetPos, 0.15);
-  
-  // 5. 시선 보간 (차량의 약간 앞쪽을 바라보게 하여 더 역동적으로)
-  const lookAtOffset = new THREE.Vector3(0, 0.6, -4);
-  lookAtOffset.applyQuaternion(interpolatedCarQuaternion);
+  // 차량 회전에 맞춰 카메라 위치 회전
+  const worldOffset = localOffset.applyQuaternion(carQuat);
+  const targetPos = carPos.clone().add(worldOffset);
+
+  // 프레임 속도에 관계없이 일정한 부드러움
+  const smooth = 1 - Math.exp(-10 * frameDelta);
+  camera.position.lerp(targetPos, smooth);
+
+  // 차량 앞쪽보다 약간 위를 바라봄
+  const localLookAt = new THREE.Vector3(0,0.8,-3.5);
+
+  const lookAtOffset = localLookAt.applyQuaternion(carQuat);
   const lookAtTarget = carPos.clone().add(lookAtOffset);
-  
-  // 현재 카메라가 보고 있는 방향에서 목표 방향으로 부드럽게 회전
-  const currentLookAt = new THREE.Vector3();
-  camera.getWorldDirection(currentLookAt);
-  const targetLookAt = lookAtTarget.clone().sub(camera.position).normalize();
-  
+
   camera.lookAt(lookAtTarget);
 }
 
-   function updateFirstPersonCamera() {
-  // 차종별 운전석 위치
+
+  function updateFirstPersonCamera() {
   let offset;
-   if (currentCarModel === 'SUV') {
-    offset = new THREE.Vector3(0, 3.3, -3.6); // Range Rover 운전석
+
+  if (currentCarModel === 'SUV') {
+    offset = new THREE.Vector3(0, 3.3, -3.6);
   } else if (currentCarModel === 'SportsCar') {
-    offset = new THREE.Vector3(-0.85, 2.5, -0.25); // Ferrari
+    offset = new THREE.Vector3(-0.85, 2.5, -0.25);
   } else if (currentCarModel === 'McLarenP1') {
-    offset = new THREE.Vector3(0, 0.5, -4); // mclaren
+    offset = new THREE.Vector3(0, 0.5, -4);
   } else if (currentCarModel === 'PontiacPhoenix') {
-    offset = new THREE.Vector3(-0.97, 2.66, 0.26); // Pontiac Phoenix
+    offset = new THREE.Vector3(-0.97, 2.66, 0.26);
   } else if (currentCarModel === 'DodgeDemon') {
-    offset = new THREE.Vector3(-0.85, 3.0, -0.4); // DodgeDemon
+    offset = new THREE.Vector3(-0.85, 3.0, -0.4);
   } else {
-    offset = new THREE.Vector3(-0.85, 2.5, -0.4); // 그랜저 기본
+    offset = new THREE.Vector3(-0.85, 2.5, -0.4);
   }
-  // 위 값은 원래(확대된) 모델 기준으로 맞춘 좌석 위치다. fitCarModel()이 적용한
-  // 축소 비율과 위치 보정을 똑같이 적용해 실제 크기 차량의 좌석으로 옮긴다.
+
   const fit = carModel.userData.fit;
-  if (fit) offset.multiplyScalar(fit.k).add(fit.offset);
+  if (fit) {
+    offset.multiplyScalar(fit.k).add(fit.offset);
+  }
 
-
-
-  // 1인칭 흔들림 효과 (G-Force 표현)
   const speed = getSpeedKmH();
   const speedFactor = speed / 100;
-  const shake = Math.sin(Date.now() * 0.01) * 0.0021618 * speedFactor;
-  offset.y += shake;
-  offset.x += -steeringValue * 0.12; // 조향 시 몸이 쏠리는 효과
+
+  offset.y += Math.sin(Date.now() * 0.01) * 0.0021618 * speedFactor;
+  offset.x += -steeringValue * 0.12;
 
   offset.applyQuaternion(interpolatedCarQuaternion);
-  camera.position.copy(interpolatedCarPosition).add(offset);
 
-  const forward = new THREE.Vector3(0, 0, -1);
-  // 시선도 조향 방향으로 살짝 미리 보게 함
+  camera.position
+    .copy(interpolatedCarPosition)
+    .add(offset);
+
+  // 1인칭 전용 시야
+  camera.fov = 60;
+  camera.near = 0.05;
+  camera.updateProjectionMatrix();
+
   const lookRotation = interpolatedCarQuaternion.clone();
-  const steeringQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), -steeringValue * 0.08);
-  lookRotation.multiply(steeringQuat);
-  
-  forward.applyQuaternion(lookRotation);
+  const steeringQuat = new THREE.Quaternion()
+    .setFromAxisAngle(
+      new THREE.Vector3(0, 1, 0),
+      -steeringValue * 0.08
+    );
 
-  const lookAt = camera.position.clone().add(forward.multiplyScalar(20));
-  camera.lookAt(lookAt);
+  lookRotation.multiply(steeringQuat);
+
+  const forward = new THREE.Vector3(0, 0, -1)
+    .applyQuaternion(lookRotation);
+
+  camera.lookAt(
+    camera.position.clone().add(forward.multiplyScalar(20))
+  );
 }
+
 
     // 타이머 관리
     let startTime = null;
