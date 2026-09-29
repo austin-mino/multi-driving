@@ -1644,13 +1644,22 @@ function createSUVCar(color = '#ffffff') {
         innerCar.traverse((child) => {
            child.castShadow = true;
         child.receiveShadow = true;
-          const n = child.name.toUpperCase();
-          // 더 넓은 범위의 이름 검색 (공백, 대소문자, 약어 대응)
-          if ((n.includes('FL') || n.includes('FRONT_LEFT')) && n.includes('WHEEL')) carWheelNodes[0] = child;
-          else if ((n.includes('FR') || n.includes('FRONT_RIGHT')) && n.includes('WHEEL')) carWheelNodes[1] = child;
-          else if ((n.includes('BL') || n.includes('BACK_LEFT') || n.includes('RL')) && n.includes('WHEEL')) carWheelNodes[2] = child;
-          else if ((n.includes('BR') || n.includes('BACK_RIGHT') || n.includes('RR')) && n.includes('WHEEL')) carWheelNodes[3] = child;
-        });
+         const n = child.name.toUpperCase();
+
+if ((n.includes('FL') || n.includes('FRONT_LEFT')) && n.includes('WHEEL')) {
+  child.userData.side = 'L';
+  carWheelNodes[0] = child;
+} else if ((n.includes('FR') || n.includes('FRONT_RIGHT')) && n.includes('WHEEL')) {
+  child.userData.side = 'R';
+  carWheelNodes[1] = child;
+} else if ((n.includes('BL') || n.includes('BACK_LEFT') || n.includes('RL')) && n.includes('WHEEL')) {
+  child.userData.side = 'L';
+  carWheelNodes[2] = child;
+} else if ((n.includes('BR') || n.includes('BACK_RIGHT') || n.includes('RR')) && n.includes('WHEEL')) {
+  child.userData.side = 'R';
+  carWheelNodes[3] = child;
+}
+           });
         console.log('Range Rover 바퀴 노드:', carWheelNodes.map(n => n ? n.name : 'null'));
         carWheelNodes.forEach((node) => {
           if (node) {
@@ -3350,9 +3359,13 @@ const myWheels = carModel ? carModel.userData.wheelNodes : null;
 
   // 3. 전체 로컬 회전에서 조향 성분을 빼버려서, '순수하게 바퀴가 굴러가는 회전(Roll)'만 추출
   const rollingQuat = physicsSteeringQuat.clone().invert().multiply(localQuat);
-if (currentCarModel.includes('PontiacPhoenix')) {
-      rollingQuat.invert(); 
-  }
+if (
+  currentCarModel.includes('PontiacPhoenix') ||
+  (currentCarModel.includes('SUV') && node.userData.side === 'R')
+) {
+  rollingQuat.invert();
+}
+
   // 4. 우리가 원하는 시각적 조향각 계산 (SUV 반전 및 앞바퀴 증폭)
   // 물리 앞바퀴는 -steeringValue로 조향되므로, 시각 계산에는 원래 의미의 조향값을 쓴다.
   const logicalSteering = i < 2 ? -physicsSteering : 0;
@@ -3511,7 +3524,8 @@ correctionQuat.setFromEuler(new THREE.Euler(0, -Math.PI / 2, 0));
                 const visualSteering = (i === 0 || i === 1) ? -steerAngle : 0;
                 
                 const steerQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), visualSteering);
-                const rollQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), pData.accumulatedRoll);
+                const rollSign = wheel.userData.side === 'R' ? -1 : 1;
+                const rollQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0),pData.accumulatedRoll * rollSign);
                 
                 // 조향 성분과 구름 성분 결합
                 const localTransform = new THREE.Quaternion().copy(steerQuat).multiply(rollQuat);
@@ -3520,7 +3534,7 @@ correctionQuat.setFromEuler(new THREE.Euler(0, -Math.PI / 2, 0));
                 const correctionQuat = new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0));
                 const finalTransform = localTransform.clone().multiply(correctionQuat);
                 
-                // ★ 중요: SUV는 곱하는 순서가 [baseQuaternion * 회전값] 이어야 옆으로 구르지 않습니다.
+                // SUV는 곱하는 순서가 [baseQuaternion * 회전값] 이어야 옆으로 구르지 않는다.
                 if (wheel.userData.baseQuaternion) {
                     wheel.quaternion.copy(wheel.userData.baseQuaternion.clone().multiply(finalTransform));
                 } else {
